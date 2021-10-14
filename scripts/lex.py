@@ -66,8 +66,7 @@ def main(filename):
     m.build()
     with open(filename, "r") as fh:
         for (pos, token_type, value) in m.get_tokens(fh.read()):
-            # print(pos, token_type, value)
-            pass
+            print(pos, token_type, value)
 
 
 if __name__ == "__main__":
