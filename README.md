@@ -75,7 +75,7 @@ As an example of how `sha256` will be used here:
 ```
     _id: XX ->  sha256(sha256(type), sha256(key1), sha256(key2), ...)
     _id: 10 ->  sha256(sha256(set_salt, 6, 8), 7, 9)
-    _id: 11 ->  sha256(sha256(5, sha256(set_salt, 6, 8)), 3, 5, 10)
+    _id: 11 ->  sha256(sha256(4, sha256(set_salt, 6, 8)), 3, 5, 10)
 ```
 
 Notes:
