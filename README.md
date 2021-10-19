@@ -32,7 +32,7 @@ The `_id` must be built by hashing (`sha256`) the documents' fields to avoid dup
 For simplicity, we'll be using integers on this example.
 
 ```
-Types: [
+AtomTypes: [
     { _id: 1, type: null, name: “Unknown” },
     { _id: 2, type: null, name: “Type” },
     { _id: 3, type: 2, name: “Evaluation” },
