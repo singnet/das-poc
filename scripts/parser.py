@@ -6,8 +6,8 @@ from sys import argv
 from datetime import datetime
 from pathlib import Path
 
-from .atomese2metta.parser import MultiprocessingParser
-from .atomese2metta.translator import Translator
+from atomese2metta.parser import MultiprocessingParser
+from atomese2metta.translator import Translator
 
 def parseArgs(fn):
     def inner(args):
