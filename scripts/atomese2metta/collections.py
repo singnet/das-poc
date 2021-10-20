@@ -1,8 +1,5 @@
 from collections import OrderedDict
 from collections.abc import MutableSet
-from typing import Collection, TypeVar
-
-T = TypeVar('T')
 
 
 class OrderedSet(OrderedDict, MutableSet):

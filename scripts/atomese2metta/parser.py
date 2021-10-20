@@ -35,10 +35,12 @@ class MultiprocessingParser(Parser):
         text = re.sub(r"(\".*\")", "", text)
         return text.count("(") - text.count(")")
 
-    def _split_expressions(self, file: Union[list[str], str, StringIO, TextIOWrapper]) -> Iterator[str]:
+    def _split_expressions(
+        self, file: Union[list[str], str, StringIO, TextIOWrapper]
+    ) -> Iterator[str]:
         if isinstance(file, str):
             file = file.split("\n")
-        
+
         counter = 0
         # TODO: Make expressions a set type.
         expressions = []
@@ -48,7 +50,7 @@ class MultiprocessingParser(Parser):
             if not line:
                 continue
             counter += self._count_paren_diff(line)
-            expression += line.replace('\n', '')
+            expression += line.replace("\n", "")
             if counter == 0:
                 expressions.append(expression)
                 expression = ""
@@ -83,8 +85,7 @@ class MultiprocessingParser(Parser):
         for i, expressions in enumerate(self._split_expressions(file)):
             proc_num = i % self.cpus
             worker = multiprocessing.Process(
-                target=self._parse,
-                args=(expressions, self.workers_data[proc_num])
+                target=self._parse, args=(expressions, self.workers_data[proc_num])
             )
             workers.append(worker)
             worker.start()
@@ -96,8 +97,8 @@ class MultiprocessingParser(Parser):
         if len(workers) > 0:
             result.append(self._resolve_workers(workers))
 
-        data = sum([pickle.load(open(filename, 'rb')) for filename in result], start=[])
+        data = sum([pickle.load(open(filename, "rb")) for filename in result], start=[])
         for filename in result:
-            os.remove(filename) 
+            os.remove(filename)
 
         return data
