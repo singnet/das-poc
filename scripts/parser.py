@@ -6,8 +6,9 @@ from sys import argv
 from datetime import datetime
 from pathlib import Path
 
-from .atomese2metta.parser import MultiprocessingParser
-from .atomese2metta.translator import Translator
+from atomese2metta.parser import MultiprocessingParser
+from atomese2metta.translator import Translator
+
 
 def parseArgs(fn):
     def inner(args):
@@ -20,11 +21,13 @@ def parseArgs(fn):
         output_dir = path.abspath("./") if len(args) < 2 else args[1]
 
         return fn(file_path, output_dir)
+
     return inner
 
 
 def get_filesize_mb(file_path):
     return math.ceil(Path(file_path).stat().st_size / 1024 / 1024)
+
 
 @parseArgs
 def main(file_path, output_dir):
@@ -51,6 +54,7 @@ def main(file_path, output_dir):
     print(f"Outputing to {output_file_path}")
 
     print(f"Took {(datetime.now() - d1).seconds} seconds to finish processing.")
+
 
 if __name__ == "__main__":
     main(argv[1:])

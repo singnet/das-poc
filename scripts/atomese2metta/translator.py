@@ -14,6 +14,7 @@ class BaseExpression(ABC):
     OPENER = "("
     CLOSER = ")"
 
+
 class Expression(list, BaseExpression):
     SYMBOL = None
 
@@ -44,7 +45,7 @@ class MTypeExpression(BaseExpression):
         return self.symbol == other.symbol and self.type == other.type
 
     def __str__(self):
-        return f'{self.OPENER}: {self.symbol} {self.type}{self.CLOSER}'
+        return f"{self.OPENER}: {self.symbol} {self.type}{self.CLOSER}"
 
 
 class InvalidSymbol(Exception):
@@ -86,17 +87,21 @@ class Translator:
     def build(cls, parsed_expressions):
         translator = cls()
         types, nodes = translator.collect_types(parsed_expressions)
-         
+
         body = translator.translate(parsed_expressions)
         return MettaDocument(types.union(nodes), body)
 
     @property
     def ALLOWED_LINKS(self):
-        return self._ALLOWED_LINKS + tuple(self.symbol_name2metta(symbol) for symbol in self._ALLOWED_LINKS)
+        return self._ALLOWED_LINKS + tuple(
+            self.symbol_name2metta(symbol) for symbol in self._ALLOWED_LINKS
+        )
 
     @property
     def ALLOWED_NODES(self):
-        return self._ALLOWED_NODES + tuple(self.symbol_name2metta(symbol) for symbol in self._ALLOWED_NODES)
+        return self._ALLOWED_NODES + tuple(
+            self.symbol_name2metta(symbol) for symbol in self._ALLOWED_NODES
+        )
 
     def is_node(self, symbol: Symbol) -> bool:
         return isinstance(symbol, Symbol) and symbol in self.ALLOWED_NODES
@@ -162,7 +167,9 @@ class Translator:
                     types.add(MTypeExpression(self.symbol_name2metta(d[0])))
                     node_name, symbol = d[0:2]
                     node_name = self.symbol_name2metta(node_name)
-                    symbol = self.replace_nodesymbol(node_name, self.symbol_name2metta(symbol))
+                    symbol = self.replace_nodesymbol(
+                        node_name, self.symbol_name2metta(symbol)
+                    )
                     nodes.add(MTypeExpression(symbol, mtype=node_name))
                 else:
                     if not self.is_ignored_symbol(d[0]):
@@ -171,6 +178,7 @@ class Translator:
                 types.update(types_)
                 nodes.update(nodes_)
         return types, nodes
+
 
 class MettaDocument:
     def __init__(self, types: Sequence[MTypeExpression], body: Sequence[Expression]):
