@@ -156,7 +156,8 @@ class Translator:
         for d in expressions:
             if isinstance(d, MutableSequence):
                 if self.is_link(d[0]):
-                    types.add(MTypeExpression(self.symbol_name2metta(d[0])))
+                    if self.symbol_name2metta(d[0]) not in (MList.SYMBOL, MSet.SYMBOL):
+                        types.add(MTypeExpression(self.symbol_name2metta(d[0])))
                 elif self.is_node(d[0]):
                     types.add(MTypeExpression(self.symbol_name2metta(d[0])))
                     node_name, symbol = d[0:2]
