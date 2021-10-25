@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+import argparse
 from hashlib import sha256
 from typing import Union
+
 from atomese2metta.parser import Parser
 from atomese2metta.translator import Translator
 from atomese2metta.collections import OrderedSet
@@ -82,11 +84,10 @@ class Hasher:
             expression._id = expression_hash
 
 
-def main():
-    filepath = "./Sample.scm"
+def main(filename):
     parser = Parser()
 
-    with open(filepath, "r") as f:
+    with open(filename, "r") as f:
         parsed = parser.parse(f.read())
 
     document = Translator.build(parsed)
@@ -99,4 +100,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser("Hashing MettaDocumen ")
+    parser.add_argument("filename", type=str, help="Input sample .scm filename")
+
+    args = parser.parse_args()
+    main(args.filename)
