@@ -11,12 +11,18 @@ Type = Symbol("Type")
 
 
 class BaseExpression(ABC):
+    SYMBOL = None
+    SALT = None
+
     OPENER = "("
     CLOSER = ")"
 
 
 class Expression(list, BaseExpression):
-    SYMBOL = None
+
+    def __init__(self, iterable, _id=None):
+        self.extend(iterable)
+        self._id = _id
 
     def __str__(self):
         return f'{self.OPENER}{" ".join([str(v) for v in self])}{self.CLOSER}'
@@ -24,10 +30,12 @@ class Expression(list, BaseExpression):
 
 class MList(Expression):
     SYMBOL = "List"
+    SALT = "LIST"
 
 
 class MSet(Expression):
     SYMBOL = "Set"
+    SALT = "SET"
 
     OPENER = "{"
     CLOSER = "}"
