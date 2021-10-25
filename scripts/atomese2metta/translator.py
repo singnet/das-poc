@@ -43,7 +43,7 @@ class MSet(Expression):
     CLOSER = "}"
 
 
-class MTypeExpression(BaseExpression):
+class AtomType(BaseExpression):
     def __init__(self, symbol: Symbol, mtype: Symbol = Type):
         self.symbol: Symbol = symbol
         self.type: Symbol = mtype
@@ -175,15 +175,15 @@ class Translator:
             if isinstance(d, MutableSequence):
                 if self.is_link(d[0]):
                     if self.symbol_name2metta(d[0]) not in (MList.SYMBOL, MSet.SYMBOL):
-                        types.add(MTypeExpression(self.symbol_name2metta(d[0])))
+                        types.add(AtomType(self.symbol_name2metta(d[0])))
                 elif self.is_node(d[0]):
-                    types.add(MTypeExpression(self.symbol_name2metta(d[0])))
+                    types.add(AtomType(self.symbol_name2metta(d[0])))
                     node_name, symbol = d[0:2]
                     node_name = self.symbol_name2metta(node_name)
                     symbol = self.replace_nodesymbol(
                         node_name, self.symbol_name2metta(symbol)
                     )
-                    nodes.add(MTypeExpression(symbol, mtype=node_name))
+                    nodes.add(AtomType(symbol, mtype=node_name))
                 else:
                     if not self.is_ignored_symbol(d[0]):
                         raise InvalidSymbol(d[0])
@@ -194,7 +194,7 @@ class Translator:
 
 
 class MettaDocument:
-    def __init__(self, types: Sequence[MTypeExpression], body: Sequence[Expression]):
+    def __init__(self, types: Sequence[AtomType], body: Sequence[Expression]):
         self.types = types
         self.body = body
 
