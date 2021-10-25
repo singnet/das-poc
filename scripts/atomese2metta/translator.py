@@ -27,6 +27,8 @@ class Expression(list, BaseExpression):
     def __str__(self):
         return f'{self.OPENER}{" ".join([str(v) for v in self])}{self.CLOSER}'
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}({repr(list(self))}, _id={repr(self._id)})'
 
 class MList(Expression):
     SYMBOL = "List"
@@ -54,6 +56,9 @@ class MTypeExpression(BaseExpression):
 
     def __str__(self):
         return f"{self.OPENER}: {self.symbol} {self.type}{self.CLOSER}"
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(_id={repr(self._id)}, symbol={repr(self.symbol)}, mtype={repr(self.type)})"
 
 
 class InvalidSymbol(Exception):
@@ -207,3 +212,6 @@ class MettaDocument:
 
     def __str__(self):
         return "\n".join(str(expr) for expr in self.expressions)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(types={repr(self.types)}, body={repr(self.body)})'
