@@ -67,9 +67,6 @@ class InvalidSymbol(Exception):
 
 
 class Translator:
-    NODE_SUFFIX = r"Node$"
-    LINK_SUFFIX = r"Link$"
-
     _ALLOWED_LINKS = (
         "ContextLink",
         "EvaluationLink",
