@@ -44,12 +44,13 @@ class MSet(Expression):
 
 
 class AtomType(BaseExpression):
-    def __init__(self, symbol: Symbol, mtype: Symbol = Type):
+    def __init__(self, symbol: Symbol, mtype: Symbol = Type, _id=None):
+        self._id = _id
         self.symbol: Symbol = symbol
         self.type: Symbol = mtype
 
     def __hash__(self):
-        return hash(self.symbol + ":" + self.type)
+        return hash(self.symbol + ":" + (self.type or ''))
 
     def __eq__(self, other):
         return self.symbol == other.symbol and self.type == other.type
@@ -99,7 +100,13 @@ class Translator:
     @classmethod
     def build(cls, parsed_expressions):
         translator = cls()
+
+        base_types = OrderedSet()
+        base_types.add(AtomType(symbol='Unknown', mtype=None))
+        base_types.add(AtomType(symbol='Type', mtype=None))
+
         types, nodes = translator.collect_types(parsed_expressions)
+        types = base_types.union(types)
 
         body = translator.translate(parsed_expressions)
         return MettaDocument(types.union(nodes), body)
