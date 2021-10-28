@@ -51,9 +51,6 @@ class Hasher:
             return self.apply_alg(expression)
 
         elif isinstance(expression, Expression):
-            if expression._id is not None:
-                return expression._id
-
             expression_type_hash = self.get_expression_type_hash(expression)
             keys_hashes = [
                 self.get_expression_hash(key, level=level + 1) for key in expression
