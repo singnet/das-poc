@@ -1,7 +1,7 @@
 from abc import ABC
 import re
 from collections.abc import MutableSequence
-from typing import Iterable, Sequence, Union
+from typing import Iterable, Sequence, Union, Optional
 
 from .collections import OrderedSet
 
@@ -51,10 +51,10 @@ class MSet(Expression):
 
 
 class AtomType(BaseExpression):
-    def __init__(self, symbol: Symbol, mtype: Symbol = Type, _id=None):
+    def __init__(self, symbol: Symbol, mtype: Optional[Symbol] = Type, _id=None):
         self._id = _id
         self.symbol: Symbol = symbol
-        self.type: Symbol = mtype
+        self.type: Optional[Symbol] = mtype
 
     def __hash__(self):
         return hash(self.symbol + ":" + (self.type or ''))
