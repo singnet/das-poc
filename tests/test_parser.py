@@ -1,4 +1,4 @@
-from scripts.atomese2metta.parser import Parser, MultiprocessingParser
+from scripts.atomese2metta.parser import Parser, MultiprocessingParser, LexParser
 
 
 def test_when_split_string_to_two_chunks():
@@ -57,3 +57,16 @@ def test_when_given_same_input_normal_parser_and_multiprocessing_parser_should_r
         '(PredicateNode "P2")\n'
     )
     assert Parser().parse(text) == MultiprocessingParser().parse(text)
+
+def test_when_given_same_input_normal_parser_and_lex_parser_should_return_same_result():
+    text= (
+        '(PredicateNode "P1")\n'
+        '(PredicateNode "P2")\n'
+    )
+    assert Parser().parse(text) == LexParser().parse(text)
+
+def test_when_parse_input_single_expression_using_lex_parser_and_lex_parser_should_return_a_list_with_one_expression():
+    text= (
+        '(PredicateNode "P1")\n'
+    )
+    assert LexParser().parse(text) == [['PredicateNode', '"P1"']]
