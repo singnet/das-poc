@@ -101,18 +101,18 @@ class Translator:
 
     IGNORED_SYMBOLS = ("stv",)
 
+    def __init__(self):
+        self.atom_node_types = OrderedSet([AtomType(symbol='Unknown', mtype=None), AtomType(symbol='Type', mtype=None)])
+        self.atom_nodes = OrderedSet()
+
     @classmethod
     def build(cls, parsed_expressions):
         translator = cls()
 
-        base_types = OrderedSet()
-        base_types.add(AtomType(symbol='Unknown', mtype=None))
-        base_types.add(AtomType(symbol='Type', mtype=None))
-
-        types, nodes = translator.collect_types(parsed_expressions)
-        types = base_types.union(types)
-
         body = translator.translate(parsed_expressions)
+        types = translator.atom_node_types
+        nodes = translator.atom_nodes
+
         return MettaDocument(types.union(nodes), body)
 
     @property
