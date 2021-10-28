@@ -5,8 +5,7 @@ from typing import Union
 
 from atomese2metta.parser import Parser
 from atomese2metta.translator import Translator
-from atomese2metta.collections import OrderedSet
-from atomese2metta.translator import MettaDocument, AtomType, Expression, MSet, MList
+from atomese2metta.translator import MettaDocument, AtomType, Expression, MSet
 
 
 class Hasher:
