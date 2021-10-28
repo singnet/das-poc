@@ -20,15 +20,16 @@ class BaseExpression(ABC):
 
 class Expression(list, BaseExpression):
 
-    def __init__(self, iterable, _id=None):
+    def __init__(self, iterable, _id=None, is_root=False):
         self.extend(iterable)
         self._id = _id
+        self.is_root = is_root
 
     def __str__(self):
         return f'{self.OPENER}{" ".join([str(v) for v in self])}{self.CLOSER}'
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({repr(list(self))}, _id={repr(self._id)})'
+        return f'{self.__class__.__name__}({repr(list(self))}, _id={repr(self._id)}, is_root={repr(self.is_root)})'
 
 class MList(Expression):
     SYMBOL = "List"
