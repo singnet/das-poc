@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from collections import defaultdict
 from hashlib import sha256
 from typing import Union
 
@@ -13,6 +14,7 @@ class Hasher:
         self.document = document
         self.algorithm = algorithm
         self.atom_type_dict = dict()
+        self.hash_index = defaultdict(set)
 
     def apply_alg(self, value: str) -> str:
         return self.algorithm(value.encode("utf-8")).digest().hex()
@@ -60,6 +62,7 @@ class Hasher:
             signature = expression_type_hash + "".join(keys_hashes)
             hash_id = self.apply_alg(signature)
             expression._id = hash_id
+            self.add_hash(expression)
             return hash_id
 
         else:
@@ -76,6 +79,9 @@ class Hasher:
         for expression in self.document.body:
             expression_hash = self.get_expression_hash(expression)
             expression._id = expression_hash
+
+    def add_hash(self, value):
+        self.hash_index[value._id].add(value)
 
 
 def main(filename):
