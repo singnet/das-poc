@@ -195,6 +195,7 @@ class MettaDocument:
     @property
     def expressions(self) -> Iterable[BaseExpression]:
         for type in self.types:
+            if type.type is None: continue
             yield type
         for expression in self.body:
             yield expression
