@@ -25,6 +25,12 @@ class Expression(list, BaseExpression):
         self._id = _id
         self.is_root = is_root
 
+    def _signature(self):
+        return f"{(self.SALT or 'EXPR')}:{':'.join(str(hash(e)) for e in self)}"
+
+    def __hash__(self):
+        return hash(self._signature())
+
     def __str__(self):
         return f'{self.OPENER}{" ".join([str(v) for v in self])}{self.CLOSER}'
 
