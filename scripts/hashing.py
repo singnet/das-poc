@@ -75,8 +75,8 @@ class Hasher:
 
     def hash_expressions(self):
         for expression in self.document.body:
-            expression_hash = self.get_expression_hash(expression)
-            expression._id = expression_hash
+            expression.is_root = True
+            self.get_expression_hash(expression)
 
     def add_hash(self, value):
         self.hash_index[value._id].add(value)
