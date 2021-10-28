@@ -12,19 +12,13 @@ class Hasher:
     def __init__(self, document: MettaDocument, algorithm=sha256):
         self.document = document
         self.algorithm = algorithm
+        self.atom_type_dict = dict()
 
     def apply_alg(self, value: str) -> str:
         return self.algorithm(value.encode("utf-8")).digest().hex()
 
     def search_by_name(self, name: str) -> AtomType:
-        return next(
-            (
-                expression
-                for expression in self.document.types
-                if expression.symbol == name
-            ),
-            None,
-        )
+        return self.atom_type_dict.get(name, None)
 
     def get_type_signature(self, atom_type: AtomType) -> str:
         name = atom_type.symbol
@@ -76,6 +70,7 @@ class Hasher:
             value = self.get_type_signature(atom_type)
             _id = self.apply_alg(value)
             atom_type._id = _id
+            self.atom_type_dict[atom_type.symbol] = atom_type
 
     def hash_expressions(self):
         for expression in self.document.body:
