@@ -94,8 +94,6 @@ def main(filename):
     hasher.hash_atom_types()
     hasher.hash_expressions()
 
-    print(repr(document))
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Hashing MettaDocumen ")
