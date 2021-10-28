@@ -74,6 +74,7 @@ class Hasher:
             _id = self.apply_alg(value)
             atom_type._id = _id
             self.atom_type_dict[atom_type.symbol] = atom_type
+            self.add_hash(atom_type)
 
     def hash_expressions(self):
         for expression in self.document.body:
