@@ -153,55 +153,38 @@ class Translator:
         if isinstance(first, MutableSequence):
             return Expression(map(self.translate, expressions))
         elif isinstance(first, Symbol):
-            symbol = self.symbol_name2metta(first)
+            mtype = self.symbol_name2metta(first)
             if self.is_node(first):
                 if len(rest) > 1:
                     raise ValueError(f"Node rest len is greater than 1: {rest}")
-                return self.replace_nodesymbol(symbol, rest[0])
-            elif symbol in (MList.SYMBOL, MSet.SYMBOL):
-                if symbol == MList.SYMBOL:
-                    return MList(map(self.translate, rest))
-                elif symbol == MSet.SYMBOL:
-                    return MSet(map(self.translate, rest))
-            else:
-                return Expression(
-                    [
-                        symbol,
-                        *map(
-                            self.translate,
-                            filter(lambda e: not self.is_ignored_symbol(e[0]), rest),
-                        ),
-                    ]
-                )
-        else:
-            raise InvalidSymbol(expressions)
 
-    def collect_types(self, expressions):
-        types = OrderedSet()
-        nodes = OrderedSet()
-        if isinstance(expressions, Symbol):
-            return types, nodes
+                symbol = self.replace_nodesymbol(mtype, rest[0])
 
-        for d in expressions:
-            if isinstance(d, MutableSequence):
-                if self.is_link(d[0]):
-                    if self.symbol_name2metta(d[0]) not in (MList.SYMBOL, MSet.SYMBOL):
-                        types.add(AtomType(self.symbol_name2metta(d[0])))
-                elif self.is_node(d[0]):
-                    types.add(AtomType(self.symbol_name2metta(d[0])))
-                    node_name, symbol = d[0:2]
-                    node_name = self.symbol_name2metta(node_name)
-                    symbol = self.replace_nodesymbol(
-                        node_name, self.symbol_name2metta(symbol)
-                    )
-                    nodes.add(AtomType(symbol, mtype=node_name))
+                self.atom_node_types.add(AtomType(mtype))
+                self.atom_nodes.add(AtomType(symbol, mtype=mtype))
+
+                return symbol
+            elif self.is_link(first):
+                if mtype in (MList.SYMBOL, MSet.SYMBOL):
+                    if mtype == MList.SYMBOL:
+                        return MList(map(self.translate, rest))
+                    elif mtype == MSet.SYMBOL:
+                        return MSet(map(self.translate, rest))
                 else:
-                    if not self.is_ignored_symbol(d[0]):
-                        raise InvalidSymbol(d[0])
-                types_, nodes_ = self.collect_types(d[1:])
-                types.update(types_)
-                nodes.update(nodes_)
-        return types, nodes
+                    self.atom_node_types.add(AtomType(mtype))
+                    return Expression(
+                        [
+                            mtype,
+                            *map(
+                                self.translate,
+                                filter(lambda e: not self.is_ignored_symbol(e[0]), rest),
+                            ),
+                        ]
+                    )
+            else:
+                raise InvalidSymbol(first)
+        else:
+            raise InvalidSymbol(first)
 
 
 class MettaDocument:
