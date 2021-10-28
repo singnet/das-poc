@@ -210,3 +210,11 @@ class MettaDocument:
 
     def __repr__(self):
         return f'{self.__class__.__name__}(types={repr(self.types)}, body={repr(self.body)})'
+
+    def __add__(self, other):
+        types = self.types.union(other.types)
+        body = self.body + other.body
+        return self.__class__(types=types, body=body)
+
+    def __iadd__(self, other):
+        return self + other
