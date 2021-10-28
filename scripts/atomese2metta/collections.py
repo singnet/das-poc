@@ -3,6 +3,11 @@ from collections.abc import MutableSet
 
 
 class OrderedSet(OrderedDict, MutableSet):
+    def __init__(self, iterable=None):
+        super().__init__()
+        if iterable is not None:
+            self.update(iterable)
+
     def update(self, *args, **kwargs):
         if kwargs:
             raise TypeError("update() takes no keyword arguments")
