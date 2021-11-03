@@ -1,7 +1,7 @@
 from abc import ABC
 import re
 from collections.abc import MutableSequence
-from typing import Iterable, Sequence, Union
+from typing import Iterable, Sequence, Union, Optional
 
 from .collections import OrderedSet
 
@@ -11,35 +11,53 @@ Type = Symbol("Type")
 
 
 class BaseExpression(ABC):
+    SYMBOL = None
+    SALT = None
+
     OPENER = "("
     CLOSER = ")"
 
 
 class Expression(list, BaseExpression):
-    SYMBOL = None
+
+    def __init__(self, iterable, _id=None, is_root=False):
+        self.extend(iterable)
+        self._id = _id
+        self.is_root = is_root
+
+    def _signature(self):
+        return f"{(self.SALT or 'EXPR')}:{':'.join(str(hash(e)) for e in self)}"
+
+    def __hash__(self):
+        return hash(self._signature())
 
     def __str__(self):
         return f'{self.OPENER}{" ".join([str(v) for v in self])}{self.CLOSER}'
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}({repr(list(self))}, _id={repr(self._id)}, is_root={repr(self.is_root)})'
 
 class MList(Expression):
     SYMBOL = "List"
+    SALT = "LIST"
 
 
 class MSet(Expression):
     SYMBOL = "Set"
+    SALT = "SET"
 
     OPENER = "{"
     CLOSER = "}"
 
 
-class MTypeExpression(BaseExpression):
-    def __init__(self, symbol: Symbol, mtype: Symbol = Type):
+class AtomType(BaseExpression):
+    def __init__(self, symbol: Symbol, mtype: Optional[Symbol] = Type, _id=None):
+        self._id = _id
         self.symbol: Symbol = symbol
-        self.type: Symbol = mtype
+        self.type: Optional[Symbol] = mtype
 
     def __hash__(self):
-        return hash(self.symbol + ":" + self.type)
+        return hash(self.symbol + ":" + (self.type or ''))
 
     def __eq__(self, other):
         return self.symbol == other.symbol and self.type == other.type
@@ -47,15 +65,15 @@ class MTypeExpression(BaseExpression):
     def __str__(self):
         return f"{self.OPENER}: {self.symbol} {self.type}{self.CLOSER}"
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(_id={repr(self._id)}, symbol={repr(self.symbol)}, mtype={repr(self.type)})"
+
 
 class InvalidSymbol(Exception):
     pass
 
 
 class Translator:
-    NODE_SUFFIX = r"Node$"
-    LINK_SUFFIX = r"Link$"
-
     _ALLOWED_LINKS = (
         "ContextLink",
         "EvaluationLink",
@@ -83,12 +101,18 @@ class Translator:
 
     IGNORED_SYMBOLS = ("stv",)
 
+    def __init__(self):
+        self.atom_node_types = OrderedSet([AtomType(symbol='Unknown', mtype=None), AtomType(symbol='Type', mtype=None)])
+        self.atom_nodes = OrderedSet()
+
     @classmethod
     def build(cls, parsed_expressions):
         translator = cls()
-        types, nodes = translator.collect_types(parsed_expressions)
 
         body = translator.translate(parsed_expressions)
+        types = translator.atom_node_types
+        nodes = translator.atom_nodes
+
         return MettaDocument(types.union(nodes), body)
 
     @property
@@ -129,65 +153,49 @@ class Translator:
         if isinstance(first, MutableSequence):
             return Expression(map(self.translate, expressions))
         elif isinstance(first, Symbol):
-            symbol = self.symbol_name2metta(first)
+            mtype = self.symbol_name2metta(first)
             if self.is_node(first):
                 if len(rest) > 1:
                     raise ValueError(f"Node rest len is greater than 1: {rest}")
-                return self.replace_nodesymbol(symbol, rest[0])
-            elif symbol in (MList.SYMBOL, MSet.SYMBOL):
-                if symbol == MList.SYMBOL:
-                    return MList(map(self.translate, rest))
-                elif symbol == MSet.SYMBOL:
-                    return MSet(map(self.translate, rest))
-            else:
-                return Expression(
-                    [
-                        symbol,
-                        *map(
-                            self.translate,
-                            filter(lambda e: not self.is_ignored_symbol(e[0]), rest),
-                        ),
-                    ]
-                )
-        else:
-            raise InvalidSymbol(expressions)
 
-    def collect_types(self, expressions):
-        types = OrderedSet()
-        nodes = OrderedSet()
-        if isinstance(expressions, Symbol):
-            return types, nodes
+                symbol = self.replace_nodesymbol(mtype, rest[0])
 
-        for d in expressions:
-            if isinstance(d, MutableSequence):
-                if self.is_link(d[0]):
-                    if self.symbol_name2metta(d[0]) not in (MList.SYMBOL, MSet.SYMBOL):
-                        types.add(MTypeExpression(self.symbol_name2metta(d[0])))
-                elif self.is_node(d[0]):
-                    types.add(MTypeExpression(self.symbol_name2metta(d[0])))
-                    node_name, symbol = d[0:2]
-                    node_name = self.symbol_name2metta(node_name)
-                    symbol = self.replace_nodesymbol(
-                        node_name, self.symbol_name2metta(symbol)
-                    )
-                    nodes.add(MTypeExpression(symbol, mtype=node_name))
+                self.atom_node_types.add(AtomType(mtype))
+                self.atom_nodes.add(AtomType(symbol, mtype=mtype))
+
+                return symbol
+            elif self.is_link(first):
+                if mtype in (MList.SYMBOL, MSet.SYMBOL):
+                    if mtype == MList.SYMBOL:
+                        return MList(map(self.translate, rest))
+                    elif mtype == MSet.SYMBOL:
+                        return MSet(map(self.translate, rest))
                 else:
-                    if not self.is_ignored_symbol(d[0]):
-                        raise InvalidSymbol(d[0])
-                types_, nodes_ = self.collect_types(d[1:])
-                types.update(types_)
-                nodes.update(nodes_)
-        return types, nodes
+                    self.atom_node_types.add(AtomType(mtype))
+                    return Expression(
+                        [
+                            mtype,
+                            *map(
+                                self.translate,
+                                filter(lambda e: not self.is_ignored_symbol(e[0]), rest),
+                            ),
+                        ]
+                    )
+            else:
+                raise InvalidSymbol(first)
+        else:
+            raise InvalidSymbol(first)
 
 
 class MettaDocument:
-    def __init__(self, types: Sequence[MTypeExpression], body: Sequence[Expression]):
+    def __init__(self, types: Sequence[AtomType], body: Sequence[Expression]):
         self.types = types
         self.body = body
 
     @property
     def expressions(self) -> Iterable[BaseExpression]:
         for type in self.types:
+            if type.type is None: continue
             yield type
         for expression in self.body:
             yield expression
@@ -199,3 +207,14 @@ class MettaDocument:
 
     def __str__(self):
         return "\n".join(str(expr) for expr in self.expressions)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(types={repr(self.types)}, body={repr(self.body)})'
+
+    def __add__(self, other):
+        types = self.types.union(other.types)
+        body = self.body + other.body
+        return self.__class__(types=types, body=body)
+
+    def __iadd__(self, other):
+        return self + other

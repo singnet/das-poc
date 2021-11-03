@@ -8,6 +8,8 @@ from typing import Iterator, Optional, Union
 
 from pyparsing import OneOrMore, nestedExpr
 
+from lex import Lex
+
 
 class Parser:
     @staticmethod
@@ -16,6 +18,32 @@ class Parser:
 
     def parse(self, text):
         return self._parse(text)
+
+
+class LexParser(Parser):
+    @staticmethod
+    def _parse(text):
+        lex = Lex()
+        lex.build()
+
+        list_stack = []
+        current = []
+
+        for (_, token_type, value) in lex.get_tokens(text):
+            if token_type == "LPAREN":
+                _pointer = []
+                current.append(_pointer)
+                list_stack.append(current)
+                current = _pointer
+            elif token_type == "RPAREN":
+                current = list_stack.pop()
+            else:
+                current.append(value)
+
+        if (len_list_stack := len(list_stack)) > 0:
+            raise ValueError(f"list_stack length invalid: {len_list_stack}")
+
+        return current
 
 
 class MultiprocessingParser(Parser):
