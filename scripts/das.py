@@ -76,11 +76,10 @@ class DAS:
         data: list[dict] = [self.expression_to_dict(expr) for expr in OrderedSet(self.metta_doc.body)]
         self.insert_many(collection, data)
 
-    @staticmethod
-    def atom_type_to_dict(atom_type: AtomType) -> dict:
+    def atom_type_to_dict(self, atom_type: AtomType) -> dict:
         return {
             '_id': atom_type._id,
-            'type': atom_type.type,
+            'type': self.retrieve_id(atom_type.type) if atom_type.type is not None else None,
             'name': atom_type.symbol,
         }
 
@@ -130,7 +129,7 @@ def main(filenames):
     metta = mettas[0] 
     if len(mettas) > 1:
         metta = sum(mettas[1:], start=metta)
-    
+
     logger.info("Hashing data")
     hasher = Hasher(metta)
     hasher.hash_atom_types()
