@@ -30,30 +30,33 @@ def evaluate_hash(hash_dict: dict, output_file):
     expressions_root = 0
     expressions_non_root = 0
     hash_count = 0
+    all_hashes = 0
 
     for key, value in hash_dict.items():
         hash_count += 1
+        all_hashes += len(value)
+        value = set(value)
         if len(value) > 1:
             collisions.append((key, value))
             print("Collision:", key, value)
-        else:
-            expr = value.copy().pop()
-            with open(output_file, 'a') as f:
-                f.write(key)
-                f.write(' ')
-                f.write(str(expr))
-                f.write('\n')
 
-            if isinstance(expr, AtomType):
-                if expr.type in (None, Type):
-                    node_types += 1
-                else:
-                    nodes += 1
+        expr = value.pop()
+        with open(output_file, 'a') as f:
+            f.write(key)
+            f.write(' ')
+            f.write(str(expr))
+            f.write('\n')
+
+        if isinstance(expr, AtomType):
+            if expr.type in (None, Type):
+                node_types += 1
             else:
-                if expr.is_root:
-                    expressions_root += 1
-                else:
-                    expressions_non_root += 1
+                nodes += 1
+        else:
+            if expr.is_root:
+                expressions_root += 1
+            else:
+                expressions_non_root += 1
 
     print("1 - Collisions", len(collisions))
     print("2 - NodeTypes:", node_types)
@@ -61,6 +64,7 @@ def evaluate_hash(hash_dict: dict, output_file):
     print("4 - Expressions (is_root=True):", expressions_root)
     print("5 - Subexpressions (is_root=False):", expressions_non_root)
     print("6 - Hash Count:", hash_count)
+    print("7 - Including duplicated: ", all_hashes)
 
 
 def main(filenames, output_name=None, output_dir='./'):

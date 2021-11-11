@@ -14,7 +14,7 @@ class Hasher:
         self.document = document
         self.algorithm = algorithm
         self.atom_type_dict = dict()
-        self.hash_index = defaultdict(set)
+        self.hash_index = defaultdict(list)
 
     def apply_alg(self, value: str) -> str:
         return self.algorithm(value.encode("utf-8")).digest().hex()
@@ -79,7 +79,7 @@ class Hasher:
             self.get_expression_hash(expression)
 
     def add_hash(self, value):
-        self.hash_index[value._id].add(value)
+        self.hash_index[value._id].append(value)
 
 
 def main(filename):

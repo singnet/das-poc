@@ -110,10 +110,10 @@ class Translator:
         translator = cls()
 
         body = translator.translate(parsed_expressions)
-        types = translator.atom_node_types
+        node_types = translator.atom_node_types
         nodes = translator.atom_nodes
 
-        return MettaDocument(types.union(nodes), body)
+        return MettaDocument(node_types=node_types, nodes=nodes, body=body)
 
     @property
     def ALLOWED_LINKS(self):
@@ -188,17 +188,28 @@ class Translator:
 
 
 class MettaDocument:
-    def __init__(self, types: Sequence[AtomType], body: Sequence[Expression]):
-        self.types = types
+    def __init__(self, node_types: Sequence[AtomType], nodes: Sequence[AtomType], body: Sequence[Expression]):
+        self.node_types = node_types
+        self.nodes = nodes
         self.body = body
 
     @property
-    def expressions(self) -> Iterable[BaseExpression]:
-        for type in self.types:
-            if type.type is None: continue
-            yield type
+    def expressions(self, skip_base_types=True) -> Iterable[BaseExpression]:
+        for node_type in self.node_types:
+            if node_type.type is None and skip_base_types: continue
+            yield node_type
+        for node in self.nodes:
+            yield node
         for expression in self.body:
             yield expression
+
+    @property
+    def types(self):
+        for node_type in self.node_types:
+            yield node_type
+        for node in self.nodes:
+            yield node
+
 
     def write_to(self, file):
         for line in self.expressions:
@@ -212,9 +223,10 @@ class MettaDocument:
         return f'{self.__class__.__name__}(types={repr(self.types)}, body={repr(self.body)})'
 
     def __add__(self, other):
-        types = self.types.union(other.types)
+        node_types = self.node_types.union(other.node_types)
+        nodes = self.nodes.union(other.nodes)
         body = self.body + other.body
-        return self.__class__(types=types, body=body)
+        return self.__class__(node_types=node_types, nodes=nodes, body=body)
 
     def __iadd__(self, other):
         return self + other
