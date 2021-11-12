@@ -80,24 +80,3 @@ class Hasher:
 
     def add_hash(self, value):
         self.hash_index[value._id].append(value)
-
-
-def main(filename):
-    parser = Parser()
-
-    with open(filename, "r") as f:
-        parsed = parser.parse(f.read())
-
-    document = Translator.build(parsed)
-
-    hasher = Hasher(document)
-    hasher.hash_atom_types()
-    hasher.hash_expressions()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Hashing MettaDocumen ")
-    parser.add_argument("filename", type=str, help="Input sample .scm filename")
-
-    args = parser.parse_args()
-    main(args.filename)
