@@ -1,3 +1,5 @@
+import argparse
+
 from typing import Any, List, Union
 
 from atomese2metta.translator import AtomType, Expression, MSet, MettaDocument
@@ -109,3 +111,19 @@ class MettaParser:
     @classmethod
     def parse(cls, text: str):
         return cls()._parse(text)
+
+
+def main(filename):
+    with open(filename, 'r') as f:
+        text = f.read()
+
+    for type_name, expression in MettaParser.parse(text):
+        print(type_name, expression)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser("Parse MeTTa file")
+    parser.add_argument("filename", type=str, help="Input .metta filename")
+
+    args = parser.parse_args()
+    main(args.filename)
