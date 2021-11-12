@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-import argparse
 from collections import defaultdict
 from hashlib import sha256
 from typing import Union
 
-from atomese2metta.parser import Parser
-from atomese2metta.translator import Translator
-from atomese2metta.translator import MettaDocument, AtomType, Expression, MSet
+from atomese2metta.translator import AtomType, Expression, MSet
 
 
 class Hasher:
