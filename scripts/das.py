@@ -60,8 +60,6 @@ class DAS:
         data_len = len(data)
         while i < data_len:
             data_ = data[i:min(i + step, data_len)]
-            from pprint import pformat
-            logger.debug(pformat(data_))
             collection.insert_many(data_)
             i += step
 
