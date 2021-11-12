@@ -43,6 +43,12 @@ class DAS:
             self.LINKS,
         ]
 
+    def links_collection(self, expression: Expression) -> Collection:
+        order = len(expression)
+        if hasattr(self, f"LINKS_{order}"):
+            return self.db[getattr(self, f"LINKS_{order}")]
+        return self.db[self.LINKS]
+
     @staticmethod
     def insert_many(collection: Collection, data: list[dict], step: int = 1000):
         logger.info(f"Collection: {collection.name}")
