@@ -34,8 +34,8 @@ class DAS:
     LINKS_2 = 'links_2'
     LINKS_3 = 'links_3'
 
-    def __init__(self, metta_doc: MettaDocument, hasher: Hasher):
-        self.metta_doc = metta_doc
+    def __init__(self, db: Database, hasher: Hasher):
+        self.db = db
         self.hasher = hasher
         self.collections_name = [
             self.NODE_TYPES,
@@ -56,9 +56,9 @@ class DAS:
             collection.insert_many(data_)
             i += step
 
-    def clean_collections(self, db: Database):
+    def clean_collections(self):
         for collection_name in self.collections_name:
-            collection = db[collection_name]
+            collection = self.db[collection_name]
             collection.bulk_write([ DeleteMany({}), ])
 
     def insert_node_types(self, db: Database):
