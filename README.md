@@ -63,7 +63,7 @@ Links_3: [
     {
 	    _id: 11,
 	    is_root: false,
-	    type: [Evaluation, Predicate, {Reactome, Concept}],
+	    type: [Type, Predicate, {Reactome, Concept}],
 	    key1: 3,
 	    key2: 7,
 	    key3: 10,
@@ -71,7 +71,7 @@ Links_3: [
     {
 	    _id: 12,
 	    is_root: true,
-	    type: [Evaluation, Predicate, Evaluation],
+	    type: [Type, Predicate, [Type, Predicate, {Reactome, Concept}]],
 	    key1: 3,
 	    key2: 7,
 	    key3: 11,
