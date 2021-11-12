@@ -63,7 +63,7 @@ Links_3: [
     {
 	    _id: 11,
 	    is_root: true,
-	    type: [Predicate, {Reactome, Concept}],
+	    type: [Type, Predicate, {Reactome, Concept}],
 	    key1: 3,
 	    key2: 7,
 	    key3: 10,
