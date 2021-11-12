@@ -1,3 +1,9 @@
+from typing import Any, List, Union
+
+from atomese2metta.translator import AtomType, Expression, MSet, MettaDocument
+from atomese2metta.collections import OrderedSet
+from hashing import Hasher
+
 from ply.lex import lex
 
 
@@ -50,3 +56,56 @@ class MettaLex(object):
             if not tok:
                 break
             yield tok.lexpos, tok.type, tok.value
+
+
+class MettaParser:
+    LEX_CLASS = MettaLex
+    HASHER_CLASS = Hasher
+    NODE_TYPE = 'NODE_TYPE'
+    NODE = 'NODE'
+    EXPRESSION = 'EXPRESSION'
+
+    def __init__(self):
+        self.lex = self.LEX_CLASS()
+        self.lex.build()
+
+    def _parse(self, text: str):
+        list_stack: List[Any] = list()
+        current: List[Union[AtomType, Expression]] = list()
+
+        yield self.NODE_TYPE, AtomType(symbol='Unknown', mtype=None)
+        yield self.NODE_TYPE, AtomType(symbol='Type', mtype=None)
+
+        for (_, token_type, value) in self.lex.get_tokens(text):
+            if token_type in ("LPAREN", "LCBRACKET"):
+                pointer = []
+                current.append(pointer)
+                list_stack.append(current)
+                current = pointer
+            elif token_type in ("RPAREN", "RCBRACKET"):
+                current = list_stack.pop()
+                pointer = current.pop()
+                if pointer[0] == ":":
+                    atom_type = AtomType(*pointer[1:])
+                    if atom_type.type == "Type":
+                        yield self.NODE_TYPE, atom_type
+                    else:
+                        yield self.NODE, atom_type
+                else:
+                    if token_type == "RPAREN":
+                        expression = Expression(pointer)
+                    else:
+                        expression = MSet(pointer)
+
+                    if len(list_stack) == 0:
+                        expression.is_root = True
+                    else:
+                        current.append(expression)
+
+                    yield self.EXPRESSION, expression
+            else:
+                current.append(value)
+
+    @classmethod
+    def parse(cls, text: str):
+        return cls()._parse(text)
