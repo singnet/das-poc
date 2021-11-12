@@ -68,20 +68,17 @@ class DAS:
             collection = self.db[collection_name]
             collection.bulk_write([ DeleteMany({}), ])
 
-    def insert_node_types(self, db: Database):
-        collection: Collection = db.node_types
-        data: list[dict] = [self.atom_type_to_dict(node_type) for node_type in self.metta_doc.node_types]
-        self.insert_many(collection, data)
+    def insert_node_type(self, node_type: AtomType) -> InsertOneResult:
+        collection: Collection = self.db[self.NODE_TYPES]
+        return collection.insert_one(self.atom_type_to_dict(node_type))
 
-    def insert_nodes(self, db: Database):
-        collection: Collection = db.nodes
-        data: list[dict] = [self.atom_type_to_dict(node) for node in self.metta_doc.nodes]
-        self.insert_many(collection, data)
+    def insert_node(self, node: AtomType) -> InsertOneResult:
+        collection: Collection = self.db[self.NODES]
+        return collection.insert_one(self.atom_type_to_dict(node))
 
-    def insert_links(self, db: Database):
-        collection: Collection = db.links
-        data: list[dict] = [self.expression_to_dict(expr) for expr in OrderedSet(self.metta_doc.body)]
-        self.insert_many(collection, data)
+    def insert_link(self, link: Expression) -> InsertOneResult:
+        collection = self.links_collection(link)
+        return collection.insert_one(self.expression_to_dict(link))
 
     def atom_type_to_dict(self, atom_type: AtomType) -> dict:
         return {
