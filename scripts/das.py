@@ -110,7 +110,7 @@ class DAS:
         expression_type = []
         for e in expression:
             if isinstance(e, str):
-                expression_type.append(self.hasher.search_by_name(e).type)
+                expression_type.append(self.hasher.get_type(e)._id)
             elif isinstance(e, Expression):
                 expression_type.append(self.retrieve_expression_type(e))
             else:
