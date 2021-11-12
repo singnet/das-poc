@@ -5,11 +5,14 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
 from bson import ObjectId
+from pymongo.errors import DuplicateKeyError
 from pymongo.operations import DeleteMany
+from pymongo.results import InsertOneResult
 
 from atomese2metta.parser import LexParser
 from atomese2metta.translator import Translator, MettaDocument, AtomType, Expression
 from atomese2metta.collections import OrderedSet
+from metta_lex import MettaParser
 from hashing import Hasher
 
 
@@ -120,48 +123,39 @@ class DAS:
 
         return expression_type
 
-def main(filenames):
-    mettas = []
-
-    for file_path in filenames:
-        logger.info(f"Processing: {file_path}")
-        parser = LexParser()
-
-        with open(file_path, "r") as f:
-            parsed_expressions = parser.parse(f.read())
-
-        mettas.append(Translator.build(parsed_expressions))
-
-    metta = mettas[0] 
-    if len(mettas) > 1:
-        metta = sum(mettas[1:], start=metta)
-
-    logger.info("Hashing data")
-    hasher = Hasher(metta)
-    hasher.hash_atom_types()
-    hasher.hash_expressions()
-
-    from parser import evaluate_hash
-
-    evaluate_hash(hasher.hash_index, '/tmp/hash.txt')
-
-    das = DAS(metta, hasher)
-
-    logger.info("Inserting data")
+def main(filename, database_name='das'):
     client = MongoClient()
-    db = client.das
 
-    das.clean_collections(db)
+    with open(filename, 'r') as f:
+        text = f.read()
 
-    das.insert_node_types(db)
-    das.insert_nodes(db)
-    das.insert_links(db)
+    hasher = Hasher()
+    das = DAS(client[database_name], hasher)
+
+    for type_name, expression in MettaParser.parse(text):
+        if type_name == MettaParser.EXPRESSION:
+            hasher.hash_expression(expression)
+            logger.debug(f"{type_name} {expression}")
+            try:
+                das.insert_link(expression)
+            except DuplicateKeyError:
+                logger.error(f"Duplicated: {expression}")
+        else:
+            hasher.hash_atom_type(expression)
+            try:
+                if type_name == MettaParser.NODE_TYPE:
+                    das.insert_node_type(expression)
+                elif type_name == MettaParser.NODE:
+                    das.insert_node(expression)
+            except DuplicateKeyError:
+                logger.error(f"Duplicated: {expression}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Insert data into DAS")
 
-    parser.add_argument('filenames', type=str, nargs='+')
+    parser.add_argument('filename', type=str)
+    parser.add_argument('--database', '-d', type=str, default='das', metavar='NAME', dest='database_name')
     args = parser.parse_args()
 
-    main(args.filenames)
+    main(**vars(args))
