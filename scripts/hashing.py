@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 from collections import defaultdict
-from hashlib import sha256
+from hashlib import md5
 from typing import Union
 
 from atomese2metta.translator import AtomType, Expression, MSet
 
 
 class Hasher:
-    def __init__(self, document: MettaDocument, algorithm=sha256):
-        self.document = document
+    def __init__(self, algorithm=md5):
         self.algorithm = algorithm
         self.atom_type_dict = dict()
         self.hash_index = defaultdict(list)
