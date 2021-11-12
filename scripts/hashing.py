@@ -64,18 +64,15 @@ class Hasher:
         else:
             raise ValueError(f"InvalidSymbol: {expression}")
 
-    def hash_atom_types(self):
-        for atom_type in self.document.types:
-            value = self.get_type_signature(atom_type)
-            _id = self.apply_alg(value)
-            atom_type._id = _id
-            self.atom_type_dict[atom_type.symbol] = atom_type
-            self.add_hash(atom_type)
+    def hash_atom_type(self, atom_type):
+        value = self.get_type_signature(atom_type)
+        _id = self.apply_alg(value)
+        atom_type._id = _id
+        self.atom_type_dict[atom_type.symbol] = atom_type
+        self.add_hash(atom_type)
 
-    def hash_expressions(self):
-        for expression in self.document.body:
-            expression.is_root = True
-            self.get_expression_hash(expression)
+    def hash_expression(self, expression):
+        self.get_expression_hash(expression)
 
     def add_hash(self, value):
         self.hash_index[value._id].append(value)
