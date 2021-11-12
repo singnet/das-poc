@@ -18,6 +18,9 @@ class Hasher:
     def search_by_name(self, name: str) -> AtomType:
         return self.atom_type_dict.get(name, None)
 
+    def get_type(self, name: str) -> AtomType:
+        return self.search_by_name(self.search_by_name(name).type)
+
     def get_type_signature(self, atom_type: AtomType) -> str:
         name = atom_type.symbol
         _atom_type = self.search_by_name(atom_type.type)
@@ -32,7 +35,7 @@ class Hasher:
             if isinstance(e, Expression):
                 ids.append(self.get_expression_type_hash(e))
             elif isinstance(e, str):
-                ids.append(self.search_by_name(e)._id)
+                ids.append(self.get_type(e)._id)
             else:
                 raise ValueError(e)
 
@@ -44,7 +47,7 @@ class Hasher:
 
     def get_expression_hash(self, expression: Union[Expression, str], level=0) -> str:
         if isinstance(expression, str):
-            return self.apply_alg(expression)
+            return self.search_by_name(expression)._id
 
         elif isinstance(expression, Expression):
             expression_type_hash = self.get_expression_type_hash(expression)
