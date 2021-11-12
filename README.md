@@ -22,7 +22,7 @@ As a simple example, we have the following expression:
 	    Evaluation 
 	    "Predicate:has_name" 
 	    {"Reactome:R-HSA-164843" "Concept:2-LTR circle formation"}
-    )
+	)
 )
 ```
 
@@ -62,11 +62,19 @@ Links_2: [
 Links_3: [
     {
 	    _id: 11,
-	    is_root: true,
-	    type: [Predicate, {Reactome, Concept}],
+	    is_root: false,
+	    type: [Evaluation, Predicate, {Reactome, Concept}],
 	    key1: 3,
 	    key2: 7,
 	    key3: 10,
+    },
+    {
+	    _id: 12,
+	    is_root: true,
+	    type: [Evaluation, Predicate, Evaluation],
+	    key1: 3,
+	    key2: 7,
+	    key3: 11,
     },
 ]
 ```
@@ -76,7 +84,8 @@ As an example of how `sha256` will be used here:
 ```
     _id: XX ->  sha256(sha256(type), sha256(key1), sha256(key2), ...)
     _id: 10 ->  sha256(sha256(set_salt, 5, 6), 8, 9)
-    _id: 11 ->  sha256(sha256(4, sha256(set_salt, 5, 6)), 3, 7, 10)
+    _id: 11 ->  sha256(sha256(3, 4, sha256(set_salt, 5, 6)), 3, 7, 10)
+    _id: 12 ->  sha256(sha256(3, 4, 3), 3, 7, 11)
 ```
 
 Notes:
@@ -85,6 +94,7 @@ Notes:
 
 #### Redis:
 
+---- TODO (also fix bellow items) ----
 ```
 IncomingSet:
 {
