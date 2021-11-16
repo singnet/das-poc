@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
-import argparse
 from collections import defaultdict
-from hashlib import sha256
+from hashlib import md5
 from typing import Union
 
-from atomese2metta.parser import Parser
-from atomese2metta.translator import Translator
-from atomese2metta.translator import MettaDocument, AtomType, Expression, MSet
+from atomese2metta.translator import AtomType, Expression, MSet
 
 
 class Hasher:
-    def __init__(self, document: MettaDocument, algorithm=sha256):
-        self.document = document
+    def __init__(self, algorithm=md5):
         self.algorithm = algorithm
         self.atom_type_dict = dict()
         self.hash_index = defaultdict(list)
@@ -21,6 +17,9 @@ class Hasher:
 
     def search_by_name(self, name: str) -> AtomType:
         return self.atom_type_dict.get(name, None)
+
+    def get_type(self, name: str) -> AtomType:
+        return self.search_by_name(self.search_by_name(name).type)
 
     def get_type_signature(self, atom_type: AtomType) -> str:
         name = atom_type.symbol
@@ -36,7 +35,7 @@ class Hasher:
             if isinstance(e, Expression):
                 ids.append(self.get_expression_type_hash(e))
             elif isinstance(e, str):
-                ids.append(self.search_by_name(e)._id)
+                ids.append(self.get_type(e)._id)
             else:
                 raise ValueError(e)
 
@@ -48,7 +47,7 @@ class Hasher:
 
     def get_expression_hash(self, expression: Union[Expression, str], level=0) -> str:
         if isinstance(expression, str):
-            return self.apply_alg(expression)
+            return self.search_by_name(expression)._id
 
         elif isinstance(expression, Expression):
             expression_type_hash = self.get_expression_type_hash(expression)
@@ -65,39 +64,15 @@ class Hasher:
         else:
             raise ValueError(f"InvalidSymbol: {expression}")
 
-    def hash_atom_types(self):
-        for atom_type in self.document.types:
-            value = self.get_type_signature(atom_type)
-            _id = self.apply_alg(value)
-            atom_type._id = _id
-            self.atom_type_dict[atom_type.symbol] = atom_type
-            self.add_hash(atom_type)
+    def hash_atom_type(self, atom_type):
+        value = self.get_type_signature(atom_type)
+        _id = self.apply_alg(value)
+        atom_type._id = _id
+        self.atom_type_dict[atom_type.symbol] = atom_type
+        self.add_hash(atom_type)
 
-    def hash_expressions(self):
-        for expression in self.document.body:
-            expression.is_root = True
-            self.get_expression_hash(expression)
+    def hash_expression(self, expression):
+        self.get_expression_hash(expression)
 
     def add_hash(self, value):
         self.hash_index[value._id].append(value)
-
-
-def main(filename):
-    parser = Parser()
-
-    with open(filename, "r") as f:
-        parsed = parser.parse(f.read())
-
-    document = Translator.build(parsed)
-
-    hasher = Hasher(document)
-    hasher.hash_atom_types()
-    hasher.hash_expressions()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Hashing MettaDocumen ")
-    parser.add_argument("filename", type=str, help="Input sample .scm filename")
-
-    args = parser.parse_args()
-    main(args.filename)

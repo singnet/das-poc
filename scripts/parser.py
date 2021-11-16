@@ -6,7 +6,7 @@ from os import path
 from pathlib import Path
 
 from atomese2metta.parser import LexParser, MultiprocessingParser
-from atomese2metta.translator import Translator, AtomType, Type
+from atomese2metta.translator import AtomType, Translator, Type
 from hashing import Hasher
 
 
@@ -23,7 +23,7 @@ def human_time(delta) -> str:
     else:
         return "{:d}:{:02d} minute(s)".format(seconds // 60, seconds % 60)
 
-def evaluate_hash(hash_dict: dict, output_file):
+def evaluate_hash(hash_dict: dict, output_file: str = ''):
     collisions = []
     node_types = 0
     nodes = 0
@@ -110,7 +110,7 @@ def main(filenames, output_name=None, output_dir='./'):
     print(f"Took {human_time((datetime.now() - d4))} to hash document.")
 
     output_file_path = path.join(output_dir, output_name)
-    evaluate_hash(hasher.hash_index, output_file_path+'i')
+    #  evaluate_hash(hasher.hash_index)
 
     with open(output_file_path, "w") as f:
         metta.write_to(f)
