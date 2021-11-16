@@ -15,7 +15,7 @@ If this is the first time this command is executed two containers was created:
 - `das_mongo_1`
 - `das_scripts_1`
 
-At this moment is possible run scripts in `scripts` directory.
+At this moment is possible run scripts in `scripts` directory. The mongo database instance is available on port `27017`.
 
 
 ### `das.py`
