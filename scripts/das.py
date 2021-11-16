@@ -4,7 +4,6 @@ import logging
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
-from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 from pymongo.operations import DeleteMany
 from pymongo.results import InsertOneResult
