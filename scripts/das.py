@@ -1,3 +1,4 @@
+import os
 import argparse
 import logging
 
@@ -117,15 +118,16 @@ class DAS:
 
         return expression_type
 
-def main(filename, database_name='das'):
-    logger.info(f"Loading file: {filename}")
-    client = MongoClient()
 
-    with open(filename, 'r') as f:
+def main(filename, mongo_hostname, mongo_port, mongo_database):
+    logger.info(f"Loading file: {filename}")
+    with open(filename, "r") as f:
         text = f.read()
 
     hasher = Hasher()
-    das = DAS(client[database_name], hasher)
+
+    client = MongoClient(host=mongo_hostname, port=mongo_port)
+    das = DAS(client[mongo_database], hasher)
 
     for type_name, expression in MettaParser.parse(text):
         logger.debug(f"{type_name} {expression}")
@@ -147,10 +149,38 @@ def main(filename, database_name='das'):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Insert data into DAS")
+    parser = argparse.ArgumentParser(
+        "Load MeTTa data into DAS", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
-    parser.add_argument('filename', type=str)
-    parser.add_argument('--database', '-d', type=str, default='das', metavar='NAME', dest='database_name')
+    parser.add_argument("filename", type=str, help="file path to load data from")
+    parser.add_argument(
+        "--hostname",
+        "-H",
+        type=str,
+        default=os.environ.get("DAS_MONGO_HOSTNAME", "localhost"),
+        metavar="HOSTNAME",
+        dest="mongo_hostname",
+        help="mongo hostname to connect to",
+    )
+    parser.add_argument(
+        "--port",
+        "-p",
+        type=int,
+        default=os.environ.get("DAS_MONGO_PORT", "27017"),
+        metavar="PORT",
+        dest="mongo_port",
+        help="mongo port to connect to",
+    )
+    parser.add_argument(
+        "--database",
+        "-d",
+        type=str,
+        default="das",
+        metavar="NAME",
+        dest="mongo_database",
+        help="mongo database name to connect to",
+    )
     args = parser.parse_args()
 
     main(**vars(args))
