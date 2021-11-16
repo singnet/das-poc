@@ -16,10 +16,10 @@ from hashing import Hasher
 
 
 logger = logging.getLogger('das')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.DEBUG)
+stream_handler.setLevel(logging.INFO)
 
 formatter = logging.Formatter("[%(asctime)s %(levelname)s]: %(message)s")
 
