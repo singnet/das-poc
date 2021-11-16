@@ -118,6 +118,7 @@ class DAS:
         return expression_type
 
 def main(filename, database_name='das'):
+    logger.info(f"Loading file: {filename}")
     client = MongoClient()
 
     with open(filename, 'r') as f:
@@ -127,9 +128,9 @@ def main(filename, database_name='das'):
     das = DAS(client[database_name], hasher)
 
     for type_name, expression in MettaParser.parse(text):
+        logger.debug(f"{type_name} {expression}")
         if type_name == MettaParser.EXPRESSION:
             hasher.hash_expression(expression)
-            logger.debug(f"{type_name} {expression}")
             try:
                 das.insert_link(expression)
             except DuplicateKeyError:
