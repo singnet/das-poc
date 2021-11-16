@@ -15,6 +15,9 @@ As a simple example, we have the following expression:
 (: Predicate Type)
 (: Reactome Type)
 (: Concept Type)
+(: "Predicate:has_name" Predicate)
+(: "Reactome:R-HSA-164843" Reactome)
+(: "Concept:2-LTR circle formation" Concept)
 (
 	Evaluation 
 	"Predicate:has_name" 
@@ -22,7 +25,7 @@ As a simple example, we have the following expression:
 	    Evaluation 
 	    "Predicate:has_name" 
 	    {"Reactome:R-HSA-164843" "Concept:2-LTR circle formation"}
-    )
+	)
 )
 ```
 
@@ -52,6 +55,7 @@ Links_1: [{}]
 Links_2: [
     {
 	    _id: 10,
+	    is_ordered: false,
 	    is_root: false,
 	    type: {Reactome, Concept},
 	    key1: 8,
@@ -62,11 +66,21 @@ Links_2: [
 Links_3: [
     {
 	    _id: 11,
-	    is_root: true,
+	    is_ordered: true,
+	    is_root: false,
 	    type: [Type, Predicate, {Reactome, Concept}],
 	    key1: 3,
 	    key2: 7,
 	    key3: 10,
+    },
+    {
+	    _id: 12,
+	    is_ordered: true,
+	    is_root: true,
+	    type: [Type, Predicate, [Type, Predicate, {Reactome, Concept}]],
+	    key1: 3,
+	    key2: 7,
+	    key3: 11,
     },
 ]
 ```
@@ -76,11 +90,12 @@ As an example of how `sha256` will be used here:
 ```
     _id: XX ->  sha256(sha256(type), sha256(key1), sha256(key2), ...)
     _id: 10 ->  sha256(sha256(set_salt, 5, 6), 8, 9)
-    _id: 11 ->  sha256(sha256(4, sha256(set_salt, 5, 6)), 3, 7, 10)
+    _id: 11 ->  sha256(sha256(2, 4, sha256(set_salt, 5, 6)), 3, 7, 10)
+    _id: 12 ->  sha256(sha256(2, 4, sha256(2, 4, sha256(set_salt, 5, 6))), 3, 7, 11)
 ```
 
 Notes:
-- We do NOT use the `is_root` field on hashing.
+- We do NOT use `is_root` and `is_ordered` fields on hashing.
 - For set expressions (`{ ... }`) we add a `salt` to the hash calculation.
 
 #### Redis:
@@ -90,30 +105,34 @@ IncomingSet:
 {
      8: [10],
      9: [10],
-     3: [11],
-     5: [11],
-    10: [11]
+     3: [11, 12],
+     7: [11, 12],
+    10: [11],
+    11: [12]
 }
 
 RecursiveIncomingSet:
 {
-     8: [10, 11],
-     9: [10, 11],
-     3: [10],
-     5: [10],
-    10: [10]
+     8: [10, 11, 12],
+     9: [10, 11, 12],
+     3: [11, 12],
+     7: [11, 12],
+    10: [11, 12],
+    11: [12]
 }
 
 OutgoingSet:
 {
     10: [8, 9],
-    11: [3, 7, 10]
+    11: [3, 7, 10],
+    12: [3, 7, 11]
 }
 
 RecursiveOutgoingSet:
 {
     10: [8, 9],
-    11: [3, 7, 10, 8, 9]
+    11: [3, 7, 10, 8, 9],
+    12: [3, 7, 11, 10, 8, 9]
 }
 ```
 
