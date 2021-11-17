@@ -18,7 +18,7 @@ If this is the first time this command is executed two containers was created:
 At this moment:
 - Is possible run scripts in `scripts` directory
 - The mongo database instance is available on port `27017`
-- There are some `.metta` files available in `/data` directory
+- There are some `.metta` files available in `/data` directory into the `das_scripts_1` cotainer
     - Use `docker-compose exec scripts ls /data` to see them without need to attach the container.
 
 
