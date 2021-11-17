@@ -20,9 +20,10 @@ class BaseExpression(ABC):
 
 class Expression(list, BaseExpression):
 
-    def __init__(self, iterable, _id=None, is_root=False):
+    def __init__(self, iterable, _id=None, is_root=False, type_hash=None):
         self.extend(iterable)
         self._id = _id
+        self.type_hash = type_hash
         self.is_root = is_root
 
     def _signature(self):
@@ -35,7 +36,7 @@ class Expression(list, BaseExpression):
         return f'{self.OPENER}{" ".join([str(v) for v in self])}{self.CLOSER}'
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({repr(list(self))}, _id={repr(self._id)}, is_root={repr(self.is_root)})'
+        return f'{self.__class__.__name__}({repr(list(self))}, _id={repr(self._id)}, is_root={repr(self.is_root)}, type_hash={repr(self.type_hash)})'
 
 class MList(Expression):
     SYMBOL = "List"
