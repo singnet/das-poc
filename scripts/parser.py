@@ -41,11 +41,12 @@ def evaluate_hash(hash_dict: dict, output_file: str = ''):
             print("Collision:", key, value)
 
         expr = value.pop()
-        with open(output_file, 'a') as f:
-            f.write(key)
-            f.write(' ')
-            f.write(str(expr))
-            f.write('\n')
+        if output_file:
+            with open(output_file, 'a') as f:
+                f.write(key)
+                f.write(' ')
+                f.write(str(expr))
+                f.write('\n')
 
         if isinstance(expr, AtomType):
             if expr.type in (None, Type):
@@ -64,7 +65,7 @@ def evaluate_hash(hash_dict: dict, output_file: str = ''):
     print("4 - Expressions (is_root=True):", expressions_root)
     print("5 - Subexpressions (is_root=False):", expressions_non_root)
     print("6 - Hash Count:", hash_count)
-    print("7 - Including duplicated: ", all_hashes)
+    print("7 - Hash Count(Including duplicated): ", all_hashes)
 
 
 def main(filenames, output_name=None, output_dir='./'):
@@ -95,23 +96,13 @@ def main(filenames, output_name=None, output_dir='./'):
 
     print(f"Took {human_time((datetime.now() - d1))} to proccess all files")
 
-    metta = mettas[0] 
+    metta = mettas[0]
     if len(mettas) > 1:
         d3 = datetime.now()
         metta = sum(mettas[1:], start=metta)
         print(f"Took {human_time((datetime.now() - d3))} to merge MeTTa documents.")
 
-    print("Hashing metta document")
-    d4 = datetime.now()
-    hasher = Hasher(metta)
-    hasher.hash_atom_types()
-    print(f"Took {human_time((datetime.now() - d4))} to hash atom types.")
-    hasher.hash_expressions()
-    print(f"Took {human_time((datetime.now() - d4))} to hash document.")
-
     output_file_path = path.join(output_dir, output_name)
-    #  evaluate_hash(hasher.hash_index)
-
     with open(output_file_path, "w") as f:
         metta.write_to(f)
 
