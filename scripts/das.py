@@ -143,7 +143,7 @@ class DAS:
         return expression_type
 
 
-def main(filename, mongo_hostname, mongo_port, mongo_database):
+def main(filename, mongo_hostname, mongo_port, mongo_database, raise_duplicated):
     logger.info(f"Loading file: {filename}")
     with open(filename, "r") as f:
         text = f.read()
@@ -159,8 +159,10 @@ def main(filename, mongo_hostname, mongo_port, mongo_database):
             hasher.hash_expression(expression)
             try:
                 das.insert_link(expression)
-            except DuplicateKeyError:
-                logger.error(f"Duplicated: {expression}")
+            except DuplicateKeyError as e:
+                if raise_duplicated:
+                    raise e
+                logger.info(f"Duplicated: {expression}")
         else:
             hasher.hash_atom_type(expression)
             try:
@@ -168,8 +170,10 @@ def main(filename, mongo_hostname, mongo_port, mongo_database):
                     das.insert_node_type(expression)
                 elif type_name == MettaParser.NODE:
                     das.insert_node(expression)
-            except DuplicateKeyError:
-                logger.error(f"Duplicated: {expression}")
+            except DuplicateKeyError as e:
+                if raise_duplicated:
+                    raise e
+                logger.info(f"Duplicated: {expression}")
 
 
 if __name__ == "__main__":
@@ -204,6 +208,13 @@ if __name__ == "__main__":
         metavar="NAME",
         dest="mongo_database",
         help="mongo database name to connect to",
+    )
+    parser.add_argument(
+        "--raise-on-duplicated",
+        action='store_true',
+        default=False,
+        dest="raise_duplicated",
+        help="raise error when duplicated insert error found",
     )
     args = parser.parse_args()
 
