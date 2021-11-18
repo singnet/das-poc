@@ -10,10 +10,10 @@ from pymongo.operations import DeleteMany
 from pymongo.results import InsertOneResult
 
 from atomese2metta.parser import LexParser
-from atomese2metta.translator import Translator, MettaDocument, AtomType, Expression
+from atomese2metta.translator import Translator, MettaDocument, AtomType, Expression, MSet, BaseExpression
 from atomese2metta.collections import OrderedSet
 from metta_lex import MettaParser
-from hashing import Hasher
+from hashing import Hasher, sort_by_key_hash
 
 
 logger = logging.getLogger("das")
@@ -44,10 +44,12 @@ class DAS:
             self.NODE_TYPES,
             self.NODES,
             self.LINKS,
+            self.LINKS_1,
+            self.LINKS_2,
+            self.LINKS_3,
         ]
 
-    def links_collection(self, expression: Expression) -> Collection:
-        order = len(expression)
+    def links_collection_by_order(self, order: int) -> Collection:
         if hasattr(self, f"LINKS_{order}"):
             return self.db[getattr(self, f"LINKS_{order}")]
         return self.db[self.LINKS]
@@ -81,7 +83,7 @@ class DAS:
         return collection.insert_one(self.atom_type_to_dict(node))
 
     def insert_link(self, link: Expression) -> InsertOneResult:
-        collection = self.links_collection(link)
+        collection = self.links_collection_by_order(len(link))
         return collection.insert_one(self.expression_to_dict(link))
 
     def atom_type_to_dict(self, atom_type: AtomType) -> dict:
@@ -94,14 +96,29 @@ class DAS:
         }
 
     def expression_to_dict(self, expression: Expression) -> dict:
+        keys_hashes = [self.retrieve_id(e) for e in expression]
+        type_ = self.retrieve_expression_type(expression)
+
+        if (is_set := isinstance(expression, MSet)):
+            keys_hashes, type_ = sort_by_key_hash(keys_hashes, type_)
+
         result = {
             "_id": expression._id,
-            "type": self.retrieve_expression_type(expression),
+            "type": type_,
             "is_root": expression.is_root,
+            "is_ordered": not is_set,
         }
-        keys = {
-            f"key{i}": self.retrieve_id(e) for i, e in enumerate(expression, start=1)
-        }
+
+
+        if len(expression) > 3:
+            keys = {
+                "keys": keys_hashes
+            }
+        else:
+            keys = {
+                f"key{i}": e for i, e in enumerate(keys_hashes, start=1)
+            }
+
         result.update(keys)
         return result
 
