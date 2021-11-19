@@ -19,14 +19,16 @@ def test_when_split_string_to_two_chunks():
         '(EvaluationLink    (PredicateNode "P2")    (ListLink        (CellNode "CL2")        (ConceptNode "CC2")))'
     ]
 
+
 def test_when_parse_input_single_expression():
-    text= (
+    text = (
         '(PredicateNode "P1")\n'
     )
     assert Parser().parse(text) == [['PredicateNode', '"P1"']]
 
+
 def test_when_parse_input_two_expressions():
-    text= (
+    text = (
         '(PredicateNode "P1")\n'
         '(PredicateNode "P2")\n'
     )
@@ -35,14 +37,16 @@ def test_when_parse_input_two_expressions():
         ['PredicateNode', '"P2"'],
     ]
 
+
 def test_when_parse_input_single_expression_using_multiprocessing():
-    text= (
+    text = (
         '(PredicateNode "P1")\n'
     )
     assert MultiprocessingParser(1).parse(text) == [['PredicateNode', '"P1"']]
 
+
 def test_when_parse_input_two_expressions_using_multiprocessing():
-    text= (
+    text = (
         '(PredicateNode "P1")\n'
         '(PredicateNode "P2")\n'
     )
@@ -51,22 +55,25 @@ def test_when_parse_input_two_expressions_using_multiprocessing():
         ['PredicateNode', '"P2"'],
     ]
 
+
 def test_when_given_same_input_normal_parser_and_multiprocessing_parser_should_return_same_result():
-    text= (
+    text = (
         '(PredicateNode "P1")\n'
         '(PredicateNode "P2")\n'
     )
     assert Parser().parse(text) == MultiprocessingParser().parse(text)
 
+
 def test_when_given_same_input_normal_parser_and_lex_parser_should_return_same_result():
-    text= (
+    text = (
         '(PredicateNode "P1")\n'
         '(PredicateNode "P2")\n'
     )
     assert Parser().parse(text) == LexParser().parse(text)
 
+
 def test_when_parse_input_single_expression_using_lex_parser_and_lex_parser_should_return_a_list_with_one_expression():
-    text= (
+    text = (
         '(PredicateNode "P1")\n'
     )
     assert LexParser().parse(text) == [['PredicateNode', '"P1"']]
