@@ -155,8 +155,11 @@ def main(source, mongo_hostname, mongo_port, mongo_database, raise_duplicated):
     das = DAS(client[mongo_database], hasher)
 
     d1 = datetime.now()
-    for file_path in metta_files:
-        logger.info(f"Loading file: {file_path} [{get_filesize_mb(file_path)} MB]")
+    for idx, file_path in enumerate(metta_files):
+        logger.info(
+            f"Loading file: {file_path} "
+            f"[{get_filesize_mb(file_path)} MB] "
+            f"({idx+1}/{len(metta_files)})")
         d2 = datetime.now()
         with open(file_path, "r") as f:
             text = f.read()
