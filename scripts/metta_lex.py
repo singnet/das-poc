@@ -2,8 +2,7 @@ import argparse
 
 from typing import Any, List, Union
 
-from atomese2metta.translator import AtomType, Expression, MSet, MettaDocument
-from atomese2metta.collections import OrderedSet
+from atomese2metta.translator import AtomType, Expression, MSet
 from hashing import Hasher
 
 from ply.lex import lex

@@ -1,6 +1,8 @@
-import os
 import argparse
+from datetime import datetime
+import glob
 import logging
+import os
 
 from pymongo import MongoClient
 from pymongo.collection import Collection
@@ -9,11 +11,10 @@ from pymongo.errors import DuplicateKeyError
 from pymongo.operations import DeleteMany
 from pymongo.results import InsertOneResult
 
-from atomese2metta.parser import LexParser
-from atomese2metta.translator import Translator, MettaDocument, AtomType, Expression, MSet, BaseExpression
-from atomese2metta.collections import OrderedSet
+from atomese2metta.translator import AtomType, Expression, MSet
 from metta_lex import MettaParser
 from hashing import Hasher, sort_by_key_hash
+from helpers import evaluate_hash, get_filesize_mb, human_time
 
 
 logger = logging.getLogger("das")
@@ -99,7 +100,7 @@ class DAS:
         keys_hashes = [self.retrieve_id(e) for e in expression]
         type_ = self.retrieve_expression_type(expression)
 
-        if (is_set := isinstance(expression, MSet)):
+        if is_set := isinstance(expression, MSet):
             keys_hashes, type_ = sort_by_key_hash(keys_hashes, type_)
 
         result = {
@@ -108,7 +109,6 @@ class DAS:
             "is_root": expression.is_root,
             "is_ordered": not is_set,
         }
-
 
         if len(expression) > 3:
             keys = {
@@ -143,37 +143,51 @@ class DAS:
         return expression_type
 
 
-def main(filename, mongo_hostname, mongo_port, mongo_database, raise_duplicated):
-    logger.info(f"Loading file: {filename}")
-    with open(filename, "r") as f:
-        text = f.read()
+def main(source, mongo_hostname, mongo_port, mongo_database, raise_duplicated):
+    metta_files = []
+    if source.endswith('.metta'):
+        metta_files.append(source)
+    else:
+        metta_files = glob.glob(f'{source}/*.metta')
 
     hasher = Hasher()
-
     client = MongoClient(host=mongo_hostname, port=mongo_port)
     das = DAS(client[mongo_database], hasher)
 
-    for type_name, expression in MettaParser.parse(text):
-        logger.debug(f"{type_name} {expression}")
-        if type_name == MettaParser.EXPRESSION:
-            hasher.hash_expression(expression)
-            try:
-                das.insert_link(expression)
-            except DuplicateKeyError as e:
-                if raise_duplicated:
-                    raise e
-                logger.info(f"Duplicated: {expression}")
-        else:
-            hasher.hash_atom_type(expression)
-            try:
-                if type_name == MettaParser.NODE_TYPE:
-                    das.insert_node_type(expression)
-                elif type_name == MettaParser.NODE:
-                    das.insert_node(expression)
-            except DuplicateKeyError as e:
-                if raise_duplicated:
-                    raise e
-                logger.info(f"Duplicated: {expression}")
+    d1 = datetime.now()
+    for file_path in metta_files:
+        logger.info(f"Loading file: {file_path} [{get_filesize_mb(file_path)} MB]")
+        d2 = datetime.now()
+        with open(file_path, "r") as f:
+            text = f.read()
+
+        for type_name, expression in MettaParser.parse(text):
+            logger.debug(f"{type_name} {expression}")
+            if type_name == MettaParser.EXPRESSION:
+                hasher.hash_expression(expression)
+                try:
+                    das.insert_link(expression)
+                except DuplicateKeyError as e:
+                    if raise_duplicated:
+                        raise e
+                    logger.debug(f"Duplicated: {expression}")
+            else:
+                hasher.hash_atom_type(expression)
+                try:
+                    if type_name == MettaParser.NODE_TYPE:
+                        das.insert_node_type(expression)
+                    elif type_name == MettaParser.NODE:
+                        das.insert_node(expression)
+                except DuplicateKeyError as e:
+                    if raise_duplicated:
+                        raise e
+                    logger.debug(f"Duplicated: {expression}")
+
+        logger.info(f"Took {human_time((datetime.now() - d2))} to process {file_path}.")
+        logger.info(f"Partial time of processing: {human_time((datetime.now() - d1))}")
+
+    logger.info(f"Took {human_time((datetime.now() - d1))} to process {len(metta_files)} file(s)")
+    evaluate_hash(hash_dict=hasher.hash_index, logger=logger)
 
 
 if __name__ == "__main__":
@@ -181,7 +195,7 @@ if __name__ == "__main__":
         "Load MeTTa data into DAS", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
-    parser.add_argument("filename", type=str, help="file path to load data from")
+    parser.add_argument("source", type=str, help="metta file(s) directory or path to load data from")
     parser.add_argument(
         "--hostname",
         "-H",

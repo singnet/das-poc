@@ -1,71 +1,11 @@
 #!/usr/bin/env python3
 import argparse
-import math
 from datetime import datetime
 from os import path
-from pathlib import Path
 
-from atomese2metta.parser import LexParser, MultiprocessingParser
-from atomese2metta.translator import AtomType, Translator, Type
-from hashing import Hasher
-
-
-def get_filesize_mb(file_path):
-    return math.ceil(Path(file_path).stat().st_size / 1024 / 1024)
-
-
-def human_time(delta) -> str:
-    seconds = delta.seconds
-    if seconds < 1:
-        return f"{ delta.microseconds } microseconds"
-    elif seconds < 60:
-        return f"{seconds} second(s)"
-    else:
-        return "{:d}:{:02d} minute(s)".format(seconds // 60, seconds % 60)
-
-def evaluate_hash(hash_dict: dict, output_file: str = ''):
-    collisions = []
-    node_types = 0
-    nodes = 0
-    expressions_root = 0
-    expressions_non_root = 0
-    hash_count = 0
-    all_hashes = 0
-
-    for key, value in hash_dict.items():
-        hash_count += 1
-        all_hashes += len(value)
-        value = set(value)
-        if len(value) > 1:
-            collisions.append((key, value))
-            print("Collision:", key, value)
-
-        expr = value.pop()
-        if output_file:
-            with open(output_file, 'a') as f:
-                f.write(key)
-                f.write(' ')
-                f.write(str(expr))
-                f.write('\n')
-
-        if isinstance(expr, AtomType):
-            if expr.type in (None, Type):
-                node_types += 1
-            else:
-                nodes += 1
-        else:
-            if expr.is_root:
-                expressions_root += 1
-            else:
-                expressions_non_root += 1
-
-    print("1 - Collisions", len(collisions))
-    print("2 - NodeTypes:", node_types)
-    print("3 - Nodes:", nodes)
-    print("4 - Expressions (is_root=True):", expressions_root)
-    print("5 - Subexpressions (is_root=False):", expressions_non_root)
-    print("6 - Hash Count:", hash_count)
-    print("7 - Hash Count(Including duplicated): ", all_hashes)
+from atomese2metta.parser import LexParser
+from atomese2metta.translator import Translator
+from helpers import get_filesize_mb, human_time
 
 
 def main(filenames, output_name=None, output_dir='./'):
@@ -83,10 +23,10 @@ def main(filenames, output_name=None, output_dir='./'):
         print(f"Processing: {file_path}")
         print(f"File size: {get_filesize_mb(file_path)} MB")
 
-        parser = LexParser()
+        lex_parser = LexParser()
 
         with open(file_path, "r") as f:
-            parsed_expressions = parser.parse(f.read())
+            parsed_expressions = lex_parser.parse(f.read())
 
         print(f"Took {human_time((datetime.now() - d2))} to parse string.")
 
@@ -94,7 +34,7 @@ def main(filenames, output_name=None, output_dir='./'):
         print(f"Took {human_time((datetime.now() - d2))} to build Metta document.")
         print(f"Partial time of processing: {human_time((datetime.now() - d1))}")
 
-    print(f"Took {human_time((datetime.now() - d1))} to proccess all files")
+    print(f"Took {human_time((datetime.now() - d1))} to process all files")
 
     metta = mettas[0]
     if len(mettas) > 1:
@@ -106,7 +46,7 @@ def main(filenames, output_name=None, output_dir='./'):
     with open(output_file_path, "w") as f:
         metta.write_to(f)
 
-    print(f"Outputing to {output_file_path}")
+    print(f"Outputting to {output_file_path}")
     print(f"Took {human_time((datetime.now() - d1))} to finish processing.")
 
 
