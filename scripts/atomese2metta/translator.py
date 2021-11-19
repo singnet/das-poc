@@ -82,6 +82,7 @@ class Translator:
         "ListLink",
         "MemberLink",
         "SetLink",
+        "SimilarityLink",
     )
 
     _ALLOWED_NODES = (
