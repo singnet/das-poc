@@ -32,11 +32,15 @@ class Expression(list, BaseExpression):
     def __hash__(self):
         return hash(self._signature())
 
+    def __eq__(self, o):
+        return self._signature() == o._signature()
+
     def __str__(self):
         return f'{self.OPENER}{" ".join([str(v) for v in self])}{self.CLOSER}'
 
     def __repr__(self):
         return f'{self.__class__.__name__}({repr(list(self))}, _id={repr(self._id)}, is_root={repr(self.is_root)}, type_hash={repr(self.type_hash)})'
+
 
 class MList(Expression):
     SYMBOL = "List"
@@ -49,6 +53,9 @@ class MSet(Expression):
 
     OPENER = "{"
     CLOSER = "}"
+
+    def _signature(self):
+        return f"{(self.SALT)}:{':'.join(str(hash(e)) for e in sorted(self))}"
 
 
 class AtomType(BaseExpression):
