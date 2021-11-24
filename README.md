@@ -159,3 +159,8 @@ already translated to MeTTa (`.metta`) in the [data/bio_atomsapace](./data/bio_a
 
 
 The translation script used is in [scripts/atomese2metta](./scripts/atomese2metta).
+
+
+### Get it started:
+
+Go to [scripts/](./scripts) directory to get info about how to set up the necessary environment.
