@@ -5,6 +5,8 @@ services:
         environment:
             - DAS_MONGO_HOSTNAME=${DAS_MONGO_HOSTNAME:-mongo}
             - DAS_MONGO_PORT=${DAS_MONGO_PORT:-27017}
+            - DAS_MONGO_USERNAME=${DAS_MONGO_USERNAME:-mongoadmin}
+            - DAS_MONGO_PASSWORD=${DAS_MONGO_PASSWORD:-das#secret}
         tty: true
         volumes:
             - ./scripts:/scripts
@@ -12,9 +14,13 @@ services:
             - mongo
     mongo:
         image: mongo
+        environment:
+            - MONGO_INITDB_ROOT_USERNAME=${DAS_MONGO_USERNAME:-mongoadmin}
+            - MONGO_INITDB_ROOT_PASSWORD=${DAS_MONGO_PASSWORD:-das#secret}
         ports:
-            - "27017:27017"
+            - "${DAS_MONGO_PORT:-27017}:${DAS_MONGO_PORT:-27017}"
         volumes:
             - mongodbdata:/data/db
+        command: mongod --port ${DAS_MONGO_PORT:-27017}
 volumes:
     mongodbdata: {}

@@ -143,7 +143,8 @@ class DAS:
         return expression_type
 
 
-def main(source, mongo_hostname, mongo_port, mongo_database, raise_duplicated):
+def main(
+  source, mongo_hostname, mongo_port, mongo_username, mongo_password, mongo_database, raise_duplicated):
     metta_files = []
     if source.endswith('.metta'):
         metta_files.append(source)
@@ -151,7 +152,7 @@ def main(source, mongo_hostname, mongo_port, mongo_database, raise_duplicated):
         metta_files = glob.glob(f'{source}/*.metta')
 
     hasher = Hasher()
-    client = MongoClient(host=mongo_hostname, port=mongo_port)
+    client = MongoClient(f"mongodb://{mongo_username}:{mongo_password}@{mongo_hostname}:{mongo_port}")
     das = DAS(client[mongo_database], hasher)
 
     d1 = datetime.now()
@@ -216,6 +217,24 @@ if __name__ == "__main__":
         metavar="PORT",
         dest="mongo_port",
         help="mongo port to connect to",
+    )
+    parser.add_argument(
+        "--username",
+        "-user",
+        type=str,
+        default=os.environ.get("DAS_MONGO_USERNAME", "mongoadmin"),
+        metavar="USERNAME",
+        dest="mongo_username",
+        help="mongo username",
+    )
+    parser.add_argument(
+        "--password",
+        "-pass",
+        type=str,
+        default=os.environ.get("DAS_MONGO_PASSWORD", "das#secret"),
+        metavar="PASSWORD",
+        dest="mongo_password",
+        help="mongo password",
     )
     parser.add_argument(
         "--database",

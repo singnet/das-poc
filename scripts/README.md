@@ -1,30 +1,36 @@
 Scripts
 ===
 
-This scripts run actions related to DAS context (Eg. conversion, loading).
+These scripts run actions related to DAS context (Eg. conversion, loading).
 
 ## Run using docker-compose
 
 Assuming there is a running console where the current directory is the root of this project:
 
 ```sh
+# MongoDB variables
+export DAS_MONGO_HOSTNAME=mongo
+export DAS_MONGO_PORT=27017
+# Change the following values when running on a public instance
+export DAS_MONGO_USERNAME=mongoadmin
+export DAS_MONGO_PASSWORD=das#secret
 docker-compose up -d
 ```
 
-If this is the first time this command is executed two containers was created:
+The command creates two containers:
 - `das_mongo_1`
 - `das_scripts_1`
 
 At this moment:
 - Is possible run scripts in `scripts` directory
 - The mongo database instance is available on port `27017`
-- There are some `.metta` files available in `/data` directory into the `das_scripts_1` cotainer
+- There are some `.metta` files available in `/data` directory into the `das_scripts_1` container
     - Use `docker-compose exec scripts ls /data` to see them without need to attach the container.
 
 
 ### `das.py`
 
-This script load MeTTa files into a specified mongo database.
+This script loads MeTTa files into a specified mongo database.
 
 ```sh
 # show help message
