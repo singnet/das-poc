@@ -64,3 +64,7 @@ def evaluate_hash(hash_dict: dict, output_file: str = '', logger=None):
   _print(f"5 - Subexpressions (!is_root): {expressions_non_root}")
   _print(f"6 - Hash Count               : {hash_count}")
   _print(f"7 - Hash Count(w/ duplicated): {all_hashes}")
+
+
+def extract_by_prefix(key, kwargs):
+    return {k.removeprefix(key): v for k, v in kwargs.items() if k.startswith(key)}
