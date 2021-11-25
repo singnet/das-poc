@@ -3,3 +3,4 @@ pymongo==3.12.1
 pytest==6.2.5
 redis==4.0.1
 hiredis==2.0.0
+couchbase==3.2.3

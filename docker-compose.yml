@@ -15,6 +15,7 @@ services:
             - ./scripts:/scripts
         links:
             - mongo
+            - couchbase
     mongo:
         image: mongo
         environment:
@@ -25,9 +26,13 @@ services:
         volumes:
             - mongodbdata:/data/db
         command: mongod --port ${DAS_MONGO_PORT:-27017}
-    redis:
-        image: redis
+    couchbase:
+        image: couchbase
         ports:
-            - "6379:6379"
+            - 8091-8094:8091-8094
+            - 11210:11210
+        volumes:
+            - couchbasedata:/opt/couchbase/var
 volumes:
     mongodbdata: {}
+    couchbasedata: {}
