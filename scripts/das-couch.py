@@ -73,7 +73,7 @@ def get_mongodb(mongo_hostname, mongo_port, mongo_username, mongo_password, mong
 def main(mongo_hostname, mongo_port, mongo_username, mongo_password, mongo_database):
     cluster = Cluster(
         'couchbase://localhost',
-        authenticator=PasswordAuthenticator('couchadmin', 'das#secret'))
+        authenticator=PasswordAuthenticator(mongo_username, mongo_password))
     bucket = cluster.bucket('das')
 
     create_collections(
