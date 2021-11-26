@@ -47,9 +47,15 @@ def populate_sets(collection: Collection, bucket):
             keys = doc['keys']
         else:
             keys = [v for k, v in doc.items() if k.startswith('key')]
-        append(outgoing_set, key=_id, new_value=keys)
+        outgoing_set.upsert(_id, list(set(keys)))
+        incoming_dict = {}
         for key in keys:
-            append(incoming_set, key=key, new_value=[_id])
+            if key in incoming_dict:
+                incoming_dict[key].append(_id)
+            else:
+                incoming_dict[key] = [_id]
+        for key, values in incoming_dict.items():
+            append(incoming_set, key=key, new_value=values)
         count += 1
         if count % 10000 == 0:
             logger.info(f'Documents processed: [{count}/{total}]')
