@@ -38,7 +38,9 @@ def append(coll, key, new_value):
 def populate_sets(collection: Collection, bucket):
     incoming_set = bucket.collection(INCOMING_COLL_NAME)
     outgoing_set = bucket.collection(OUTGOING_COLL_NAME)
+    total = collection.find({}).count()
     cursor = collection.find({}, no_cursor_timeout=True).batch_size(100)
+    count = 0
     for doc in cursor:
         _id = doc['_id']
         if 'keys' in doc:
@@ -48,6 +50,8 @@ def populate_sets(collection: Collection, bucket):
         append(outgoing_set, key=_id, new_value=keys)
         for key in keys:
             append(incoming_set, key=key, new_value=[_id])
+        if count % 10000:
+            logger.info(f'Documents processed: [{count}/{total}]')
     cursor.close()
 
 
@@ -57,14 +61,14 @@ def create_collections(bucket, collections_names=None):
     # Creating Couchbase collections
     coll_manager = bucket.collections()
     for name in collections_names:
-        print(f'Creating Couchbase collection: "{name}"...')
+        logger.info(f'Creating Couchbase collection: "{name}"...')
         try:
             coll_manager.create_collection(CollectionSpec(name))
         except cb_exceptions.CollectionAlreadyExistsException as _:
-            print(f'Collection exists!')
+            logger.info(f'Collection exists!')
             pass
         except Exception as e:
-            print(e)
+            logger.error(f'[create_collections] Failed: {e}')
 
 
 def get_mongodb(mongo_hostname, mongo_port, mongo_username, mongo_password, mongo_database):
