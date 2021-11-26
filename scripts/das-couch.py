@@ -40,7 +40,6 @@ def populate_sets(collection: Collection, bucket):
     outgoing_set = bucket.collection(OUTGOING_COLL_NAME)
     total = collection.count_documents({})
     cursor = collection.find({}, no_cursor_timeout=True).batch_size(100)
-    incoming_keys = set()
     count = 0
     for doc in cursor:
         _id = doc['_id']
@@ -58,11 +57,7 @@ def populate_sets(collection: Collection, bucket):
                 incoming_dict[key] = [_id]
 
         for key, values in incoming_dict.items():
-            if key in incoming_keys:
-                append(incoming_set, key=key, new_value=values)
-            else:
-                incoming_set.upsert(key, list(set(values)))
-        incoming_keys = incoming_keys.union(set(incoming_dict.keys()))
+            append(incoming_set, key=key, new_value=values)
 
         count += 1
         if count % 10000 == 0:
