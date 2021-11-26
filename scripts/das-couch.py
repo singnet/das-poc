@@ -38,7 +38,8 @@ def append(coll, key, new_value):
 def populate_sets(collection: Collection, bucket):
     incoming_set = bucket.collection(INCOMING_COLL_NAME)
     outgoing_set = bucket.collection(OUTGOING_COLL_NAME)
-    for doc in collection.find():
+    cursor = collection.find({}, no_cursor_timeout=True).batch_size(100)
+    for doc in cursor:
         _id = doc['_id']
         if 'keys' in doc:
             keys = doc['keys']
@@ -47,6 +48,7 @@ def populate_sets(collection: Collection, bucket):
         append(outgoing_set, key=_id, new_value=keys)
         for key in keys:
             append(incoming_set, key=key, new_value=[_id])
+    cursor.close()
 
 
 def create_collections(bucket, collections_names=None):

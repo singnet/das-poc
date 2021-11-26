@@ -86,7 +86,7 @@ class MettaParser:
             elif token_type in ("RPAREN", "RCBRACKET"):
                 current = list_stack.pop()
                 pointer = current.pop()
-                if pointer[0] == ":":
+                if isinstance(pointer[0], str) and pointer[0] == ":":
                     atom_type = AtomType(*pointer[1:])
                     if atom_type.type == "Type":
                         yield self.NODE_TYPE, atom_type
