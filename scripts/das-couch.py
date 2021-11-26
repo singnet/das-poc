@@ -51,7 +51,7 @@ def populate_sets(collection: Collection, bucket):
         for key in keys:
             append(incoming_set, key=key, new_value=[_id])
         count += 1
-        if count % 1000 == 0:
+        if count % 10000 == 0:
             logger.info(f'Documents processed: [{count}/{total}]')
     cursor.close()
 
