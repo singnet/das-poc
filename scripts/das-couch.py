@@ -38,7 +38,7 @@ def append(coll, key, new_value):
 def populate_sets(collection: Collection, bucket):
     incoming_set = bucket.collection(INCOMING_COLL_NAME)
     outgoing_set = bucket.collection(OUTGOING_COLL_NAME)
-    total = collection.count_documents()
+    total = collection.count_documents({})
     cursor = collection.find({}, no_cursor_timeout=True).batch_size(100)
     count = 0
     for doc in cursor:
@@ -51,7 +51,7 @@ def populate_sets(collection: Collection, bucket):
         for key in keys:
             append(incoming_set, key=key, new_value=[_id])
         count += 0
-        if count % 10000:
+        if count % 1000 == 0:
             logger.info(f'Documents processed: [{count}/{total}]')
     cursor.close()
 
