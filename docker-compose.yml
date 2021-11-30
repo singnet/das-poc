@@ -1,33 +1,31 @@
 version: "3.9"
 services:
-    scripts:
-        build: .
-        image: scripts:${DAS_TAG:-latest}
-        environment:
-            - DAS_MONGO_HOSTNAME=${DAS_MONGO_HOSTNAME:-localhost}
-            - DAS_MONGO_PORT=${DAS_MONGO_PORT:-27017}
-            - DAS_MONGO_USERNAME=${DAS_MONGO_USERNAME:-mongoadmin}
-            - DAS_MONGO_PASSWORD=${DAS_MONGO_PASSWORD:-das#secret}
-            - DAS_REDIS_HOSTNAME=${DAS_REDIS_HOSTNAME:-redis}
-            - DAS_REDIS_PORT=${DAS_REDIS_PORT:-6379}
-        tty: true
-        volumes:
-            - ./scripts:/scripts
-        network_mode: host
-    mongo:
-        image: mongo
-        environment:
-            - MONGO_INITDB_ROOT_USERNAME=${DAS_MONGO_USERNAME:-mongoadmin}
-            - MONGO_INITDB_ROOT_PASSWORD=${DAS_MONGO_PASSWORD:-das#secret}
-        volumes:
-            - mongodbdata:/data/db
-        network_mode: host
-        command: mongod --port ${DAS_MONGO_PORT:-27017}
-    couchbase:
-        image: couchbase
-        volumes:
-            - couchbasedata:/opt/couchbase/var
-        network_mode: host
+  scripts:
+    build: .
+    image: scripts:${DAS_TAG:-latest}
+    environment:
+      - DAS_DATABASE_HOSTNAME=${DAS_DATABASE_HOSTNAME:-localhost}
+      - DAS_DATABASE_PORT=${DAS_DATABASE_PORT:-27017}
+      - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
+      - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-das#secret}
+    tty: true
+    volumes:
+      - ./scripts:/scripts
+    network_mode: host
+  mongo:
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
+      - MONGO_INITDB_ROOT_PASSWORD=${DAS_DATABASE_PASSWORD:-das#secret}
+    volumes:
+      - mongodbdata:/data/db
+    network_mode: host
+    command: mongod --port ${DAS_DATABASE_PORT:-27017}
+  couchbase:
+    image: couchbase
+    volumes:
+      - couchbasedata:/opt/couchbase/var
+    network_mode: host
 volumes:
-    mongodbdata: {}
-    couchbasedata: {}
+  mongodbdata: { }
+  couchbasedata: { }

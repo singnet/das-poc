@@ -213,6 +213,7 @@ def test_cached_should_not_call_actual_client_without_limit_being_achieved() -> 
   assert fake.total_add_calls == 1
   assert cached.current_size == 8
 
+
 def test_cached_should_flush_correctly() -> None:
   fake = FakeCouchbaseClient()
   cached = CachedCouchbaseClient(fake, limit=8)

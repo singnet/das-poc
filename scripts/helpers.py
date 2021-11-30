@@ -11,7 +11,7 @@ def get_filesize_mb(file_path):
 def human_time(delta) -> str:
   seconds = delta.seconds
   if seconds < 1:
-    return f"{ delta.microseconds } microseconds"
+    return f"{delta.microseconds} microseconds"
   elif seconds < 60:
     return f"{seconds} second(s)"
   else:
@@ -67,4 +67,4 @@ def evaluate_hash(hash_dict: dict, output_file: str = '', logger=None):
 
 
 def extract_by_prefix(key, kwargs):
-    return {k.removeprefix(key): v for k, v in kwargs.items() if k.startswith(key)}
+  return {k.removeprefix(key): v for k, v in kwargs.items() if k.startswith(key)}

@@ -1,10 +1,11 @@
-import pytest
 import math
-import numpy as np
 import time
 
+import numpy as np
+import pytest
 
-class Clock():
+
+class Clock:
   def __init__(self):
     self._ini = time.time_ns()
 
@@ -21,7 +22,7 @@ class Clock():
     return self.elapsed_time_ns() / 1e9
 
 
-class AccumulatorClock():
+class AccumulatorClock:
   def __init__(self):
     self.acc = 0
     self.ini = time.time_ns()
@@ -32,12 +33,12 @@ class AccumulatorClock():
     self.ini = time.time_ns()
 
   def pause(self):
-    assert self.paused == False
+    assert not self.paused
     self.acc += time.time_ns() - self.ini
     self.paused = True
 
   def start(self):
-    assert self.paused == True
+    assert self.paused
     self.ini = time.time_ns()
     self.paused = False
 
@@ -72,7 +73,7 @@ class Statistics:
   def add(self, item):
     self.n += 1
     self.sum += item
-    self.sum_squared += item**2
+    self.sum_squared += item ** 2
     if item < self.min:
       self.min = item
     if item > self.max:
@@ -82,7 +83,7 @@ class Statistics:
     return self.sum / self.n
 
   def variance(self):
-    return (self.sum_squared / self.n) - self.mean()**2
+    return (self.sum_squared / self.n) - self.mean() ** 2
 
   def std(self):
     return math.sqrt(self.variance())
@@ -111,7 +112,8 @@ def test_mean():
   assert np.mean(v) == pytest.approx(s.mean())
   assert np.std(v) == pytest.approx(s.std())
 
-if __name__ == '__main__':
+
+def run():
   acc = AccumulatorClock()
   acc.start()
   time.sleep(1)
@@ -129,3 +131,7 @@ if __name__ == '__main__':
   time.sleep(1)
   print(c.elapsed_time_ms())
   print('acc: {}'.format(acc.acc_seconds()))
+
+
+if __name__ == '__main__':
+  run()

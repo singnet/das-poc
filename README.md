@@ -2,14 +2,13 @@
 
 ### Description:
 
-This repo aims to develop a new design to store all the MeTTa expressions in
-a database to be accessed through an API. Our first approach is using
-MongoDB (expressions) + Redis (indexes).
-
+This repo aims to develop a new design to store all the MeTTa expressions in a database to be accessed through an API.
+Our first approach is using MongoDB (expressions) + Couchbase (indexes).
 
 ### Examples:
 
 As a simple example, we have the following expression:
+
 ```
 (: Evaluation Type)
 (: Predicate Type)
@@ -31,8 +30,8 @@ As a simple example, we have the following expression:
 
 #### MongoDB:
 
-The `_id` must be built by hashing (`sha256`) the documents' fields to avoid duplication.
-For simplicity, we'll be using integers on this example.
+The `_id` must be built by hashing (`sha256`) the documents' fields to avoid duplication. For simplicity, we'll be using
+integers on this example.
 
 ```
 NodeTypes: [
@@ -95,10 +94,11 @@ As an example of how `sha256` will be used here:
 ```
 
 Notes:
+
 - We do NOT use `is_root` and `is_ordered` fields on hashing.
 - For set expressions (`{ ... }`) we add a `salt` to the hash calculation.
 
-#### Redis:
+#### Couchbase:
 
 ```
 IncomingSet:
@@ -151,15 +151,13 @@ Here is another simple example to show how we create a graph from an expression:
 
 ![Example_2 Graph](./assets/example_2_graph.png)
 
-
 ### Datasets:
 
-You can find all the Atomese (`.scm`) files from [gene-level-dataset_2020-10-20](https://mozi.ai/datasets/gene-level-dataset_2020-10-20/)
+You can find all the Atomese (`.scm`) files
+from [gene-level-dataset_2020-10-20](https://mozi.ai/datasets/gene-level-dataset_2020-10-20/)
 already translated to MeTTa (`.metta`) in the [data/bio_atomsapace](./data/bio_atomspace) directory.
 
-
 The translation script used is in [scripts/atomese2metta](./scripts/atomese2metta).
-
 
 ### Get it started:
 

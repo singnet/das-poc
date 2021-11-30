@@ -30,40 +30,40 @@ class Heap(MutableSequence[PrioritizedItem]):
   def insert(self, index: int, value: PrioritizedItem) -> None:
     self.v.insert(index, value)
 
-  def _sift_down(self, startpos: int, pos: int) -> None:
-    newitem = self[pos]
+  def _sift_down(self, start_pos: int, pos: int) -> None:
+    new_item = self[pos]
     # Follow the path to the root, moving parents down until finding a place
-    # newitem fits.
-    while pos > startpos:
-      parentpos = (pos - 1) >> 1
-      parent = self[parentpos]
-      if newitem < parent:
+    # new_item fits.
+    while pos > start_pos:
+      parent_pos = (pos - 1) >> 1
+      parent = self[parent_pos]
+      if new_item < parent:
         self[pos] = parent
-        pos = parentpos
+        pos = parent_pos
         continue
       break
-    self[pos] = newitem
+    self[pos] = new_item
 
   def _sift_up(self, pos: int) -> None:
-    endpos = len(self)
-    startpos = pos
-    newitem = self[pos]
+    end_pos = len(self)
+    start_pos = pos
+    new_item = self[pos]
     # Bubble up the smaller child until hitting a leaf.
-    childpos = 2 * pos + 1  # leftmost child position
-    while childpos < endpos:
-      # Set childpos to index of smaller child.
-      rightpos = childpos + 1
-      if rightpos < endpos and not self[childpos] < self[rightpos]:
-        childpos = rightpos
+    child_pos = 2 * pos + 1  # leftmost child position
+    while child_pos < end_pos:
+      # Set child_pos to index of smaller child.
+      right_pos = child_pos + 1
+      if right_pos < end_pos and not self[child_pos] < self[right_pos]:
+        child_pos = right_pos
       # Move the smaller child up.
-      self[pos] = self[childpos]
-      pos = childpos
-      childpos = 2 * pos + 1
-    # The leaf at pos is empty now.  Put newitem there, and bubble it up
+      self[pos] = self[child_pos]
+      pos = child_pos
+      child_pos = 2 * pos + 1
+    # The leaf at pos is empty now.  Put new_item there, and bubble it up
     # to its final resting place (by sifting its parents down).
-    self[pos] = newitem
+    self[pos] = new_item
 
-    self._sift_down(startpos, pos)
+    self._sift_down(start_pos, pos)
 
   def contains(self, key: str) -> bool:
     return key in self.map_key_to_pos
@@ -84,18 +84,18 @@ class Heap(MutableSequence[PrioritizedItem]):
     n = len(self)
     if i >= n:
       return
-    lpos = 2*i
-    rpos = lpos + 1
-    minpos = i
-    if rpos < n:
-      if self[minpos] > self[rpos]:
-        minpos = rpos
-    if lpos < n:
-      if self[minpos] > self[lpos]:
-        minpos = lpos
-    if minpos != i:
-      self[i], self[minpos] = self[minpos], self[i]
-      self._fix_down(minpos)
+    l_pos = 2 * i
+    r_pos = l_pos + 1
+    min_pos = i
+    if r_pos < n:
+      if self[min_pos] > self[r_pos]:
+        min_pos = r_pos
+    if l_pos < n:
+      if self[min_pos] > self[l_pos]:
+        min_pos = l_pos
+    if min_pos != i:
+      self[i], self[min_pos] = self[min_pos], self[i]
+      self._fix_down(min_pos)
 
   def heap_push(self, item: PrioritizedItem):
     """Push item onto heap, maintaining the heap invariant."""
@@ -125,8 +125,8 @@ def test_heap_should_behave_like_a_heap():
 
   assert v[0].size == 0
   for i in range(n // 2):
-    l = 2*i
-    r = 2*i + 1
+    l = 2 * i
+    r = 2 * i + 1
 
     if l < n:
       assert v[i] <= v[l]
@@ -141,7 +141,7 @@ def test_fix_down_should_keep_heap_constraints():
   for i in range(n):
     v.heap_push(PrioritizedItem(key=str(i), size=i, value=''))
 
-  v[13].size = n+1
+  v[13].size = n + 1
 
   assert v[13].size > v[26].size
   assert v[13].size > v[27].size
@@ -171,7 +171,3 @@ def test_heap_pop_should_return_items_in_order():
 
   for i in range(1, 8):
     assert h.heap_pop().size == i
-
-
-
-

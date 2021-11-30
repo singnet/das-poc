@@ -1,7 +1,6 @@
 import argparse
 import logging
 import os
-import shutil
 
 from couchbase import exceptions as cb_exceptions
 from couchbase.auth import PasswordAuthenticator
@@ -10,6 +9,7 @@ from couchbase.management.collections import CollectionSpec
 from pymongo.collection import Collection
 from pymongo.mongo_client import MongoClient
 
+from cache import CachedCouchbaseClient, CouchbaseClient, DocumentNotFoundException
 from util import Clock, Statistics, AccumulatorClock
 
 logger = logging.getLogger("das")
@@ -43,7 +43,32 @@ acc_clock_block4 = AccumulatorClock()
 acc_clock_full = AccumulatorClock()
 
 
-def populate_sets(fh, collection: Collection, bucket):
+def append(couchbase_client: CachedCouchbaseClient, key: str, new_value):
+  value = []
+  try:
+    clock.reset()
+    value = couchbase_client.get(key)
+    # logger.info(result.content)
+    # value = result.content
+  except DocumentNotFoundException:
+    pass
+  finally:
+    get_time_statistics.add(clock.elapsed_time_ms())
+
+  value.extend(new_value)
+  clock.reset()
+  v = list(set(value))
+  couchbase_client.add(key=key, value=v, size=len(v))
+  incoming_size_statistics.add(len(v))
+  upsert_time_statistics.add(clock.elapsed_time_ms())
+
+
+def populate_sets(collection: Collection, bucket):
+  incoming_cached = CachedCouchbaseClient(
+    couchbase_client=CouchbaseClient(bucket=bucket, collection_name=INCOMING_COLL_NAME),
+    limit=10000000
+  )
+
   outgoing_set = bucket.collection(OUTGOING_COLL_NAME)
 
   total = collection.count_documents({})
@@ -81,8 +106,7 @@ def populate_sets(fh, collection: Collection, bucket):
     acc_clock_block4.start()
     incoming_clock.reset()
     for key, values in incoming_dict.items():
-      for v in values:
-        fh.write('{},{}\n'.format(key, v))
+      append(incoming_cached, key=key, new_value=values)
     incoming_time_statistics.add(incoming_clock.elapsed_time_ms())
     acc_clock_block4.pause()
 
@@ -123,6 +147,7 @@ def populate_sets(fh, collection: Collection, bucket):
     acc_clock_full.pause()
 
   cursor.close()
+  incoming_cached.flush()
 
 
 def create_collections(bucket, collections_names=None):
@@ -134,7 +159,7 @@ def create_collections(bucket, collections_names=None):
     logger.info(f'Creating Couchbase collection: "{name}"...')
     try:
       coll_manager.create_collection(CollectionSpec(name))
-    except cb_exceptions.CollectionAlreadyExistsException:
+    except cb_exceptions.CollectionAlreadyExistsException as _:
       logger.info(f'Collection exists!')
       pass
     except Exception as e:
@@ -149,7 +174,7 @@ def get_mongodb(mongodb_specs):
   return client[mongodb_specs['database']]
 
 
-def main(mongodb_specs, couchbase_specs, file_path):
+def main(mongodb_specs, couchbase_specs):
   cluster = Cluster(
     f'couchbase://{couchbase_specs["hostname"]}',
     authenticator=PasswordAuthenticator(couchbase_specs['username'], couchbase_specs['password']))
@@ -161,29 +186,20 @@ def main(mongodb_specs, couchbase_specs, file_path):
 
   db = get_mongodb(mongodb_specs)
 
-  # TODO: Cover all possible links_N collections.
-  with open(file_path, 'w') as fh:
-    logger.info('Indexing links_1')
-    populate_sets(fh, db['links_1'], bucket)
-    logger.info('Indexing links_2')
-    populate_sets(fh, db['links_2'], bucket)
-    logger.info('Indexing links_3')
-    populate_sets(fh, db['links_3'], bucket)
-    logger.info('Indexing links')
-    populate_sets(fh, db['links'], bucket)
-
-  # TODO: Use python. (?)
-  os.system(f'sort -t , -k 1,1 {file_path} > {file_path}.sorted')
-  shutil.move(f'{file_path}.sorted', file_path)
+  logger.info('Indexing links_1')
+  populate_sets(db['links_1'], bucket)
+  logger.info('Indexing links_2')
+  populate_sets(db['links_2'], bucket)
+  logger.info('Indexing links_3')
+  populate_sets(db['links_3'], bucket)
+  logger.info('Indexing links')
+  populate_sets(db['links'], bucket)
 
 
 def run():
   parser = argparse.ArgumentParser(
     'Indexes DAS (from MongoDB) to Couchbase', formatter_class=argparse.ArgumentDefaultsHelpFormatter
   )
-
-  parser.add_argument('--file-path', help='output file path')
-
   parser.add_argument('--mongo-hostname', help='mongo hostname to connect to')
   parser.add_argument('--mongo-port', help='mongo port to connect to')
   parser.add_argument('--mongo-username', help='mongo username')
@@ -205,12 +221,12 @@ def run():
   }
 
   couchbase_specs = {
-    'hostname': args.couchbase_hostname or os.environ.get('DAS_DATABASE_HOSTNAME', 'localhost'),
-    'username': args.couchbase_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
-    'password': args.couchbase_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
+    'hostname': args.mongo_hostname or os.environ.get('DAS_DATABASE_HOSTNAME', 'localhost'),
+    'username': args.mongo_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
+    'password': args.mongo_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
   }
 
-  main(mongodb_specs, couchbase_specs, args.file_path or '/tmp/all_pairs.txt')
+  main(mongodb_specs, couchbase_specs)
 
 
 if __name__ == '__main__':

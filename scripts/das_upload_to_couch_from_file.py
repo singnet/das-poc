@@ -1,13 +1,13 @@
 import argparse
+import datetime
 import logging
+import os
 from typing import Iterator
 
 from couchbase import exceptions as cb_exceptions
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.management.collections import CollectionSpec
-
-from cache import CouchbaseClient
 
 logger = logging.getLogger("das")
 logger.setLevel(logging.INFO)
@@ -59,28 +59,42 @@ def create_collections(bucket, collections_names=None):
       logger.error(f'[create_collections] Failed: {e}')
 
 
-def main(input_filename: str, couchbase_user: str, couchbase_password: str) -> None:
+def main(couchbase_specs, input_filename: str) -> None:
   cluster = Cluster(
-    'couchbase://localhost',
-    authenticator=PasswordAuthenticator(couchbase_user, couchbase_password),
+    f'couchbase://{couchbase_specs["hostname"]}',
+    authenticator=PasswordAuthenticator(couchbase_specs["username"], couchbase_specs["password"]),
 
   )
   bucket = cluster.bucket('das')
-
-  couchbase_client = CouchbaseClient(bucket=bucket, collection_name=INCOMING_COLL_NAME)
+  collection = bucket.collection(INCOMING_COLL_NAME)
 
   i = 0
   for k, v in key_value_generator(input_filename):
-    couchbase_client.add(k, v)
+    collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
     i += 1
     if i % 10000 == 0:
       logger.info(f'processed {i}')
 
 
-if __name__ == '__main__':
+def run():
   parser = argparse.ArgumentParser()
-  parser.add_argument('filename', help='Pairs filename', type=str)
-  parser.add_argument('--couchbase-user', help='Couchbase user', type=str)
-  parser.add_argument('--couchbase-password', help='Couchbase password', type=str)
+
+  parser.add_argument('--file-path', help='pairs file path')
+
+  parser.add_argument('--couchbase-hostname', help='couchbase hostname to connect to')
+  parser.add_argument('--couchbase-username', help='couchbase username')
+  parser.add_argument('--couchbase-password', help='couchbase password')
+
   args = parser.parse_args()
-  main(args.filename, args.couchbase_user, args.couchbase_password)
+
+  couchbase_specs = {
+    'hostname': args.couchbase_hostname or os.environ.get('DAS_DATABASE_HOSTNAME', 'localhost'),
+    'username': args.couchbase_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
+    'password': args.couchbase_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
+  }
+
+  main(couchbase_specs, args.file_path or '/tmp/all_pairs.txt')
+
+
+if __name__ == '__main__':
+  run()
