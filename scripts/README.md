@@ -43,3 +43,14 @@ docker-compose exec scripts python das.py file.metta
 # into a mongo database named UBERON
 docker-compose exec scripts python das.py -d UBERON /data/Go-Plus-UBERON_2020-10-20.metta
 ```
+
+
+### Populating couchbase from file
+
+First, generate the `(id, value)` file using the script `das_generate_file.py`. Then, run the command
+
+```shell
+sort -t , -k 1,1 all_pairs.txt > all_pairs_sorted.txt
+```
+
+Finally, upload the data to couchbase, using the script `das_upload_to_couch_from_file`.
