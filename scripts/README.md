@@ -23,9 +23,10 @@ docker-compose up -d
 
 # Setup Couchbase
 ./scripts/setup/couchbase.sh
-# > Couchbase is starting up...
-# > ...
-# > Couchbase is ready.
+# > INFO: Waiting for Couchbase...
+# > SUCCESS: Cluster initialized
+# > SUCCESS: Bucket created
+# > SUCCESS: Couchbase is ready.
 # > SUCCESS: Cluster initialized
 # > SUCCESS: Bucket created
 ```
