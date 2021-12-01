@@ -22,10 +22,16 @@ logger.addHandler(stream_handler)
 INCOMING_COLL_NAME = 'IncomingSet'
 OUTGOING_COLL_NAME = 'OutgoingSet'
 
+MAX_BLOCK_SIZE = 500000
 
-def key_value_generator(input_filename: str) -> Iterator[tuple[str, list[str]]]:
+
+def key_value_generator(
+    input_filename: str,
+    *,
+    block_size: int = MAX_BLOCK_SIZE) -> Iterator[tuple[str, list[str], int]]:
   last_key = ''
   last_list = []
+  counter = 0
   with open(input_filename, 'r') as fh:
     for line in fh:
       line = line.strip()
@@ -34,13 +40,18 @@ def key_value_generator(input_filename: str) -> Iterator[tuple[str, list[str]]]:
       key, value = line.split(',')
       if last_key == key:
         last_list.append(value)
+        if len(last_list) >= block_size:
+            yield last_key, last_list, counter
+            counter += 1
+            last_list = []
       else:
         if last_key != '':
-          yield last_key, last_list
+          yield last_key, last_list, counter
+        counter = 0
         last_key = key
         last_list = [value]
   if last_key != '':
-    yield last_key, last_list
+    yield last_key, last_list, counter
 
 
 def create_collections(bucket, collections_names=None):
@@ -69,8 +80,16 @@ def main(couchbase_specs, input_filename: str) -> None:
   collection = bucket.collection(INCOMING_COLL_NAME)
 
   i = 0
-  for k, v in key_value_generator(input_filename):
-    collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
+  for k, v, c in key_value_generator(input_filename):
+    if c == 0:
+      collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
+    else:
+      if c == 1:
+        first_block = collection.get(k)
+        collection.upsert(f"{k}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
+      collection.upsert(k, c + 1)
+      collection.upsert(f"{k}_{c}", v, timeout=datetime.timedelta(seconds=100))
+
     i += 1
     if i % 10000 == 0:
       logger.info(f'processed {i}')
