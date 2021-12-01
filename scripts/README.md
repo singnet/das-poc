@@ -27,8 +27,6 @@ docker-compose up -d
 # > SUCCESS: Cluster initialized
 # > SUCCESS: Bucket created
 # > SUCCESS: Couchbase is ready.
-# > SUCCESS: Cluster initialized
-# > SUCCESS: Bucket created
 ```
 
 The command creates three containers:
