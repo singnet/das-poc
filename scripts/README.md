@@ -9,12 +9,25 @@ Assuming there is a running console where the current directory is the root of t
 
 ```sh
 # MongoDB variables
-export DAS_DATABASE_HOSTNAME=localhost
-export DAS_DATABASE_PORT=27017
-# Change the following values when running on a public instance
+export DAS_MONGODB_HOSTNAME=mongo
+export DAS_MONGODB_PORT=27017
+# Couchbase variables (Using 8Gb of RAM)
+export DAS_COUCHBASE_HOSTNAME=couchbase
+export DAS_COUCHBASE_BUCKET_RAMSIZE=8192
+# Change the following values when running on a public instance (used by MongoDB and Couchbase)
 export DAS_DATABASE_USERNAME=dbadmin
 export DAS_DATABASE_PASSWORD=das#secret
+
+# Build and run containers
 docker-compose up -d
+
+# Setup Couchbase
+./scripts/setup/couchbase.sh
+# > Couchbase is starting up...
+# > ...
+# > Couchbase is ready.
+# > SUCCESS: Cluster initialized
+# > SUCCESS: Bucket created
 ```
 
 The command creates three containers:
@@ -53,8 +66,8 @@ First, generate `(id, value)` file running:
 ```sh
 # This will use the MongoDB "das" database
 docker-compose exec scripts python das_generate_file.py --file-path /tmp/all_pairs.txt
-# To run it with another database:
-docker-compose exec scripts python das_generate_file.py --file-path /tmp/all_pairs.txt --mongo-database UBERON
+# To run it against a specific mongo database:
+docker-compose exec scripts python das_generate_file.py --file-path /tmp/all_pairs.txt -d UBERON
 ```
 
 Now, upload the data to couchbase by running:

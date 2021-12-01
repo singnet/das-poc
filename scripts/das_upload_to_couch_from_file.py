@@ -88,7 +88,7 @@ def run():
   args = parser.parse_args()
 
   couchbase_specs = {
-    'hostname': args.couchbase_hostname or os.environ.get('DAS_DATABASE_HOSTNAME', 'localhost'),
+    'hostname': args.couchbase_hostname or os.environ.get('DAS_COUCHBASE_HOSTNAME', 'localhost'),
     'username': args.couchbase_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
     'password': args.couchbase_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
   }

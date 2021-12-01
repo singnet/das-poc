@@ -8,8 +8,8 @@ from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.management.collections import CollectionSpec
 from pymongo.collection import Collection
-from pymongo.mongo_client import MongoClient
 
+from helpers import get_mongodb
 from util import Clock, Statistics, AccumulatorClock
 
 logger = logging.getLogger("das")
@@ -141,14 +141,6 @@ def create_collections(bucket, collections_names=None):
       logger.error(f'[create_collections] Failed: {e}')
 
 
-def get_mongodb(mongodb_specs):
-  client = MongoClient(
-    f'mongodb://'
-    f'{mongodb_specs["username"]}:{mongodb_specs["password"]}'
-    f'@{mongodb_specs["hostname"]}:{mongodb_specs["port"]}')
-  return client[mongodb_specs['database']]
-
-
 def main(mongodb_specs, couchbase_specs, file_path):
   cluster = Cluster(
     f'couchbase://{couchbase_specs["hostname"]}',
@@ -188,7 +180,7 @@ def run():
   parser.add_argument('--mongo-port', help='mongo port to connect to')
   parser.add_argument('--mongo-username', help='mongo username')
   parser.add_argument('--mongo-password', help='mongo password')
-  parser.add_argument('--mongo-database', help='mongo database name to connect to')
+  parser.add_argument('--mongo-database', '-d', help='mongo database name to connect to')
 
   parser.add_argument('--couchbase-hostname', help='couchbase hostname to connect to')
   parser.add_argument('--couchbase-username', help='couchbase username')
@@ -197,15 +189,15 @@ def run():
   args = parser.parse_args()
 
   mongodb_specs = {
-    'hostname': args.mongo_hostname or os.environ.get('DAS_DATABASE_HOSTNAME', 'localhost'),
-    'port': args.mongo_port or os.environ.get('DAS_DATABASE_PORT', 27017),
+    'hostname': args.mongo_hostname or os.environ.get('DAS_MONGODB_HOSTNAME', 'localhost'),
+    'port': args.mongo_port or os.environ.get('DAS_MONGODB_PORT', 27017),
     'username': args.mongo_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
     'password': args.mongo_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
     'database': args.mongo_database or os.environ.get('DAS_DATABASE_NAME', 'das'),
   }
 
   couchbase_specs = {
-    'hostname': args.couchbase_hostname or os.environ.get('DAS_DATABASE_HOSTNAME', 'localhost'),
+    'hostname': args.couchbase_hostname or os.environ.get('DAS_COUCHBASE_HOSTNAME', 'localhost'),
     'username': args.couchbase_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
     'password': args.couchbase_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
   }

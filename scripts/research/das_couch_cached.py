@@ -213,17 +213,17 @@ def run():
   args = parser.parse_args()
 
   mongodb_specs = {
-    'hostname': args.mongo_hostname or os.environ.get('DAS_DATABASE_HOSTNAME', 'localhost'),
-    'port': args.mongo_port or os.environ.get('DAS_DATABASE_PORT', 27017),
+    'hostname': args.mongo_hostname or os.environ.get('DAS_MONGODB_HOSTNAME', 'localhost'),
+    'port': args.mongo_port or os.environ.get('DAS_MONGODB_PORT', 27017),
     'username': args.mongo_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
     'password': args.mongo_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
     'database': args.mongo_database or os.environ.get('DAS_DATABASE_NAME', 'das'),
   }
 
   couchbase_specs = {
-    'hostname': args.mongo_hostname or os.environ.get('DAS_DATABASE_HOSTNAME', 'localhost'),
-    'username': args.mongo_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
-    'password': args.mongo_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
+    'hostname': args.couchbase_hostname or os.environ.get('DAS_COUCHBASE_HOSTNAME', 'localhost'),
+    'username': args.couchbase_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
+    'password': args.couchbase_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
   }
 
   main(mongodb_specs, couchbase_specs)

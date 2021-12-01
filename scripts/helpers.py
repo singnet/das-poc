@@ -1,7 +1,17 @@
 import math
 from pathlib import Path
 
+from pymongo import MongoClient
+
 from atomese2metta.translator import AtomType, Type
+
+
+def get_mongodb(mongodb_specs):
+  client = MongoClient(
+    f'mongodb://'
+    f'{mongodb_specs["username"]}:{mongodb_specs["password"]}'
+    f'@{mongodb_specs["hostname"]}:{mongodb_specs["port"]}')
+  return client[mongodb_specs['database']]
 
 
 def get_filesize_mb(file_path):

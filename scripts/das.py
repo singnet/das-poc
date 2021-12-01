@@ -4,7 +4,6 @@ import logging
 import os
 from datetime import datetime
 
-from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
 from pymongo.errors import DuplicateKeyError
@@ -13,7 +12,7 @@ from pymongo.results import InsertOneResult
 
 from atomese2metta.translator import AtomType, Expression, MSet
 from hashing import Hasher, sort_by_key_hash
-from helpers import evaluate_hash, get_filesize_mb, human_time
+from helpers import get_mongodb, evaluate_hash, get_filesize_mb, human_time
 from metta_lex import MettaParser
 
 logger = logging.getLogger("das")
@@ -142,8 +141,7 @@ class DAS:
     return expression_type
 
 
-def main(
-  source, mongo_hostname, mongo_port, mongo_username, mongo_password, mongo_database, raise_duplicated):
+def main(source, mongodb_specs, raise_duplicated):
   metta_files = []
   if source.endswith('.metta'):
     metta_files.append(source)
@@ -151,8 +149,7 @@ def main(
     metta_files = glob.glob(f'{source}/*.metta')
 
   hasher = Hasher()
-  client = MongoClient(f"mongodb://{mongo_username}:{mongo_password}@{mongo_hostname}:{mongo_port}")
-  das = DAS(client[mongo_database], hasher)
+  das = DAS(get_mongodb(mongodb_specs), hasher)
 
   d1 = datetime.now()
   for idx, file_path in enumerate(metta_files):
@@ -193,57 +190,18 @@ def main(
   evaluate_hash(hash_dict=hasher.hash_index, logger=logger)
 
 
-if __name__ == "__main__":
+def run():
   parser = argparse.ArgumentParser(
     "Load MeTTa data into DAS", formatter_class=argparse.ArgumentDefaultsHelpFormatter
   )
 
   parser.add_argument("source", type=str, help="metta file(s) directory or path to load data from")
-  parser.add_argument(
-    "--hostname",
-    "-H",
-    type=str,
-    default=os.environ.get("DAS_DATABASE_HOSTNAME", "localhost"),
-    metavar="HOSTNAME",
-    dest="mongo_hostname",
-    help="mongo hostname to connect to",
-  )
-  parser.add_argument(
-    "--port",
-    "-p",
-    type=int,
-    default=os.environ.get("DAS_DATABASE_PORT", "27017"),
-    metavar="PORT",
-    dest="mongo_port",
-    help="mongo port to connect to",
-  )
-  parser.add_argument(
-    "--username",
-    "-user",
-    type=str,
-    default=os.environ.get("DAS_DATABASE_USERNAME", "dbadmin"),
-    metavar="USERNAME",
-    dest="mongo_username",
-    help="mongo username",
-  )
-  parser.add_argument(
-    "--password",
-    "-pass",
-    type=str,
-    default=os.environ.get("DAS_DATABASE_PASSWORD", "das#secret"),
-    metavar="PASSWORD",
-    dest="mongo_password",
-    help="mongo password",
-  )
-  parser.add_argument(
-    "--database",
-    "-d",
-    type=str,
-    default="das",
-    metavar="NAME",
-    dest="mongo_database",
-    help="mongo database name to connect to",
-  )
+  parser.add_argument('--mongo-hostname', help='mongo hostname to connect to')
+  parser.add_argument('--mongo-port', help='mongo port to connect to')
+  parser.add_argument('--mongo-username', help='mongo username')
+  parser.add_argument('--mongo-password', help='mongo password')
+  parser.add_argument('--mongo-database', '-d', help='mongo database name to connect to')
+
   parser.add_argument(
     "--raise-on-duplicated",
     action='store_true',
@@ -251,6 +209,19 @@ if __name__ == "__main__":
     dest="raise_duplicated",
     help="raise error when duplicated insert error found",
   )
+
   args = parser.parse_args()
 
-  main(**vars(args))
+  mongodb_specs = {
+    'hostname': args.mongo_hostname or os.environ.get('DAS_MONGODB_HOSTNAME', 'localhost'),
+    'port': args.mongo_port or os.environ.get('DAS_MONGODB_PORT', 27017),
+    'username': args.mongo_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
+    'password': args.mongo_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
+    'database': args.mongo_database or os.environ.get('DAS_DATABASE_NAME', 'das'),
+  }
+
+  main(args.source, mongodb_specs, args.raise_duplicated)
+
+
+if __name__ == "__main__":
+  run()
