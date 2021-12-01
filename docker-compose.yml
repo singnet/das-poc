@@ -22,10 +22,10 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - MONGO_INITDB_ROOT_PASSWORD=${DAS_DATABASE_PASSWORD:-das#secret}
     ports:
-      - ${DAS_DATABASE_PORT:-27017}:${DAS_DATABASE_PORT:-27017}
+      - ${DAS_MONGODB_PORT:-27017}:${DAS_MONGODB_PORT:-27017}
     volumes:
       - mongodbdata:/data/db
-    command: mongod --port ${DAS_DATABASE_PORT:-27017}
+    command: mongod --port ${DAS_MONGODB_PORT:-27017}
 
   couchbase:
     image: couchbase
