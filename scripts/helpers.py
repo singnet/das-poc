@@ -1,7 +1,17 @@
 import math
 from pathlib import Path
 
+from pymongo import MongoClient
+
 from atomese2metta.translator import AtomType, Type
+
+
+def get_mongodb(mongodb_specs):
+  client = MongoClient(
+    f'mongodb://'
+    f'{mongodb_specs["username"]}:{mongodb_specs["password"]}'
+    f'@{mongodb_specs["hostname"]}:{mongodb_specs["port"]}')
+  return client[mongodb_specs['database']]
 
 
 def get_filesize_mb(file_path):
@@ -11,7 +21,7 @@ def get_filesize_mb(file_path):
 def human_time(delta) -> str:
   seconds = delta.seconds
   if seconds < 1:
-    return f"{ delta.microseconds } microseconds"
+    return f"{delta.microseconds} microseconds"
   elif seconds < 60:
     return f"{seconds} second(s)"
   else:
@@ -64,3 +74,7 @@ def evaluate_hash(hash_dict: dict, output_file: str = '', logger=None):
   _print(f"5 - Subexpressions (!is_root): {expressions_non_root}")
   _print(f"6 - Hash Count               : {hash_count}")
   _print(f"7 - Hash Count(w/ duplicated): {all_hashes}")
+
+
+def extract_by_prefix(key, kwargs):
+  return {k.removeprefix(key): v for k, v in kwargs.items() if k.startswith(key)}
