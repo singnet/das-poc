@@ -15,6 +15,9 @@ logger = get_logger()
 INCOMING_COLL_NAME = 'IncomingSet'
 OUTGOING_COLL_NAME = 'OutgoingSet'
 
+# There is a Couchbase limitation for long values (max: 20Mb)
+# So we set the it to ~15Mb, if this max size is reached
+# we create a new key to store the next 15Mb batch and so on.
 MAX_BLOCK_SIZE = 500000
 
 
@@ -70,6 +73,10 @@ def main(couchbase_specs, input_filename: str) -> None:
   bucket = cluster.bucket('das')
   collection = bucket.collection(INCOMING_COLL_NAME)
 
+  # TODO: Too over?
+  with open(input_filename, 'r') as f:
+    total_entries = len(f.readlines())
+
   i = 0
   for k, v, c in key_value_generator(input_filename):
     if c == 0:
@@ -83,7 +90,7 @@ def main(couchbase_specs, input_filename: str) -> None:
 
     i += 1
     if i % 10000 == 0:
-      logger.info(f'processed {i}')
+      logger.info(f'Entries uploaded: [{i}/{total_entries}]')
 
 
 def run():

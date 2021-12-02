@@ -78,7 +78,7 @@ def populate_sets(fh, collection: Collection, bucket):
     acc_clock_block4.pause()
 
     count += 1
-    if count % 1000 == 0:
+    if count % 10000 == 0:
       logger.debug("\n")
       logger.info("Documents processed: [{}/{}]".format(count, total))
       logger.debug("Batch time (sec):         {}".format(batch_clock.elapsed_time_seconds()))
