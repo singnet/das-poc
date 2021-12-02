@@ -1,26 +1,47 @@
 version: "3.9"
 services:
-    scripts:
-        build: .
-        environment:
-            - DAS_MONGO_HOSTNAME=${DAS_MONGO_HOSTNAME:-mongo}
-            - DAS_MONGO_PORT=${DAS_MONGO_PORT:-27017}
-            - DAS_MONGO_USERNAME=${DAS_MONGO_USERNAME:-mongoadmin}
-            - DAS_MONGO_PASSWORD=${DAS_MONGO_PASSWORD:-das#secret}
-        tty: true
-        volumes:
-            - ./scripts:/scripts
-        links:
-            - mongo
-    mongo:
-        image: mongo
-        environment:
-            - MONGO_INITDB_ROOT_USERNAME=${DAS_MONGO_USERNAME:-mongoadmin}
-            - MONGO_INITDB_ROOT_PASSWORD=${DAS_MONGO_PASSWORD:-das#secret}
-        ports:
-            - "${DAS_MONGO_PORT:-27017}:${DAS_MONGO_PORT:-27017}"
-        volumes:
-            - mongodbdata:/data/db
-        command: mongod --port ${DAS_MONGO_PORT:-27017}
+  scripts:
+    build: .
+    image: scripts:${DAS_TAG:-latest}
+    environment:
+      - DAS_MONGODB_HOSTNAME=${DAS_MONGODB_HOSTNAME:-mongo}
+      - DAS_MONGODB_PORT=${DAS_MONGODB_PORT:-27017}
+      - DAS_COUCHBASE_HOSTNAME=${DAS_COUCHBASE_HOSTNAME:-couchbase}
+      - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
+      - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-das#secret}
+    tty: true
+    volumes:
+      - ./scripts:/scripts
+    links:
+      - mongo
+      - couchbase
+
+  mongo:
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
+      - MONGO_INITDB_ROOT_PASSWORD=${DAS_DATABASE_PASSWORD:-das#secret}
+    ports:
+      - ${DAS_MONGODB_PORT:-27017}:${DAS_MONGODB_PORT:-27017}
+    volumes:
+      - mongodbdata:/data/db
+    command: mongod --port ${DAS_MONGODB_PORT:-27017}
+
+  couchbase:
+    image: couchbase
+    environment:
+      - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
+      - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-das#secret}
+      - DAS_COUCHBASE_BUCKET_RAMSIZE=${DAS_COUCHBASE_BUCKET_RAMSIZE:-8192}
+    ports:
+      - "8091-8095:8091-8095"
+      - "11210:11210"
+    expose:
+      - "8091"
+      - "8094"
+    volumes:
+      - couchbasedata:/opt/couchbase/var
+
 volumes:
-    mongodbdata: {}
+  mongodbdata: { }
+  couchbasedata: { }

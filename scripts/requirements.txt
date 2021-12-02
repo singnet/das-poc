@@ -1,3 +1,5 @@
 ply==3.11
 pymongo==3.12.1
 pytest==6.2.5
+couchbase==3.2.3
+numpy==1.21.4
