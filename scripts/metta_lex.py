@@ -5,6 +5,9 @@ from ply.lex import lex
 
 from atomese2metta.translator import AtomType, Expression, MSet
 from hashing import Hasher
+from helpers import get_logger
+
+logger = get_logger()
 
 
 class MettaLex(object):
@@ -111,17 +114,18 @@ class MettaParser:
     return cls()._parse(text)
 
 
-def main(filename):
-  with open(filename, 'r') as f:
-    text = f.read()
-
-  for type_name, expression in MettaParser.parse(text):
-    print(type_name, expression)
-
-
-if __name__ == "__main__":
+def main():
   parser = argparse.ArgumentParser("Parse MeTTa file")
   parser.add_argument("filename", type=str, help="Input .metta filename")
 
   args = parser.parse_args()
-  main(args.filename)
+
+  with open(args.filename, 'r') as f:
+    text = f.read()
+
+  for type_name, expression in MettaParser.parse(text):
+    logger.info(type_name, expression)
+
+
+if __name__ == "__main__":
+  main()

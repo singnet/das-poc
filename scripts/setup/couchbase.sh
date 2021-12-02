@@ -5,17 +5,14 @@ setup() {
 
   for attempt in $(seq 1 $ATTEMPTS); do
     echo "INFO: Waiting for Couchbase..."
+
     sleep 10
+
     docker-compose exec couchbase couchbase-cli \
       cluster-init \
       --cluster-name DAS_Cluster \
       --cluster-username "${DAS_DATABASE_USERNAME}" \
       --cluster-password "${DAS_DATABASE_PASSWORD}"
-
-    if [ "$?" == 1 ]; then
-      echo "INFO: Couchbase cluster is not ready yet."
-      continue
-    fi
 
     docker-compose exec couchbase couchbase-cli \
       bucket-create \

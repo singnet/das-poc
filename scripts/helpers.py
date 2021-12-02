@@ -1,4 +1,6 @@
+import logging
 import math
+import os
 from pathlib import Path
 
 from pymongo import MongoClient
@@ -78,3 +80,12 @@ def evaluate_hash(hash_dict: dict, output_file: str = '', logger=None):
 
 def extract_by_prefix(key, kwargs):
   return {k.removeprefix(key): v for k, v in kwargs.items() if k.startswith(key)}
+
+
+def get_logger(name='das'):
+  logger = logging.getLogger(name)
+  logging.basicConfig(format="[%(asctime)s %(levelname)s]: %(message)s")
+  debug = os.environ.get('DAS_DEBUG', False)
+  debug = debug == 'true' or debug == '1'
+  logger.setLevel(logging.DEBUG if debug else logging.INFO)
+  return logger

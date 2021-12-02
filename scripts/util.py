@@ -4,6 +4,10 @@ import time
 import numpy as np
 import pytest
 
+from helpers import get_logger
+
+logger = get_logger()
+
 
 class Clock:
   def __init__(self):
@@ -127,10 +131,10 @@ def run():
   s.add(1)
   s.add(-2)
   s.add(2)
-  print(str(s))
+  logger.info(str(s))
   time.sleep(1)
-  print(c.elapsed_time_ms())
-  print('acc: {}'.format(acc.acc_seconds()))
+  logger.info(c.elapsed_time_ms())
+  logger.info('acc: {}'.format(acc.acc_seconds()))
 
 
 if __name__ == '__main__':

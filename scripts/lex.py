@@ -2,6 +2,10 @@ import argparse
 
 from ply.lex import lex
 
+from helpers import get_logger
+
+logger = get_logger()
+
 
 class Lex(object):
   # List of token names.   This is always required
@@ -62,17 +66,19 @@ class Lex(object):
       yield tok.lexpos, tok.type, tok.value
 
 
-def main(filename):
-  m = Lex()
-  m.build()
-  with open(filename, "r") as fh:
-    for (pos, token_type, value) in m.get_tokens(fh.read()):
-      print(pos, token_type, value)
-
-
-if __name__ == "__main__":
+def main():
   parser = argparse.ArgumentParser("Lexical analysis")
   parser.add_argument("filename", type=str, help="Input filename")
 
   args = parser.parse_args()
-  main(args.filename)
+
+  m = Lex()
+  m.build()
+  with open(args.filename, "r") as fh:
+    for (pos, token_type, value) in m.get_tokens(fh.read()):
+      logger.info(pos, token_type, value)
+
+
+if __name__ == "__main__":
+  a = 1
+  main()

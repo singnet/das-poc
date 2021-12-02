@@ -1,6 +1,5 @@
 import argparse
 import glob
-import logging
 import os
 from datetime import datetime
 
@@ -12,20 +11,10 @@ from pymongo.results import InsertOneResult
 
 from atomese2metta.translator import AtomType, Expression, MSet
 from hashing import Hasher, sort_by_key_hash
-from helpers import get_mongodb, evaluate_hash, get_filesize_mb, human_time
+from helpers import get_mongodb, get_logger, evaluate_hash, get_filesize_mb, human_time
 from metta_lex import MettaParser
 
-logger = logging.getLogger("das")
-logger.setLevel(logging.INFO)
-
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
-
-formatter = logging.Formatter("[%(asctime)s %(levelname)s]: %(message)s")
-
-stream_handler.setFormatter(formatter)
-
-logger.addHandler(stream_handler)
+logger = get_logger()
 
 
 class DAS:

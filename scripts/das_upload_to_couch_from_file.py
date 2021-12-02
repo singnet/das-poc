@@ -1,6 +1,5 @@
 import argparse
 import datetime
-import logging
 import os
 from typing import Iterator
 
@@ -9,15 +8,9 @@ from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.management.collections import CollectionSpec
 
-logger = logging.getLogger("das")
-logger.setLevel(logging.INFO)
+from helpers import get_logger
 
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
-
-formatter = logging.Formatter("[%(asctime)s %(levelname)s]: %(message)s")
-stream_handler.setFormatter(formatter)
-logger.addHandler(stream_handler)
+logger = get_logger()
 
 INCOMING_COLL_NAME = 'IncomingSet'
 OUTGOING_COLL_NAME = 'OutgoingSet'
@@ -26,9 +19,9 @@ MAX_BLOCK_SIZE = 500000
 
 
 def key_value_generator(
-    input_filename: str,
-    *,
-    block_size: int = MAX_BLOCK_SIZE) -> Iterator[tuple[str, list[str], int]]:
+  input_filename: str,
+  *,
+  block_size: int = MAX_BLOCK_SIZE) -> Iterator[tuple[str, list[str], int]]:
   last_key = ''
   last_list = []
   counter = 0
@@ -41,9 +34,9 @@ def key_value_generator(
       if last_key == key:
         last_list.append(value)
         if len(last_list) >= block_size:
-            yield last_key, last_list, counter
-            counter += 1
-            last_list = []
+          yield last_key, last_list, counter
+          counter += 1
+          last_list = []
       else:
         if last_key != '':
           yield last_key, last_list, counter
@@ -73,9 +66,7 @@ def create_collections(bucket, collections_names=None):
 def main(couchbase_specs, input_filename: str) -> None:
   cluster = Cluster(
     f'couchbase://{couchbase_specs["hostname"]}',
-    authenticator=PasswordAuthenticator(couchbase_specs["username"], couchbase_specs["password"]),
-
-  )
+    authenticator=PasswordAuthenticator(couchbase_specs["username"], couchbase_specs["password"]))
   bucket = cluster.bucket('das')
   collection = bucket.collection(INCOMING_COLL_NAME)
 

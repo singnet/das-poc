@@ -1,26 +1,18 @@
 import argparse
-import logging
 import os
 
 from couchbase import exceptions as cb_exceptions
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.management.collections import CollectionSpec
+from helpers import get_logger
 from pymongo.collection import Collection
 from pymongo.mongo_client import MongoClient
-
-from cache import CachedCouchbaseClient, CouchbaseClient, DocumentNotFoundException
 from util import Clock, Statistics, AccumulatorClock
 
-logger = logging.getLogger("das")
-logger.setLevel(logging.INFO)
+from cache import CachedCouchbaseClient, CouchbaseClient, DocumentNotFoundException
 
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
-
-formatter = logging.Formatter("[%(asctime)s %(levelname)s]: %(message)s")
-stream_handler.setFormatter(formatter)
-logger.addHandler(stream_handler)
+logger = get_logger()
 
 INCOMING_COLL_NAME = 'IncomingSet'
 OUTGOING_COLL_NAME = 'OutgoingSet'
