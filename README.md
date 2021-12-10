@@ -103,10 +103,14 @@ Notes:
 ```
 IncomingSet:
 {
-     8: [10],
-     9: [10],
-     3: [11, 12],
-     7: [11, 12],
+    8: [10],
+    9: [10],
+    3: 2,
+    3_0: [11],
+    3_1: [12],
+    7: 2,
+    7_0: [11],
+    7_1: [12],
     10: [11],
     11: [12]
 }
@@ -133,6 +137,28 @@ RecursiveOutgoingSet:
     10: [8, 9],
     11: [3, 7, 10, 8, 9],
     12: [3, 7, 11, 10, 8, 9]
+}
+```
+
+At this point, we found a [size limitation for values in Couchbase collections](https://docs.couchbase.com/server/current/learn/clusters-and-availability/size-limitations.html).
+Not rarely some keys in `IncomingSet` collection will have more than the limit of 20 MB defined by Couchbase under their values.
+On intend to bypass this limitation was implemented a rule to split the values into sub-keys. For simplicity, the example uses a limit of one value for each key (the real implementation has 500,000 as max number of values).
+The rule defines that once time a main key have more values than the max limit defined that key will be splitted into two other sub-keys and at the time the last one created sub-key achieve the max limit for their values a new sub-key will be created.
+The integer number storaged at main key represents the amount of the sub-keys existents under key itself. By their turn the sub-keys has the indentifier composed by the main key plus a counter starts at zero and ends at the integer storaged under main key minus one and both are separeted by underscore (`_`).
+
+```
+IncomingSet:
+{
+    8: [10],
+    9: [10],
+    3: 2,
+    3_0: [11],
+    3_1: [12],
+    7: 2,
+    7_0: [11],
+    7_1: [12],
+    10: [11],
+    11: [12]
 }
 ```
 
