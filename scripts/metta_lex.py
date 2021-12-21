@@ -91,8 +91,10 @@ class MettaParser:
         current = list_stack.pop()
         pointer = current.pop()
         if isinstance(pointer[0], str) and pointer[0] == ":":
-          atom_type = AtomType(*pointer[1:])
-          if atom_type.type == "Type":
+          _, symbol, type_ = pointer
+          type_ = self.hasher.search_by_name(type_)
+          atom_type = AtomType(symbol, type_)
+          if atom_type.type.symbol == "Type":
             yield self.NODE_TYPE, atom_type
           else:
             yield self.NODE, atom_type

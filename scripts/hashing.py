@@ -53,6 +53,8 @@ class Hasher:
         type_hash = e.type_hash
         type_hash = (type_hash or self.get_expression_type_hash(e, salt=e.SET_FROM))
         ids.append(type_hash)
+      elif isinstance(e, AtomType):
+        ids.append(e.type._id)
       elif isinstance(e, str):
         ids.append(self.get_type(e)._id)
       else:
@@ -64,13 +66,10 @@ class Hasher:
     return self.apply_alg("".join(ids))
 
   def get_expression_hash(self, expression: Union[Expression, str], level=0) -> str:
-    if isinstance(expression, str):
-      return self.search_by_name(expression)._id
+    if hasattr(expression, "_id") and expression._id is not None:
+      return expression._id
 
     elif isinstance(expression, Expression):
-      if expression._id is not None:
-        return expression._id
-
       keys_hashes = [
         self.get_expression_hash(key, level=level + 1) for key in expression
       ]

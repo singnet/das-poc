@@ -70,22 +70,25 @@ class MSet(Expression):
 
 
 class AtomType(BaseExpression):
-  def __init__(self, symbol: Symbol, mtype: Optional[Symbol] = Type, _id=None):
+  def __init__(self, symbol: Symbol, mtype: Optional['AtomType'] = None, _id=None):
     self._id = _id
     self.symbol: Symbol = symbol
-    self.type: Optional[Symbol] = mtype
+    self.type: Optional[AtomType] = mtype
 
   def __hash__(self):
-    return hash(self.symbol + ":" + (self.type or ''))
+    return hash(self.symbol + ":" + (self.type.symbol if self.type else ''))
 
   def __eq__(self, other):
+    if not isinstance(other, AtomType):
+      return False
     return self.symbol == other.symbol and self.type == other.type
 
-  def __str__(self):
-    return f"{self.OPENER}: {self.symbol} {self.type}{self.CLOSER}"
-
   def __repr__(self):
-    return f"{self.__class__.__name__}(_id={repr(self._id)}, symbol={repr(self.symbol)}, mtype={repr(self.type)})"
+    return f"{self.__class__.__name__}({repr(self.symbol)}, mtype={repr(self.type)}, _id={repr(self._id)})"
+
+  def __str__(self):
+    return f"{self.OPENER}: {self.symbol} {self.type.symbol if self.type else ''}{self.CLOSER}"
+
 
 
 class InvalidSymbol(Exception):

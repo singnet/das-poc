@@ -112,7 +112,7 @@ class DAS:
   def retrieve_id(self, value) -> str:
     if isinstance(value, str):
       return self.hasher.search_by_name(value)._id
-    elif isinstance(value, Expression):
+    elif isinstance(value, (Expression, AtomType)):
       return value._id
     else:
       raise TypeError(f"Invalid type {type(value)}")
@@ -124,6 +124,8 @@ class DAS:
         expression_type.append(self.hasher.get_type(e)._id)
       elif isinstance(e, Expression):
         expression_type.append(self.retrieve_expression_type(e))
+      elif isinstance(e, AtomType):
+        expression_type.append(e.type._id)
       else:
         raise TypeError(e)
 
