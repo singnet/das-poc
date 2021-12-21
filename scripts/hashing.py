@@ -17,6 +17,18 @@ class Hasher:
     self.atom_type_dict = dict()
     self.hash_index = defaultdict(list)
 
+  def sort_expression(self, expression: Expression) -> tuple[tuple[str, ...], tuple[str, ...]]:
+      keys_hashes = tuple( e._id for e in expression )
+
+      keys = tuple(expression)
+      set_from = expression.SET_FROM - 1
+      to_keep_kh, to_sort_kh = keys_hashes[:set_from], keys_hashes[set_from:]
+      to_keep_keys, to_sort_keys = keys[:set_from], keys[set_from:]
+      sorted_keys_hashes, sorted_keys = sort_by_key_hash(to_sort_kh, to_sort_keys)
+      keys: tuple[str, ...] = tuple(to_keep_keys) + sorted_keys
+      keys_hashes: tuple[str, ...] = tuple(to_keep_kh) + sorted_keys_hashes
+      return keys, keys_hashes
+
   def apply_alg(self, value: str) -> str:
     return self.algorithm(value.encode("utf-8")).digest().hex()
 
@@ -39,7 +51,7 @@ class Hasher:
     for e in types:
       if isinstance(e, Expression):
         type_hash = e.type_hash
-        type_hash = (type_hash or self.get_expression_type_hash(e, salt=e.SALT))
+        type_hash = (type_hash or self.get_expression_type_hash(e, salt=e.SET_FROM))
         ids.append(type_hash)
       elif isinstance(e, str):
         ids.append(self.get_type(e)._id)
@@ -47,7 +59,7 @@ class Hasher:
         raise ValueError(e)
 
     if salt is not None:
-      ids.insert(0, salt)
+      ids.insert(0, str(salt))
 
     return self.apply_alg("".join(ids))
 
@@ -63,12 +75,14 @@ class Hasher:
         self.get_expression_hash(key, level=level + 1) for key in expression
       ]
 
-      keys = list(expression)
-      if isinstance(expression, MSet):
-        keys_hashes, keys = sort_by_key_hash(keys_hashes, keys)
+      if expression.SET_FROM is None:
+        keys = tuple(expression)
+      else:
+        keys, keys_hashes = self.sort_expression(expression)
+
 
       if expression.type_hash is None:
-        expression_type_hash = self.get_expression_type_hash(keys, salt=expression.SALT)
+        expression_type_hash = self.get_expression_type_hash(keys, salt=expression.SET_FROM)
         expression.type_hash = expression_type_hash
       else:
         expression_type_hash = expression.type_hash

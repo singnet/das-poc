@@ -3,7 +3,7 @@ from typing import Any, List, Union
 
 from ply.lex import lex
 
-from atomese2metta.translator import AtomType, Expression, MSet
+from atomese2metta.translator import AtomType, Expression, MSet, UnorderedExpression
 from hashing import Hasher
 from helpers import get_logger
 
@@ -67,10 +67,12 @@ class MettaParser:
   NODE_TYPE = 'NODE_TYPE'
   NODE = 'NODE'
   EXPRESSION = 'EXPRESSION'
+  SET_FROM_REST = ('Similarity',)
 
   def __init__(self):
     self.lex = self.LEX_CLASS()
     self.lex.build()
+    self.hasher = self.HASHER_CLASS()
 
   def _parse(self, text: str):
     list_stack: List[Any] = list()
@@ -95,10 +97,19 @@ class MettaParser:
           else:
             yield self.NODE, atom_type
         else:
+          expression = []
+          for v in pointer:
+            if isinstance(v, str):
+              expression.append(self.hasher.search_by_name(v))
+            else:
+              expression.append(v)
           if token_type == "RPAREN":
-            expression = Expression(pointer)
+            if pointer[0] in self.SET_FROM_REST:
+              expression = UnorderedExpression(expression)
+            else:
+              expression = Expression(expression)
           else:
-            expression = MSet(pointer)
+            expression = MSet(expression)
 
           if len(list_stack) == 0:
             expression.is_root = True

@@ -94,7 +94,7 @@ class DAS:
       "_id": expression._id,
       "type": type_,
       "is_root": expression.is_root,
-      "is_ordered": not is_set,
+      "set_from": expression.SET_FROM,
     }
 
     if len(expression) > 3:

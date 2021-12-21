@@ -10,15 +10,22 @@ Unknown = Symbol("?")
 Type = Symbol("Type")
 
 
+class SetFrom:
+  """This class define constant values to describe the `set_from` field from Expressions instances."""
+  NONE = None
+  ALL = 1
+  REST = 2
+
+
 class BaseExpression(ABC):
   SYMBOL = None
-  SALT = None
 
   OPENER = "("
   CLOSER = ")"
 
 
 class Expression(list, BaseExpression):
+  SET_FROM = SetFrom.NONE
 
   def __init__(self, iterable, _id=None, is_root=False, type_hash=None):
     self.extend(iterable)
@@ -27,7 +34,7 @@ class Expression(list, BaseExpression):
     self.is_root = is_root
 
   def _signature(self):
-    return f"{(self.SALT or 'EXPR')}:{':'.join(str(hash(e)) for e in self)}"
+    return f"{(self.SET_FROM or 'NONE')}:{':'.join(str(hash(e)) for e in self)}"
 
   def __hash__(self):
     return hash(self._signature())
@@ -42,20 +49,24 @@ class Expression(list, BaseExpression):
     return f'{self.__class__.__name__}({repr(list(self))}, _id={repr(self._id)}, is_root={repr(self.is_root)}, type_hash={repr(self.type_hash)})'
 
 
-class MList(Expression):
-  SYMBOL = "List"
-  SALT = "LIST"
+class UnorderedExpression(Expression):
+  SET_FROM = SetFrom.REST
+
+  def _signature(self):
+    first, *rest = list(self)
+    values = [first, *sorted(rest, key=lambda e: e._id)]
+    return f"{(self.SET_FROM)}:{':'.join(str(hash(e)) for e in values)}"
 
 
 class MSet(Expression):
+  SET_FROM = SetFrom.ALL
   SYMBOL = "Set"
-  SALT = "SET"
 
   OPENER = "{"
   CLOSER = "}"
 
   def _signature(self):
-    return f"{(self.SALT)}:{':'.join(str(hash(e)) for e in sorted(self))}"
+    return f"{(self.SET_FROM)}:{':'.join(str(hash(e)) for e in sorted(self))}"
 
 
 class AtomType(BaseExpression):
