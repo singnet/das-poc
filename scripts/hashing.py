@@ -11,11 +11,9 @@ def sort_by_key_hash(keys_hashes: list[Any], keys: list[Any], reverse=False) -> 
 
 
 class Hasher:
-
-  def __init__(self, algorithm=md5):
-    self.algorithm = algorithm
-    self.atom_type_dict = dict()
-    self.hash_index = defaultdict(list)
+  atom_type_dict = dict()
+  hash_index = defaultdict(list)
+  algorithm = md5
 
   def sort_expression(self, expression: Expression) -> tuple[tuple[str, ...], tuple[str, ...]]:
       keys_hashes = tuple( e._id for e in expression )
