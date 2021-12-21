@@ -188,11 +188,8 @@ class Translator:
 
         return symbol
       elif self.is_link(first):
-        if mtype in (MList.SYMBOL, MSet.SYMBOL):
-          if mtype == MList.SYMBOL:
-            return MList(map(self.translate, rest))
-          elif mtype == MSet.SYMBOL:
-            return MSet(map(self.translate, rest))
+        if mtype == MSet.SYMBOL:
+          return MSet(map(self.translate, rest))
         else:
           self.atom_node_types.add(AtomType(mtype))
           return Expression(
