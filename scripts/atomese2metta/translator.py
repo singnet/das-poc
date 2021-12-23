@@ -124,8 +124,11 @@ class Translator:
 
   IGNORED_SYMBOLS = ("stv",)
 
+  TYPE = AtomType(symbol='Type', mtype=None)
+  UNKNOWN = AtomType(symbol='Unknown', mtype=None)
+
   def __init__(self):
-    self.atom_node_types = OrderedSet([AtomType(symbol='Unknown', mtype=None), AtomType(symbol='Type', mtype=None)])
+    self.atom_node_types = OrderedSet([self.TYPE, self.UNKNOWN])
     self.atom_nodes = OrderedSet()
 
   @classmethod
@@ -183,15 +186,15 @@ class Translator:
 
         symbol = self.replace_nodesymbol(mtype, rest[0])
 
-        self.atom_node_types.add(AtomType(mtype))
-        self.atom_nodes.add(AtomType(symbol, mtype=mtype))
+        self.atom_node_types.add(atom_node_type := AtomType(mtype, mtype=self.TYPE))
+        self.atom_nodes.add(AtomType(symbol, mtype=atom_node_type))
 
         return symbol
       elif self.is_link(first):
         if mtype == MSet.SYMBOL:
           return MSet(map(self.translate, rest))
         else:
-          self.atom_node_types.add(AtomType(mtype))
+          self.atom_node_types.add(AtomType(mtype, mtype=self.TYPE))
           return Expression(
             [
               mtype,
