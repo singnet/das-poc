@@ -43,7 +43,7 @@ class Expression(list, BaseExpression):
     return self._signature() == o._signature()
 
   def __str__(self):
-    return f'{self.OPENER}{" ".join([str(v) for v in self])}{self.CLOSER}'
+    return f'{self.OPENER}{" ".join([v.symbol if isinstance(v, AtomType) else str(v) for v in self])}{self.CLOSER}'
 
   def __repr__(self):
     return f'{self.__class__.__name__}({repr(list(self))}, _id={repr(self._id)}, is_root={repr(self.is_root)}, type_hash={repr(self.type_hash)})'
@@ -54,7 +54,7 @@ class UnorderedExpression(Expression):
 
   def _signature(self):
     first, *rest = list(self)
-    values = [first, *sorted(rest, key=lambda e: e._id)]
+    values = [first, *sorted(rest, key=lambda e: e.symbol if isinstance(e, AtomType) else e)]
     return f"{(self.SET_FROM)}:{':'.join(str(hash(e)) for e in values)}"
 
 
@@ -66,7 +66,7 @@ class MSet(Expression):
   CLOSER = "}"
 
   def _signature(self):
-    return f"{(self.SET_FROM)}:{':'.join(str(hash(e)) for e in sorted(self))}"
+      return f"{(self.SET_FROM)}:{':'.join(str(hash(e)) for e in sorted(self, key=lambda e: e.symbol if isinstance(e, AtomType) else e))}"
 
 
 class AtomType(BaseExpression):
