@@ -6,26 +6,17 @@ from typing import Any, Union
 from atomese2metta.translator import AtomType, Expression, MSet
 
 
-def sort_by_key_hash(keys_hashes: list[Any], keys: list[Any], reverse=False) -> tuple[tuple[Any], ...]:
-  return tuple(zip(*sorted(zip(keys_hashes, keys), key=itemgetter(0), reverse=reverse)))
-
-
 class Hasher:
   atom_type_dict = dict()
   hash_index = defaultdict(list)
   algorithm = md5
 
-  def sort_expression(self, expression: Expression) -> tuple[tuple[str, ...], tuple[str, ...]]:
-      keys_hashes = tuple( e._id for e in expression )
-
-      keys = tuple(expression)
-      set_from = expression.SET_FROM - 1
-      to_keep_kh, to_sort_kh = keys_hashes[:set_from], keys_hashes[set_from:]
-      to_keep_keys, to_sort_keys = keys[:set_from], keys[set_from:]
-      sorted_keys_hashes, sorted_keys = sort_by_key_hash(to_sort_kh, to_sort_keys)
-      keys: tuple[str, ...] = tuple(to_keep_keys) + sorted_keys
-      keys_hashes: tuple[str, ...] = tuple(to_keep_kh) + sorted_keys_hashes
-      return keys, keys_hashes
+  @staticmethod
+  def sort_expression(expression: Expression):
+    if expression.SET_FROM is None:
+      return
+    set_from = expression.SET_FROM - 1
+    expression[set_from:] = sorted(expression[set_from:], key=lambda e: e._id)
 
   def apply_alg(self, value: str) -> str:
     return self.algorithm(value.encode("utf-8")).digest().hex()
