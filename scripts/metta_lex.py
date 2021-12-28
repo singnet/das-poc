@@ -106,7 +106,7 @@ class MettaParser:
             else:
               expression.append(v)
           if token_type == "RPAREN":
-            if pointer[0] in self.SET_FROM_REST:
+            if isinstance(expression[0], AtomType) and expression[0].symbol in self.SET_FROM_REST:
               expression = UnorderedExpression(expression)
             else:
               expression = Expression(expression)

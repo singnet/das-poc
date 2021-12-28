@@ -40,6 +40,8 @@ class Expression(list, BaseExpression):
     return hash(self._signature())
 
   def __eq__(self, o):
+    if not hasattr(o, '_signature'):
+        return False
     return self._signature() == o._signature()
 
   def __str__(self):
