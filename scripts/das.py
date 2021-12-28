@@ -9,8 +9,8 @@ from pymongo.errors import DuplicateKeyError
 from pymongo.operations import DeleteMany
 from pymongo.results import InsertOneResult
 
-from atomese2metta.translator import AtomType, Expression, MSet
-from hashing import Hasher, sort_by_key_hash
+from atomese2metta.translator import AtomType, Expression
+from hashing import Hasher
 from helpers import get_mongodb, get_logger, evaluate_hash, get_filesize_mb, human_time
 from metta_lex import MettaParser
 
@@ -86,9 +86,6 @@ class DAS:
   def expression_to_dict(self, expression: Expression) -> dict:
     keys_hashes = [self.retrieve_id(e) for e in expression]
     type_ = self.retrieve_expression_type(expression)
-
-    if is_set := isinstance(expression, MSet):
-      keys_hashes, type_ = sort_by_key_hash(keys_hashes, type_)
 
     result = {
       "_id": expression._id,
