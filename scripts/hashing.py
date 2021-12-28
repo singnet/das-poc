@@ -35,13 +35,13 @@ class Hasher:
 
     return name + atom_type_id
 
-  def get_expression_type_hash(self, types: list[Union[list, str]], salt=None) -> str:
+  def _set_expression_type_hash(self, expression: Expression):
     ids = []
-    for e in types:
+    for e in expression:
       if isinstance(e, Expression):
-        type_hash = e.type_hash
-        type_hash = (type_hash or self.get_expression_type_hash(e, salt=e.SET_FROM))
-        ids.append(type_hash)
+        if e.type_hash is None:
+          self._set_expression_type_hash(e)
+        ids.append(e.type_hash)
       elif isinstance(e, AtomType):
         ids.append(e.type._id)
       elif isinstance(e, str):
@@ -49,10 +49,10 @@ class Hasher:
       else:
         raise ValueError(e)
 
-    if salt is not None:
-      ids.insert(0, str(salt))
+    if set_from := expression.SET_FROM is not None:
+      ids.insert(0, str(set_from))
 
-    return self.apply_alg("".join(ids))
+    expression.type_hash = self.apply_alg("".join(ids))
 
   def get_expression_hash(self, expression: Union[Expression, str], level=0) -> str:
     if hasattr(expression, "_id") and expression._id is not None:
