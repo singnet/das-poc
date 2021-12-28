@@ -25,11 +25,11 @@ class Hasher:
     return self.atom_type_dict.get(name, None)
 
   def get_type(self, name: str) -> AtomType:
-    return self.search_by_name(self.search_by_name(name).type)
+    return self.search_by_name(name).type
 
   def get_type_signature(self, atom_type: AtomType) -> str:
     name = atom_type.symbol
-    _atom_type = self.search_by_name(atom_type.type)
+    _atom_type = atom_type.type
 
     atom_type_id = (_atom_type._id or "") if _atom_type is not None else ""
 
