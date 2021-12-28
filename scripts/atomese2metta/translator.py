@@ -10,15 +10,22 @@ Unknown = Symbol("?")
 Type = Symbol("Type")
 
 
+class SetFrom:
+  """This class define constant values to describe the `set_from` field from Expressions instances."""
+  NONE = None
+  ALL = 1
+  REST = 2
+
+
 class BaseExpression(ABC):
   SYMBOL = None
-  SALT = None
 
   OPENER = "("
   CLOSER = ")"
 
 
 class Expression(list, BaseExpression):
+  SET_FROM = SetFrom.NONE
 
   def __init__(self, iterable, _id=None, is_root=False, type_hash=None):
     self.extend(iterable)
@@ -27,7 +34,7 @@ class Expression(list, BaseExpression):
     self.is_root = is_root
 
   def _signature(self):
-    return f"{(self.SALT or 'EXPR')}:{':'.join(str(hash(e)) for e in self)}"
+    return f"{(self.SET_FROM or 'NONE')}:{':'.join(str(hash(e)) for e in self)}"
 
   def __hash__(self):
     return hash(self._signature())
@@ -36,45 +43,52 @@ class Expression(list, BaseExpression):
     return self._signature() == o._signature()
 
   def __str__(self):
-    return f'{self.OPENER}{" ".join([str(v) for v in self])}{self.CLOSER}'
+    return f'{self.OPENER}{" ".join([v.symbol if isinstance(v, AtomType) else str(v) for v in self])}{self.CLOSER}'
 
   def __repr__(self):
     return f'{self.__class__.__name__}({repr(list(self))}, _id={repr(self._id)}, is_root={repr(self.is_root)}, type_hash={repr(self.type_hash)})'
 
 
-class MList(Expression):
-  SYMBOL = "List"
-  SALT = "LIST"
+class UnorderedExpression(Expression):
+  SET_FROM = SetFrom.REST
+
+  def _signature(self):
+    first, *rest = list(self)
+    values = [first, *sorted(rest, key=lambda e: e.symbol if isinstance(e, AtomType) else e)]
+    return f"{(self.SET_FROM)}:{':'.join(str(hash(e)) for e in values)}"
 
 
 class MSet(Expression):
+  SET_FROM = SetFrom.ALL
   SYMBOL = "Set"
-  SALT = "SET"
 
   OPENER = "{"
   CLOSER = "}"
 
   def _signature(self):
-    return f"{(self.SALT)}:{':'.join(str(hash(e)) for e in sorted(self))}"
+      return f"{(self.SET_FROM)}:{':'.join(str(hash(e)) for e in sorted(self, key=lambda e: e.symbol if isinstance(e, AtomType) else e))}"
 
 
 class AtomType(BaseExpression):
-  def __init__(self, symbol: Symbol, mtype: Optional[Symbol] = Type, _id=None):
+  def __init__(self, symbol: Symbol, mtype: Optional['AtomType'] = None, _id=None):
     self._id = _id
     self.symbol: Symbol = symbol
-    self.type: Optional[Symbol] = mtype
+    self.type: Optional[AtomType] = mtype
 
   def __hash__(self):
-    return hash(self.symbol + ":" + (self.type or ''))
+    return hash(self.symbol + ":" + (self.type.symbol if self.type else ''))
 
   def __eq__(self, other):
+    if not isinstance(other, AtomType):
+      return False
     return self.symbol == other.symbol and self.type == other.type
 
-  def __str__(self):
-    return f"{self.OPENER}: {self.symbol} {self.type}{self.CLOSER}"
-
   def __repr__(self):
-    return f"{self.__class__.__name__}(_id={repr(self._id)}, symbol={repr(self.symbol)}, mtype={repr(self.type)})"
+    return f"{self.__class__.__name__}({repr(self.symbol)}, mtype={repr(self.type)}, _id={repr(self._id)})"
+
+  def __str__(self):
+    return f"{self.OPENER}: {self.symbol} {self.type.symbol if self.type else ''}{self.CLOSER}"
+
 
 
 class InvalidSymbol(Exception):
@@ -110,8 +124,11 @@ class Translator:
 
   IGNORED_SYMBOLS = ("stv",)
 
+  TYPE = AtomType(symbol='Type', mtype=None)
+  UNKNOWN = AtomType(symbol='Unknown', mtype=None)
+
   def __init__(self):
-    self.atom_node_types = OrderedSet([AtomType(symbol='Unknown', mtype=None), AtomType(symbol='Type', mtype=None)])
+    self.atom_node_types = OrderedSet([self.TYPE, self.UNKNOWN])
     self.atom_nodes = OrderedSet()
 
   @classmethod
@@ -169,18 +186,15 @@ class Translator:
 
         symbol = self.replace_nodesymbol(mtype, rest[0])
 
-        self.atom_node_types.add(AtomType(mtype))
-        self.atom_nodes.add(AtomType(symbol, mtype=mtype))
+        self.atom_node_types.add(atom_node_type := AtomType(mtype, mtype=self.TYPE))
+        self.atom_nodes.add(AtomType(symbol, mtype=atom_node_type))
 
         return symbol
       elif self.is_link(first):
-        if mtype in (MList.SYMBOL, MSet.SYMBOL):
-          if mtype == MList.SYMBOL:
-            return MList(map(self.translate, rest))
-          elif mtype == MSet.SYMBOL:
-            return MSet(map(self.translate, rest))
+        if mtype == MSet.SYMBOL:
+          return MSet(map(self.translate, rest))
         else:
-          self.atom_node_types.add(AtomType(mtype))
+          self.atom_node_types.add(AtomType(mtype, mtype=self.TYPE))
           return Expression(
             [
               mtype,

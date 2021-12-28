@@ -9,8 +9,8 @@ from pymongo.errors import DuplicateKeyError
 from pymongo.operations import DeleteMany
 from pymongo.results import InsertOneResult
 
-from atomese2metta.translator import AtomType, Expression, MSet
-from hashing import Hasher, sort_by_key_hash
+from atomese2metta.translator import AtomType, Expression
+from hashing import Hasher
 from helpers import get_mongodb, get_logger, evaluate_hash, get_filesize_mb, human_time
 from metta_lex import MettaParser
 
@@ -87,14 +87,11 @@ class DAS:
     keys_hashes = [self.retrieve_id(e) for e in expression]
     type_ = self.retrieve_expression_type(expression)
 
-    if is_set := isinstance(expression, MSet):
-      keys_hashes, type_ = sort_by_key_hash(keys_hashes, type_)
-
     result = {
       "_id": expression._id,
       "type": type_,
       "is_root": expression.is_root,
-      "is_ordered": not is_set,
+      "set_from": expression.SET_FROM,
     }
 
     if len(expression) > 3:
@@ -112,7 +109,7 @@ class DAS:
   def retrieve_id(self, value) -> str:
     if isinstance(value, str):
       return self.hasher.search_by_name(value)._id
-    elif isinstance(value, Expression):
+    elif isinstance(value, (Expression, AtomType)):
       return value._id
     else:
       raise TypeError(f"Invalid type {type(value)}")
@@ -124,6 +121,8 @@ class DAS:
         expression_type.append(self.hasher.get_type(e)._id)
       elif isinstance(e, Expression):
         expression_type.append(self.retrieve_expression_type(e))
+      elif isinstance(e, AtomType):
+        expression_type.append(e.type._id)
       else:
         raise TypeError(e)
 

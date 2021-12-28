@@ -58,7 +58,7 @@ def evaluate_hash(hash_dict: dict, output_file: str = '', logger=None):
         f.write('\n')
 
     if isinstance(expr, AtomType):
-      if expr.type in (None, Type):
+      if expr.type is None or expr.type.symbol == Type:
         node_types += 1
       else:
         nodes += 1
