@@ -54,28 +54,22 @@ class Hasher:
 
     expression.type_hash = self.apply_alg("".join(ids))
 
-  def get_expression_hash(self, expression: Union[Expression, str], level=0) -> str:
+  def get_expression_hash(self, expression: Union[Expression, AtomType], level=0) -> str:
     if hasattr(expression, "_id") and expression._id is not None:
       return expression._id
 
     elif isinstance(expression, Expression):
-      keys_hashes = [
-        self.get_expression_hash(key, level=level + 1) for key in expression
-      ]
+      for e in expression:
+        self.get_expression_hash(e, level=level+1)
 
-      if expression.SET_FROM is None:
-        keys = tuple(expression)
-      else:
-        keys, keys_hashes = self.sort_expression(expression)
-
+      if expression.SET_FROM is not None:
+        self.sort_expression(expression)
 
       if expression.type_hash is None:
-        expression_type_hash = self.get_expression_type_hash(keys, salt=expression.SET_FROM)
-        expression.type_hash = expression_type_hash
-      else:
-        expression_type_hash = expression.type_hash
+        self._set_expression_type_hash(expression)
+      expression_type_hash = expression.type_hash
 
-      signature = expression_type_hash + "".join(keys_hashes)
+      signature = expression_type_hash + "".join([e._id for e in expression])
       hash_id = self.apply_alg(signature)
       expression._id = hash_id
       self.add_hash(expression)
