@@ -54,9 +54,9 @@ Links_1: [{}]
 Links_2: [
     {
 	    _id: 10,
-	    is_ordered: false,
+	    set_from: 1,
 	    is_root: false,
-	    type: {Reactome, Concept},
+	    type: [Reactome, Concept],
 	    key1: 8,
 	    key2: 9,
     },
@@ -65,16 +65,16 @@ Links_2: [
 Links_3: [
     {
 	    _id: 11,
-	    is_ordered: true,
+	    set_from: null,
 	    is_root: false,
-	    type: [Type, Predicate, {Reactome, Concept}],
+	    type: [Type, Predicate, [Reactome, Concept]],
 	    key1: 3,
 	    key2: 7,
 	    key3: 10,
     },
     {
 	    _id: 12,
-	    is_ordered: true,
+	    set_from: null,
 	    is_root: true,
 	    type: [Type, Predicate, [Type, Predicate, {Reactome, Concept}]],
 	    key1: 3,
@@ -95,8 +95,15 @@ As an example of how `sha256` will be used here:
 
 Notes:
 
-- We do NOT use `is_root` and `is_ordered` fields on hashing.
-- For set expressions (`{ ... }`) we add a `salt` to the hash calculation.
+- The field named `is_root` is NOT used on hashing.
+- Each document that represents an expression has the field named `set_from`. This field represents:
+  - when equal to `null` that the keys in document wasn't ordered in anyway;
+  - when equal to `1` that the keys in document was ordered alphabetically since their first key;
+  - when equal to `2` that the keys in document was ordered alphabetically since their second key;
+- The `set_from` field will be different of `null` when:
+  - their expression represents a `set` (`{ ... }`). So `set_from` receives `1`.
+  - the first key in expression points to a `Similarity` node type. So `set_from` receives `2`.
+- The `set_from` field is used on hashing.
 
 #### Couchbase:
 
