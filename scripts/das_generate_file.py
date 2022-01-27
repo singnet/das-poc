@@ -1,4 +1,6 @@
+import re
 import argparse
+import logging
 import os
 import shutil
 
@@ -10,6 +12,8 @@ from pymongo.collection import Collection
 
 from helpers import get_mongodb, get_logger
 from util import Clock, Statistics, AccumulatorClock
+
+from typing import Iterator
 
 logger = get_logger()
 
@@ -31,10 +35,14 @@ acc_clock_block1 = AccumulatorClock()
 acc_clock_block2 = AccumulatorClock()
 acc_clock_block3 = AccumulatorClock()
 acc_clock_block4 = AccumulatorClock()
+acc_clock_block5 = AccumulatorClock()
 acc_clock_full = AccumulatorClock()
 
+from hashing import Hasher
 
-def populate_sets(fh, collection: Collection, bucket):
+
+def populate_sets(hasher: Hasher, fh, collection: Collection, bucket, composite_keys_masks: dict[str, list[set[int]]]):
+
   outgoing_set = bucket.collection(OUTGOING_COLL_NAME)
 
   total = collection.count_documents({})
@@ -42,6 +50,7 @@ def populate_sets(fh, collection: Collection, bucket):
   count = 0
   clock.reset()
   batch_clock.reset()
+
   for doc in cursor:
     acc_clock_full.start()
     acc_clock_block1.start()
@@ -49,7 +58,7 @@ def populate_sets(fh, collection: Collection, bucket):
     if "keys" in doc:
       keys = doc["keys"]
     else:
-      keys = {v for k, v in doc.items() if k.startswith("key")}
+      keys = [v for k, v in sorted(doc.items(), key=lambda x: x[0]) if k.startswith("key")]
     acc_clock_block1.pause()
 
     acc_clock_block2.start()
@@ -77,6 +86,15 @@ def populate_sets(fh, collection: Collection, bucket):
     incoming_time_statistics.add(incoming_clock.elapsed_time_ms())
     acc_clock_block4.pause()
 
+    acc_clock_block5.start()
+    if keys[0] in composite_keys_masks:
+      for mask in composite_keys_masks[keys[0]]:
+        keys_copy = keys.copy()
+        for pos in mask:
+          keys_copy[pos-1] = '*'
+        fh.write("{},{}\n".format(hasher.apply_alg(''.join(keys_copy)), _id))
+    acc_clock_block5.pause()
+
     count += 1
     if count % 10000 == 0:
       logger.debug("\n")
@@ -87,6 +105,7 @@ def populate_sets(fh, collection: Collection, bucket):
       logger.debug("Block2 (sec):             {}".format(acc_clock_block2.acc_seconds()))
       logger.debug("Block3 (sec):             {}".format(acc_clock_block3.acc_seconds()))
       logger.debug("Block4 (sec):             {}".format(acc_clock_block4.acc_seconds()))
+      logger.debug("Block5 (sec):             {}".format(acc_clock_block5.acc_seconds()))
 
       logger.debug("Time incoming (ms):       {}".format(incoming_time_statistics.pretty_print()))
       logger.debug("Time outgoing (ms):       {}".format(outgoing_time_statistics.pretty_print()))
@@ -109,6 +128,7 @@ def populate_sets(fh, collection: Collection, bucket):
       acc_clock_block2.reset()
       acc_clock_block3.reset()
       acc_clock_block4.reset()
+      acc_clock_block5.reset()
       acc_clock_full.reset()
 
     acc_clock_full.pause()
@@ -132,7 +152,61 @@ def create_collections(bucket, collections_names=None):
       logger.error(f"[create_collections] Failed: {e}")
 
 
-def main(mongodb_specs, couchbase_specs, file_path):
+
+def generate_non_trivial_binary_masks(dimension: int) -> Iterator[set[int]]:
+  if dimension < 1:
+    return
+
+  for i in range(1, 2**dimension-1):
+    j = dimension-1
+    s = set()
+    while j >= 0:
+      if i >= 2**j:
+        s.add(j)
+        i -= 2**j
+      j -= 1
+    yield s
+
+
+
+def process_index_pattern_file(filename: str) -> dict[str, list[set[int]]]:
+  p = re.compile(r'(?:\s|\t)+')
+  d = {}
+  with open(filename, 'r') as fh:
+    for line in fh:
+      tokens = p.split(line.strip())
+      label = tokens[0]
+      dimension = int(tokens[1])
+      keys = [int(t) for t in tokens[2:]]
+      result = []
+      d[label] = result
+
+      for m in generate_non_trivial_binary_masks(dimension):
+        s = set()
+        for i in range(dimension):
+          if i in m:
+            s.add(keys[i])
+        result.append(s)
+  return d
+
+
+def group_index_pattern_by_hash(index_pattern: dict[str, list[set[int]]], node_type_db) -> dict[str, list[set[int]]]:
+  node_type_to_hash: dict[str, str] = {}
+  cursor = node_type_db.find({}, no_cursor_timeout=True).batch_size(100)
+  for doc in cursor:
+    _id = doc["_id"]
+    name = doc["name"]
+    node_type_to_hash[name] = _id
+
+  d = {}
+  for label, l in index_pattern.items():
+    assert label in node_type_to_hash
+    d[node_type_to_hash[label]] = l
+
+  return d
+
+
+def main(mongodb_specs, couchbase_specs, file_path, index_path):
   cluster = Cluster(
     f"couchbase://{couchbase_specs['hostname']}",
     authenticator=PasswordAuthenticator(couchbase_specs["username"], couchbase_specs["password"]))
@@ -143,17 +217,22 @@ def main(mongodb_specs, couchbase_specs, file_path):
     collections_names=[INCOMING_COLL_NAME, OUTGOING_COLL_NAME])
 
   db = get_mongodb(mongodb_specs)
+  hasher = Hasher()
+
+  index_pattern = process_index_pattern_file(index_path)
+  node_type_to_keys = group_index_pattern_by_hash(index_pattern, db["node_types"])
+
 
   # TODO: Cover all possible links_N collections.
   with open(file_path, "w") as fh:
     logger.info("Indexing links_1")
-    populate_sets(fh, db["links_1"], bucket)
+    populate_sets(hasher, fh, db["links_1"], bucket, node_type_to_keys)
     logger.info("Indexing links_2")
-    populate_sets(fh, db["links_2"], bucket)
+    populate_sets(hasher, fh, db["links_2"], bucket, node_type_to_keys)
     logger.info("Indexing links_3")
-    populate_sets(fh, db["links_3"], bucket)
+    populate_sets(hasher, fh, db["links_3"], bucket, node_type_to_keys)
     logger.info("Indexing links")
-    populate_sets(fh, db["links"], bucket)
+    populate_sets(hasher, fh, db["links"], bucket, [])
 
   # TODO: Use python. (?)
   os.system(f"sort -t , -k 1,1 {file_path} > {file_path}.sorted")
@@ -166,6 +245,8 @@ def run():
   )
 
   parser.add_argument("--file-path", help="output file path")
+
+  parser.add_argument("--index-config", help="index patterns configuration file")
 
   parser.add_argument("--mongo-hostname", help="mongo hostname to connect to")
   parser.add_argument("--mongo-port", help="mongo port to connect to")
@@ -182,7 +263,7 @@ def run():
   args = parser.parse_args()
 
   if args.verbose:
-    logger.setLevel(logging)
+    logger.setLevel(logging.INFO)
 
   mongodb_specs = {
     "hostname": args.mongo_hostname or os.environ.get("DAS_MONGODB_HOSTNAME", "localhost"),
@@ -198,7 +279,7 @@ def run():
     "password": args.couchbase_password or os.environ.get("DAS_DATABASE_PASSWORD", "das#secret"),
   }
 
-  main(mongodb_specs, couchbase_specs, args.file_path or "/tmp/all_pairs.txt")
+  main(mongodb_specs, couchbase_specs, args.file_path or "/tmp/all_pairs.txt", args.index_config)
 
 
 if __name__ == "__main__":
