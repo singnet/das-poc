@@ -67,6 +67,10 @@ First, generate `(id, value)` file running:
 docker-compose exec scripts python das_generate_file.py --file-path /tmp/all_pairs.txt
 # To run it against a specific mongo database:
 docker-compose exec scripts python das_generate_file.py --file-path /tmp/all_pairs.txt -d UBERON
+# To run it using a index file
+docker-compose exec scripts python das_generate_file.py --file-path /tmp/all_pairs.txt --index-path /tmp/index.txt
+# Where a valid content of `/tmp/index.txt` would be:
+# Evaluation 2 2 3
 ```
 
 Now, upload the data to couchbase by running:
