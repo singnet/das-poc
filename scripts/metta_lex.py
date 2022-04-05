@@ -78,8 +78,13 @@ class MettaParser:
     list_stack: List[Any] = list()
     current: List[Union[AtomType, Expression]] = list()
 
-    yield self.NODE_TYPE, AtomType(symbol='Unknown', mtype=None)
-    yield self.NODE_TYPE, AtomType(symbol='Type', mtype=None)
+    unknown = AtomType(symbol='Unknown', mtype=None)
+    self.hasher.hash_atom_type(unknown)
+    yield self.NODE_TYPE, unknown
+
+    base_type = AtomType(symbol='Type', mtype=None)
+    self.hasher.hash_atom_type(base_type)
+    yield self.NODE_TYPE, base_type
 
     for (_, token_type, value) in self.lex.get_tokens(text):
       if token_type in ("LPAREN", "LCBRACKET"):
@@ -94,6 +99,7 @@ class MettaParser:
           _, symbol, type_ = pointer
           type_ = self.hasher.search_by_name(type_)
           atom_type = AtomType(symbol, type_)
+          self.hasher.hash_atom_type(atom_type)
           if atom_type.type.symbol == "Type":
             yield self.NODE_TYPE, atom_type
           else:
