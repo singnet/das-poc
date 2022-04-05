@@ -3,6 +3,7 @@ import argparse
 import logging
 import os
 import shutil
+from typing import Iterator, Optional
 
 from couchbase import exceptions as cb_exceptions
 from couchbase.auth import PasswordAuthenticator
@@ -10,10 +11,8 @@ from couchbase.cluster import Cluster
 from couchbase.management.collections import CollectionSpec
 from pymongo.collection import Collection
 
-from helpers import get_mongodb, get_logger
-from util import Clock, Statistics, AccumulatorClock
-
-from typing import Iterator
+from helpers import get_logger, get_mongodb
+from util import AccumulatorClock, Clock, Statistics
 
 logger = get_logger()
 
@@ -219,8 +218,10 @@ def main(mongodb_specs, couchbase_specs, file_path, index_path):
   db = get_mongodb(mongodb_specs)
   hasher = Hasher()
 
-  index_pattern = process_index_pattern_file(index_path)
-  node_type_to_keys = group_index_pattern_by_hash(index_pattern, db["node_types"])
+  node_type_to_keys = {}
+  if index_path is not None:
+    index_pattern = process_index_pattern_file(index_path)
+    node_type_to_keys = group_index_pattern_by_hash(index_pattern, db["node_types"])
 
 
   # TODO: Cover all possible links_N collections.
