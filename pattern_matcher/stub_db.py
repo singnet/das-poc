@@ -1,4 +1,5 @@
 from typing import List
+from pattern_matcher import WILDCARD
 from db_interface import DBInterface
 
 def _build_node_handle(node_type: str, node_name: str) -> str:
@@ -79,10 +80,28 @@ class StubDB(DBInterface):
                         return _build_link_handle(link_type, link[1:])
                 elif link_type == 'Inheritance':
                     for i in range(0, len(target_handles)):
-                        if target_handles[i] != link[i+1]:
+                        if target_handles[i] != link[i + 1]:
                             break
                     else:
                         return _build_link_handle(link_type, target_handles)
                 else:
                     raise ValueError(f"Invalid link type: {link_type}")
         return None
+
+    def get_matched_links(self, target_handles: List[str]) -> str:
+        answer = []
+        for link in self.all_links:
+            if len(target_handles) == (len(link) - 1):
+                if link[0] == 'Similarity':
+                    if all(target == WILDCARD or target in link[1:] for target in target_handles):
+                        answer.append(_build_link_handle(link[0], link[1:]))
+                elif link[0] == 'Inheritance':
+                    for i in range(0, len(target_handles)):
+                        if target_handles[i] != WILDCARD and target_handles[i] != link[i + 1]:
+                            break
+                    else:
+                        answer.append(_build_link_handle(link_type, target_handles))
+                else:
+                    raise ValueError(f"Invalid link type: {link_type}")
+        return answer
+

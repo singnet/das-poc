@@ -23,3 +23,7 @@ class DBInterface(ABC):
     @abstractmethod
     def get_link_handle(self, link_type: str, target_handles: List[str]) -> str:
         pass
+
+    @abstractmethod
+    def get_matched_links(self, target_handles: List[str]) -> str:
+        pass
