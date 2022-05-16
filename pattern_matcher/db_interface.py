@@ -23,3 +23,15 @@ class DBInterface(ABC):
     @abstractmethod
     def get_link_handle(self, link_type: str, target_handles: List[str]) -> str:
         pass
+
+    @abstractmethod
+    def get_link_targets(self, handle: str) -> List[str]:
+        pass
+
+    @abstractmethod
+    def is_ordered(self, handle: str) -> bool:
+        pass
+
+    @abstractmethod
+    def get_matched_links(self, link_type: str, target_handles: List[str]) -> str:
+        pass
