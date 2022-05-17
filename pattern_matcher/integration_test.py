@@ -1,6 +1,6 @@
 from db_interface import DBInterface
 from stub_db import StubDB
-from pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable
+from pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not
 
 
 def match(db_api: DBInterface, expression: LogicalExpression):
@@ -43,6 +43,7 @@ human = Node('Concept', 'human')
 chimp = Node('Concept', 'chimp')
 monkey = Node('Concept', 'monkey')
 ent = Node('Concept', 'ent')
+
 inh1 = Link('Inheritance', [human, mammal], True)
 inh2 = Link('Inheritance', [monkey, mammal], True)
 inh3 = Link('Inheritance', [chimp, mammal], True)
@@ -62,7 +63,6 @@ match(db, Link('Inheritance', [animal, Variable('V1')], True))
 match(db, Link('Similarity', [Variable('V1'), Variable('V2')], False))
 match(db, Link('Similarity', [human, Variable('V1')], False))
 match(db, Link('Similarity', [Variable('V1'), human], False))
-print('================================================================================')
 match(db, Link('List', [human, ent, Variable('V1'), Variable('V2')], True))
 match(db, Link('List', [human, Variable('V1'), Variable('V2'), ent], True))
 match(db, Link('List', [ent, Variable('V1'), Variable('V2'), human], True))
@@ -70,4 +70,14 @@ match(db, Link('Set', [human, ent, Variable('V1'), Variable('V2')], False))
 match(db, Link('Set', [human, Variable('V1'), Variable('V2'), ent], False))
 match(db, Link('Set', [ent, Variable('V1'), Variable('V2'), human], False))
 match(db, Link('Set', [monkey, Variable('V1'), Variable('V2'), chimp], False))
+
+#inh1 = Link('Inheritance', [Variable('V1'), Variable('V2')], True)
+#inh2 = Link('Inheritance', [Variable('V2'), Variable('V3')], True)
+#match(db, inh1)
+#match(db, inh2)
+#match(db, Not(Link('Inheritance', [human, mammal], True)))
+#match(db, Not(Link('Inheritance', [Variable('V1'), mammal], True)))
+#match(db, Not(Link('Inheritance', [Variable('V1'), human], True)))
+#print('\n\n\n\n================================================================================\n')
+#match(db, And([inh1, inh2]))
 
