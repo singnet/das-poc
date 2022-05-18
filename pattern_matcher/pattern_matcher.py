@@ -1,12 +1,12 @@
 from enum import Enum, auto
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Set
 from functools import cmp_to_key
 from abc import ABC, abstractmethod
 
 from db_interface import DBInterface
 
 WILDCARD = '*'
-DEBUG = False
+DEBUG = True
 
 #TODO: Flag to enforce Vi != Vj for i != j
 
@@ -237,6 +237,14 @@ def _evaluate_compatibility(assignment1: VariablesAssignment, assignment2: Varia
     else:
         return _AssignmentCompatibilityStatus.NO_COVERING
 
+def _check_assignment(assignment: VariablesAssignment, forbidden: Set[VariablesAssignment]) -> bool:
+    for tabu in forbidden:
+        check = _evaluate_compatibility(assignment, tabu)
+        if check == _AssignmentCompatibilityStatus.EQUAL or\
+           check == _AssignmentCompatibilityStatus.FIRST_COVERS_SECOND:
+            return False
+    return True
+
 class And(LogicalExpression):
     """
     TODO: documentation
@@ -253,7 +261,7 @@ class And(LogicalExpression):
             return False
         assert not answer.assignments
         and_answer = PatternMatchingAnswer()
-        #AQUI transformar and_answer em set()
+        forbidden_assignments = set()
         for term in self.terms:
             if DEBUG: print(f'Term: {term}')
             if DEBUG: print(f'Current and_answer = {and_answer}')
@@ -261,10 +269,14 @@ class And(LogicalExpression):
             if not term.matched(db, term_answer):
                 if DEBUG: print('NOT MATCHED')
                 return False
+            if DEBUG: print(f'term_answer = {term_answer}')
             if not term_answer.assignments:
                 if DEBUG: print('term_answer empty')
                 continue
-            # AQUI: se for NOT, add todos os assignments num set() e continua
+            if term_answer.negation:
+                if DEBUG: print('term_answer is a negation')
+                forbidden_assignments.update(term_answer.assignments)
+                continue
             if not and_answer.assignments:
                 if DEBUG: print('and_answer empty')
                 and_answer.assignments = term_answer.assignments
@@ -273,9 +285,9 @@ class And(LogicalExpression):
             new_and_answer = PatternMatchingAnswer()
             for and_assignment in and_answer.assignments:
                 for term_assignment in term_answer.assignments:
-                    if DEBUG: print(f'Checking {and_assignment} and {term_assignment}')
+                    #if DEBUG: print(f'Checking {and_assignment} and {term_assignment}')
                     status = _evaluate_compatibility(and_assignment, term_assignment)
-                    if DEBUG: print(f'status = {status}')
+                    #if DEBUG: print(f'status = {status}')
                     if status == _AssignmentCompatibilityStatus.INCOMPATIBLE:
                         continue
                     if status == _AssignmentCompatibilityStatus.EQUAL or \
@@ -293,10 +305,15 @@ class And(LogicalExpression):
                         new_and_answer.assignments.add(new_assignment)
                     else:
                         raise ValueError(f'Invalid assignment status: {status}')
-                    if DEBUG: print(f'Updated new_and_answer = {new_and_answer}')
+                    #if DEBUG: print(f'Updated new_and_answer = {new_and_answer}')
             and_answer = new_and_answer
             if DEBUG: print(f'New and_answer = {and_answer}')
         # AQUI Checar a compatibilidade de tudo no and_answer com o set() do NOT
-        answer.assignments = and_answer.assignments
+        if DEBUG: print(f'negations = {forbidden_assignments}')
+        for assignment in and_answer.assignments:
+            if _check_assignment(assignment, forbidden_assignments):
+                answer.assignments.add(assignment)
+            else:
+                if DEBUG: print(f'Excluding {assignment}')
         if DEBUG: print(f'AND result = {answer}')
         return bool(answer.assignments)
