@@ -1,8 +1,6 @@
 import pytest
 from stub_db import StubDB
-#from pattern_matcher import _AssignmentCompatibilityStatus, _evaluate_compatibility, VariablesAssignment, PatternMatchingAnswer, LogicalExpression, Variable, Node, Link
-from pattern_matcher import VariablesAssignment, PatternMatchingAnswer, LogicalExpression, Variable, Node, Link
-
+from pattern_matcher import _AssignmentCompatibilityStatus, _evaluate_compatibility, VariablesAssignment, PatternMatchingAnswer, LogicalExpression, Variable, Node, Link
 
 def test_basic_matching():
 
@@ -76,37 +74,63 @@ def test_basic_matching():
     assert Link('Set', [ent, Variable('V1'), Variable('V2'), human], False).matched(db, answer)
     assert Link('Set', [monkey, Variable('V1'), Variable('V2'), chimp], False).matched(db, answer)
 
-#def test_evaluate_compatibility():
-#
-#    def build_assignment(d):
-#        answer = VariablesAssignment()
-#        for key in d.keys():
-#            answer.assign(key, d[key])
-#        answer.freeze_assignment()
-#        return answer
-#            
-#    a1 = build_assignment({'v1': 1, 'v2': 2})
-#    a2 = build_assignment({'v1': 1, 'v2': 2})
-#    a3 = build_assignment({'v1': 1, 'v2': 2, 'v3': 3})
-#    a4 = build_assignment({'v1': 1})
-#    a5 = build_assignment({'v3': 3, 'v2': 2})
-#    a6 = build_assignment({'v3': 3, 'v4': 4})
-#    a7 = build_assignment({'v4': 1, 'v5': 2, 'v6': 3})
-#    a8 = build_assignment({'v4': 1, 'v5': 2, 'v1': 3})
-#
-#    assert(_evaluate_compatibility(a1, a2) == _AssignmentCompatibilityStatus.EQUAL)
-#    assert(_evaluate_compatibility(a1, a3) == _AssignmentCompatibilityStatus.SECOND_COVERS_FIRST)
-#    assert(_evaluate_compatibility(a3, a1) == _AssignmentCompatibilityStatus.FIRST_COVERS_SECOND)
-#    assert(_evaluate_compatibility(a4, a2) == _AssignmentCompatibilityStatus.SECOND_COVERS_FIRST)
-#    assert(_evaluate_compatibility(a2, a4) == _AssignmentCompatibilityStatus.FIRST_COVERS_SECOND)
-#    assert(_evaluate_compatibility(a2, a5) == _AssignmentCompatibilityStatus.NO_COVERING)
-#    assert(_evaluate_compatibility(a5, a2) == _AssignmentCompatibilityStatus.NO_COVERING)
-#    assert(_evaluate_compatibility(a2, a6) == _AssignmentCompatibilityStatus.NO_COVERING)
-#    assert(_evaluate_compatibility(a6, a2) == _AssignmentCompatibilityStatus.NO_COVERING)
-#    assert(_evaluate_compatibility(a3, a7) == _AssignmentCompatibilityStatus.NO_COVERING)
-#    assert(_evaluate_compatibility(a3, a8) == _AssignmentCompatibilityStatus.INCOMPATIBLE)
-#    assert(_evaluate_compatibility(a8, a4) == _AssignmentCompatibilityStatus.INCOMPATIBLE)
-    
+def test_variables_assignment_sets():
+
+    va1 = VariablesAssignment()
+    va2 = VariablesAssignment()
+    va3 = VariablesAssignment()
+    va1.assign('v1', '1')
+    va1.assign('v2', '2')
+    va2.assign('v2', '2')
+    va2.assign('v1', '1')
+    va3.assign('v1', '2')
+    va3.assign('v2', '1')
+
+    with pytest.raises(Exception):
+        s1 = set([va1, va2])
+    with pytest.raises(Exception):
+        s2 = set([va1, va3])
+
+    va1.freeze_assignment()
+    va2.freeze_assignment()
+    va3.freeze_assignment()
+    s1 = set([va1, va2])
+    s2 = set([va1, va3])
+    assert len(s1) == 1
+    assert len(s2) == 2
+    assert va1 in s1 and va2 in s1
+    assert va1 in s2 and va2 in s2 and va3 in s2
+
+def test_evaluate_compatibility():
+
+    def build_assignment(d):
+        answer = VariablesAssignment()
+        for key in d.keys():
+            answer.assign(key, d[key])
+        answer.freeze_assignment()
+        return answer
+            
+    a1 = build_assignment({'v1': 1, 'v2': 2})
+    a2 = build_assignment({'v1': 1, 'v2': 2})
+    a3 = build_assignment({'v1': 1, 'v2': 2, 'v3': 3})
+    a4 = build_assignment({'v1': 1})
+    a5 = build_assignment({'v3': 3, 'v2': 2})
+    a6 = build_assignment({'v3': 3, 'v4': 4})
+    a7 = build_assignment({'v4': 1, 'v5': 2, 'v6': 3})
+    a8 = build_assignment({'v4': 1, 'v5': 2, 'v1': 3})
+
+    assert(_evaluate_compatibility(a1, a2) == _AssignmentCompatibilityStatus.EQUAL)
+    assert(_evaluate_compatibility(a1, a3) == _AssignmentCompatibilityStatus.SECOND_COVERS_FIRST)
+    assert(_evaluate_compatibility(a3, a1) == _AssignmentCompatibilityStatus.FIRST_COVERS_SECOND)
+    assert(_evaluate_compatibility(a4, a2) == _AssignmentCompatibilityStatus.SECOND_COVERS_FIRST)
+    assert(_evaluate_compatibility(a2, a4) == _AssignmentCompatibilityStatus.FIRST_COVERS_SECOND)
+    assert(_evaluate_compatibility(a2, a5) == _AssignmentCompatibilityStatus.NO_COVERING)
+    assert(_evaluate_compatibility(a5, a2) == _AssignmentCompatibilityStatus.NO_COVERING)
+    assert(_evaluate_compatibility(a2, a6) == _AssignmentCompatibilityStatus.NO_COVERING)
+    assert(_evaluate_compatibility(a6, a2) == _AssignmentCompatibilityStatus.NO_COVERING)
+    assert(_evaluate_compatibility(a3, a7) == _AssignmentCompatibilityStatus.NO_COVERING)
+    assert(_evaluate_compatibility(a3, a8) == _AssignmentCompatibilityStatus.INCOMPATIBLE)
+    assert(_evaluate_compatibility(a8, a4) == _AssignmentCompatibilityStatus.INCOMPATIBLE)
 
 def test_patterns():
 
