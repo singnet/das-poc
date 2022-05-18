@@ -74,6 +74,33 @@ def test_basic_matching():
     assert Link('Set', [ent, Variable('V1'), Variable('V2'), human], False).matched(db, answer)
     assert Link('Set', [monkey, Variable('V1'), Variable('V2'), chimp], False).matched(db, answer)
 
+def test_variables_assignment_sets():
+
+    va1 = VariablesAssignment()
+    va2 = VariablesAssignment()
+    va3 = VariablesAssignment()
+    va1.assign('v1', '1')
+    va1.assign('v2', '2')
+    va2.assign('v2', '2')
+    va2.assign('v1', '1')
+    va3.assign('v1', '2')
+    va3.assign('v2', '1')
+
+    with pytest.raises(Exception):
+        s1 = set([va1, va2])
+    with pytest.raises(Exception):
+        s2 = set([va1, va3])
+
+    va1.freeze_assignment()
+    va2.freeze_assignment()
+    va3.freeze_assignment()
+    s1 = set([va1, va2])
+    s2 = set([va1, va3])
+    assert len(s1) == 1
+    assert len(s2) == 2
+    assert va1 in s1 and va2 in s1
+    assert va1 in s2 and va2 in s2 and va3 in s2
+
 def test_evaluate_compatibility():
 
     def build_assignment(d):

@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from db_interface import DBInterface
 
 WILDCARD = '*'
-DEBUG = True
+DEBUG = False
 
 #TODO: Flag to enforce Vi != Vj for i != j
 
@@ -24,8 +24,17 @@ class VariablesAssignment:
     def __repr__(self):
         return self.assignment.__repr__()
 
-    def reset(self):
-        self.assignment = {}
+    def __hash__(self) -> int:
+        assert self.hash
+        return self.hash
+
+    def __eq__(self, other) -> bool:
+        assert self.hash and other.hash
+        return self.hash == other.hash
+
+    def __lt__(self, other) -> bool:
+        assert self.hash and other.hash
+        return self.hash < other.hash
 
     def freeze_assignment(self):
         self.variables = frozenset(self.variables)
@@ -48,7 +57,7 @@ class PatternMatchingAnswer:
     """
 
     def __init__(self):
-        self.assignments: List[VariablesAssignment] = []
+        self.assignments: Set[VariablesAssignment] = set()
         self.negation: bool = False
 
     def __repr__(self):
@@ -165,7 +174,7 @@ class Link(Atom):
         if any(handle == WILDCARD for handle in target_handles):
             matched = db.get_matched_links(self.atom_type, target_handles)
             #print('matched()', f'matched = {matched}')
-            answer.assignments = [asn for asn in [self._assign_variables(db, link) for link in matched] if asn is not None]
+            answer.assignments = set([asn for asn in [self._assign_variables(db, link) for link in matched] if asn is not None])
             #print('matched()', 'answer.assignments = ', answer.assignments)
             return bool(answer.assignments)
         else:
@@ -271,9 +280,9 @@ class And(LogicalExpression):
                         continue
                     if status == _AssignmentCompatibilityStatus.EQUAL or \
                          status == _AssignmentCompatibilityStatus.FIRST_COVERS_SECOND:
-                        new_and_answer.assignments.append(and_assignment)
+                        new_and_answer.assignments.add(and_assignment)
                     elif status == _AssignmentCompatibilityStatus.SECOND_COVERS_FIRST:
-                        new_and_answer.assignments.append(term_assignment)
+                        new_and_answer.assignments.add(term_assignment)
                     elif status == _AssignmentCompatibilityStatus.NO_COVERING:
                         new_assignment = VariablesAssignment()
                         for variable, value in and_assignment.assignment.items():
@@ -281,7 +290,7 @@ class And(LogicalExpression):
                         for variable, value in term_assignment.assignment.items():
                             new_assignment.assign(variable, value)
                         new_assignment.freeze_assignment()
-                        new_and_answer.assignments.append(new_assignment)
+                        new_and_answer.assignments.add(new_assignment)
                     else:
                         raise ValueError(f'Invalid assignment status: {status}')
                     if DEBUG: print(f'Updated new_and_answer = {new_and_answer}')

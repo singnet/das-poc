@@ -2,7 +2,6 @@ from db_interface import DBInterface
 from stub_db import StubDB
 from pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not, And
 
-
 def match(db_api: DBInterface, expression: LogicalExpression):
     print(f"Matching {expression}")
     answer: PatternMatchingAnswer = PatternMatchingAnswer()
@@ -14,7 +13,6 @@ print('---------------------------- Integration tests --------------------------
 
 db: DBInterface = StubDB()
 
-"""
 n1 = Node('Concept', 'human')
 n2 = Node('Concept', 'mammal')
 match(db, n1)
@@ -71,7 +69,6 @@ match(db, Link('Set', [human, ent, Variable('V1'), Variable('V2')], False))
 match(db, Link('Set', [human, Variable('V1'), Variable('V2'), ent], False))
 match(db, Link('Set', [ent, Variable('V1'), Variable('V2'), human], False))
 match(db, Link('Set', [monkey, Variable('V1'), Variable('V2'), chimp], False))
-"""
 
 inh1 = Link('Inheritance', [Variable('V1'), Variable('V2')], True)
 inh2 = Link('Inheritance', [Variable('V2'), Variable('V3')], True)
@@ -81,7 +78,7 @@ inh2 = Link('Inheritance', [Variable('V2'), Variable('V3')], True)
 #match(db, Not(Link('Inheritance', [Variable('V1'), mammal], True)))
 #match(db, Not(Link('Inheritance', [Variable('V1'), human], True)))
 #match(db, And([inh1, inh2]))
-#print('\n\n\n\n================================================================================\n')
+print('\n\n\n\n================================================================================\n')
 #match(db, And([Link('Inheritance', [Variable('V1'), Variable('V2')], True),\
 #               Link('Similarity', [Variable('V1'), Variable('V2')], False)\
 #]))
@@ -93,4 +90,3 @@ match(db, And([Link('Inheritance', [Variable('V1'), Variable('V3')], True),\
 #               Link('Inheritance', [Variable('V2'), Variable('V3')], True),\
 #               Link('Similarity', [Variable('V1'), Variable('V2')], False)\
 #]))
-
