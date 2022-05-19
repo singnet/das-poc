@@ -1,6 +1,6 @@
 import pytest
 from stub_db import StubDB
-from pattern_matcher import _AssignmentCompatibilityStatus, _evaluate_compatibility, VariablesAssignment, PatternMatchingAnswer, LogicalExpression, Variable, Node, Link
+from pattern_matcher import CompatibilityStatus, OrderedAssignment, PatternMatchingAnswer, LogicalExpression, Variable, Node, Link
 
 def test_basic_matching():
 
@@ -74,11 +74,11 @@ def test_basic_matching():
     assert Link('Set', [ent, Variable('V1'), Variable('V2'), human], False).matched(db, answer)
     assert Link('Set', [monkey, Variable('V1'), Variable('V2'), chimp], False).matched(db, answer)
 
-def test_variables_assignment_sets():
+def test_ordered_assignment_sets():
 
-    va1 = VariablesAssignment()
-    va2 = VariablesAssignment()
-    va3 = VariablesAssignment()
+    va1 = OrderedAssignment()
+    va2 = OrderedAssignment()
+    va3 = OrderedAssignment()
     va1.assign('v1', '1')
     va1.assign('v2', '2')
     va2.assign('v2', '2')
@@ -91,9 +91,9 @@ def test_variables_assignment_sets():
     with pytest.raises(Exception):
         s2 = set([va1, va3])
 
-    va1.freeze_assignment()
-    va2.freeze_assignment()
-    va3.freeze_assignment()
+    va1.freeze()
+    va2.freeze()
+    va3.freeze()
     s1 = set([va1, va2])
     s2 = set([va1, va3])
     assert len(s1) == 1
@@ -104,10 +104,10 @@ def test_variables_assignment_sets():
 def test_evaluate_compatibility():
 
     def build_assignment(d):
-        answer = VariablesAssignment()
+        answer = OrderedAssignment()
         for key in d.keys():
             answer.assign(key, d[key])
-        answer.freeze_assignment()
+        answer.freeze()
         return answer
             
     a1 = build_assignment({'v1': 1, 'v2': 2})
@@ -119,18 +119,18 @@ def test_evaluate_compatibility():
     a7 = build_assignment({'v4': 1, 'v5': 2, 'v6': 3})
     a8 = build_assignment({'v4': 1, 'v5': 2, 'v1': 3})
 
-    assert(_evaluate_compatibility(a1, a2) == _AssignmentCompatibilityStatus.EQUAL)
-    assert(_evaluate_compatibility(a1, a3) == _AssignmentCompatibilityStatus.SECOND_COVERS_FIRST)
-    assert(_evaluate_compatibility(a3, a1) == _AssignmentCompatibilityStatus.FIRST_COVERS_SECOND)
-    assert(_evaluate_compatibility(a4, a2) == _AssignmentCompatibilityStatus.SECOND_COVERS_FIRST)
-    assert(_evaluate_compatibility(a2, a4) == _AssignmentCompatibilityStatus.FIRST_COVERS_SECOND)
-    assert(_evaluate_compatibility(a2, a5) == _AssignmentCompatibilityStatus.NO_COVERING)
-    assert(_evaluate_compatibility(a5, a2) == _AssignmentCompatibilityStatus.NO_COVERING)
-    assert(_evaluate_compatibility(a2, a6) == _AssignmentCompatibilityStatus.NO_COVERING)
-    assert(_evaluate_compatibility(a6, a2) == _AssignmentCompatibilityStatus.NO_COVERING)
-    assert(_evaluate_compatibility(a3, a7) == _AssignmentCompatibilityStatus.NO_COVERING)
-    assert(_evaluate_compatibility(a3, a8) == _AssignmentCompatibilityStatus.INCOMPATIBLE)
-    assert(_evaluate_compatibility(a8, a4) == _AssignmentCompatibilityStatus.INCOMPATIBLE)
+    assert(a1.evaluate_compatibility(a2) == CompatibilityStatus.EQUAL)
+    assert(a1.evaluate_compatibility(a3) == CompatibilityStatus.SECOND_COVERS_FIRST)
+    assert(a3.evaluate_compatibility(a1) == CompatibilityStatus.FIRST_COVERS_SECOND)
+    assert(a4.evaluate_compatibility(a2) == CompatibilityStatus.SECOND_COVERS_FIRST)
+    assert(a2.evaluate_compatibility(a4) == CompatibilityStatus.FIRST_COVERS_SECOND)
+    assert(a2.evaluate_compatibility(a5) == CompatibilityStatus.NO_COVERING)
+    assert(a5.evaluate_compatibility(a2) == CompatibilityStatus.NO_COVERING)
+    assert(a2.evaluate_compatibility(a6) == CompatibilityStatus.NO_COVERING)
+    assert(a6.evaluate_compatibility(a2) == CompatibilityStatus.NO_COVERING)
+    assert(a3.evaluate_compatibility(a7) == CompatibilityStatus.NO_COVERING)
+    assert(a3.evaluate_compatibility(a8) == CompatibilityStatus.INCOMPATIBLE)
+    assert(a8.evaluate_compatibility(a4) == CompatibilityStatus.INCOMPATIBLE)
 
 def test_patterns():
 
@@ -139,7 +139,7 @@ def test_patterns():
         assert expected_match == pattern.matched(db, answer)
         if expected_match:
             assert len(answer.assignments) == len(assignments)
-            l1 = sorted([sorted([f'{x}={y}' for x, y in a.assignment.items()]) for a in answer.assignments])
+            l1 = sorted([sorted([f'{x}={y}' for x, y in a.mapping.items()]) for a in answer.assignments])
             l2 = sorted([sorted([f'{x}={y}' for x, y in d.items()]) for d in assignments])
             print(f'l1 = {l1}\nl2 = {l2}')
             assert l1 == l2
