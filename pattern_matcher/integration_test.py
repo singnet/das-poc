@@ -72,12 +72,12 @@ match(db, Link('Set', [monkey, Variable('V1'), Variable('V2'), chimp], False))
 
 inh1 = Link('Inheritance', [Variable('V1'), Variable('V2')], True)
 inh2 = Link('Inheritance', [Variable('V2'), Variable('V3')], True)
-#match(db, inh1)
-#match(db, inh2)
-#match(db, Not(Link('Inheritance', [human, mammal], True)))
-#match(db, Not(Link('Inheritance', [Variable('V1'), mammal], True)))
-#match(db, Not(Link('Inheritance', [Variable('V1'), human], True)))
-#match(db, And([inh1, inh2]))
+match(db, inh1)
+match(db, inh2)
+match(db, Not(Link('Inheritance', [human, mammal], True)))
+match(db, Not(Link('Inheritance', [Variable('V1'), mammal], True)))
+match(db, Not(Link('Inheritance', [Variable('V1'), human], True)))
+match(db, And([inh1, inh2]))
 print('\n\n\n\n================================================================================\n')
 #match(db, And([Link('Inheritance', [Variable('V1'), Variable('V2')], True),\
 #               Link('Similarity', [Variable('V1'), Variable('V2')], False)\
