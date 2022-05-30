@@ -132,13 +132,10 @@ class OrderedAssignment(Assignment):
             return CompatibilityStatus.NO_COVERING
 
     def check_negation(self, negation: Assignment) -> bool:
-        print(f'ordered check_negation({self}, {negation})')
         if negation.ordered:
             check = self.evaluate_compatibility(negation)
-            print(f'check: {check.name}')
             return check != CompatibilityStatus.EQUAL and check != CompatibilityStatus.FIRST_COVERS_SECOND
         else:
-            print(f'check negation.contains_ordered()')
             return not negation.contains_ordered(self)
 
 class UnorderedAssignment(Assignment):
@@ -178,27 +175,47 @@ class UnorderedAssignment(Assignment):
             self.variables.add(variable)
         return True
 
+    def _contains_ordered(self, 
+
     def contains_ordered(self, other: OrderedAssignment) -> bool:
+
+        #AQUI: Reescrever
+
+        variables = other.mapping.keys()
+        if all(any(v not in unordered_variables for v in variables) for unordered_variables, _ in self.unordered_mappings):
+            return False
         _unordered_mappings = deepcopy(self.unordered_mappings)
         for variable, value in other.mapping.items():
             for unordered_variables, unordered_values in _unordered_mappings:
-                if unordered_variables.get(variable, 0) == 0 or unordered_values.get(value, 0) == 0:
-                    return False
-                else:
-                    unordered_variables[variable] -= 1
-                    unordered_values[value] -= 1
-        return True
-            
-    def _check_viability(self) -> bool:
-        _unordered_mappings = deepcopy(self.unordered_mappings)
-        if self.ordered_mappings is not None:
-            for variable, value in self.ordered_mappings.mapping.items():
-                for unordered_variables, unordered_values in _unordered_mappings:
+                if variable in unordered_variables:
                     if unordered_variables.get(variable, 0) == 0 or unordered_values.get(value, 0) == 0:
                         return False
                     else:
                         unordered_variables[variable] -= 1
                         unordered_values[value] -= 1
+        print(f'variables = {variables}')
+        for unordered_variables, unordered_values in _unordered_mappings:
+            for ((var, cvar), (val, cval)) in zip(unordered_variables.items(), unordered_values.items()):
+                print(f'var = {var} val = {val} cvar = {cvar} cval = {cval}')
+                if var in variables and (cvar > 0 or cval > 0):
+                    return False
+        return True
+            
+    def _check_viability(self) -> bool:
+        #print(f'_check_viability() self = {self}')
+        if not self.ordered_mappings and not self.unordered_mappings:
+            return False
+        _unordered_mappings = deepcopy(self.unordered_mappings)
+        if self.ordered_mappings is not None:
+            for variable, value in self.ordered_mappings.mapping.items():
+                for unordered_variables, unordered_values in _unordered_mappings:
+                    if variable in unordered_variables:
+                        if unordered_variables.get(variable, 0) == 0 or unordered_values.get(value, 0) == 0:
+                            #print(f'Return False on {variable} = {value}')
+                            return False
+                        else:
+                            unordered_variables[variable] -= 1
+                            unordered_values[value] -= 1
         # TODO: check if this cleanup is really needed
         new_unordered_mappings: List[Tuple[Dict[str, int], Dict[str, int]]] = []
         for unordered_variables, unordered_values in _unordered_mappings:
@@ -252,12 +269,18 @@ class UnorderedAssignment(Assignment):
             check = self.ordered_mappings.evaluate_compatibility(negation)
             if check == CompatibilityStatus.EQUAL or check == CompatibilityStatus.FIRST_COVERS_SECOND:
                 return False
-        for variable, value in other.mapping.items():
-            new_mappings: List[Tuple[Dict[str, int], Dict[str, int]]] = []
-            for variables, values in self.unordered_mappings:
-                if variables.get(variable, 0) == 0 or values.get(value, 0) == 0:
+        new_mappings: List[Tuple[Dict[str, int], Dict[str, int]]] = []
+        for variables, values in self.unordered_mappings:
+            variables_copy = deepcopy(variables)
+            values_copy = deepcopy(values)
+            for variable, value in other.mapping.items():
+                if variables_copy.get(variable, 0) == 0 or values_copy.get(value, 0) == 0:
                     new_mappings.append(tuple([variables, values]))
-            self.unordered_mappings = new_mappings
+                    continue
+                else:
+                    variables_copy[variable] -= 1
+                    values_copy[value] -= 1
+        self.unordered_mappings = new_mappings
         return self._commit_changes()
 
     def _is_covered_by(self, variables1, values1, variables2, values2):
@@ -281,12 +304,9 @@ class UnorderedAssignment(Assignment):
         return self._commit_changes()
 
     def check_negation(self, negation: Assignment) -> bool:
-        print(f'unordered check_negation({self}, {negation})')
         if negation.ordered:
-            print(f'remove ordered')
             return self._remove_ordered_mapping(negation)
         else:
-            print(f'remove unordered')
             return self._remove_unordered_mapping(negation)
 
 class PatternMatchingAnswer:
@@ -456,15 +476,6 @@ class Not(LogicalExpression):
         answer.negation = not answer.negation
         return True
 
-# TODO: considerar ordered e unordered
-def _check_assignment(assignment: Assignment, forbidden: Set[Assignment]) -> bool:
-    for tabu in forbidden:
-        check = assignment.evaluate_compatibility(tabu)
-        if check == CompatibilityStatus.EQUAL or\
-           check == CompatibilityStatus.FIRST_COVERS_SECOND:
-            return False
-    return True
-
 class And(LogicalExpression):
     """
     TODO: documentation
@@ -477,7 +488,7 @@ class And(LogicalExpression):
         return f'AND({self.terms})'
 
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
-        if len(self.terms) < 1:
+        if not self.terms:
             return False
         assert not answer.assignments
         and_answer = PatternMatchingAnswer()
@@ -494,87 +505,31 @@ class And(LogicalExpression):
                 continue
             if term_answer.negation:
                 if DEBUG: print(f'Negation: {term}')
-                if DEBUG: print(f'term_answer = {term_answer}')
+                if DEBUG: print(f'term_answer:\n{term_answer}')
                 forbidden_assignments.update(term_answer.assignments)
                 continue
             if not and_answer.assignments:
                 if DEBUG: print(f'First term: {term}')
-                if DEBUG: print(f'term_answer = {term_answer}')
+                if DEBUG: print(f'term_answer:\n{term_answer}')
                 and_answer.assignments = term_answer.assignments
                 continue
+            if DEBUG: print(f'New term: {term}')
+            if DEBUG: print(f'term_answer:\n{term_answer}')
             joint_assignments = []
             for and_assignment in and_answer.assignments:
                 for term_assignment in term_answer.assignments:
                     joint_assignment = and_assignment.join(term_assignment)
+                    #print(f'ea = {and_assignment}\nta = {term_assignment}\nja = {joint_assignment}\n')
                     if joint_assignment is not None:
-                        joint_assignments.append(and_assignment.join(term_assignment))
+                        joint_assignments.append(joint_assignment)
             and_answer.assignments = joint_assignments
+            if DEBUG: print(f'and_answer after join:\n{and_answer}')
+        #print(f'FORBIDDEN = {forbidden_assignments}')
         for assignment in and_answer.assignments:
-            if _check_assignment(assignment, forbidden_assignments):
+            #print(f'CHECK: {assignment}')
+            if all(assignment.check_negation(tabu) for tabu in forbidden_assignments):
                 answer.assignments.add(assignment)
             else:
                 if DEBUG: print(f'Excluding {assignment}')
         if DEBUG: print(f'AND result = {answer}')
         return bool(answer.assignments)
-        
-
-#    def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
-#        if len(self.terms) < 1:
-#            return False
-#        assert not answer.assignments
-#        and_answer = PatternMatchingAnswer()
-#        forbidden_assignments = set()
-#        for term in self.terms:
-#            if DEBUG: print(f'Term: {term}')
-#            if DEBUG: print(f'Current and_answer = {and_answer}')
-#            term_answer = PatternMatchingAnswer()
-#            if not term.matched(db, term_answer):
-#                if DEBUG: print('NOT MATCHED')
-#                return False
-#            if DEBUG: print(f'term_answer = {term_answer}')
-#            if not term_answer.assignments:
-#                if DEBUG: print('term_answer empty')
-#                continue
-#            if term_answer.negation:
-#                if DEBUG: print('term_answer is a negation')
-#                forbidden_assignments.update(term_answer.assignments)
-#                continue
-#            if not and_answer.assignments:
-#                if DEBUG: print('and_answer empty')
-#                and_answer.assignments = term_answer.assignments
-#                continue
-#            if DEBUG: print('Computing AND')
-#            new_and_answer = PatternMatchingAnswer()
-#            for and_assignment in and_answer.assignments:
-#                for term_assignment in term_answer.assignments:
-#                    #if DEBUG: print(f'Checking {and_assignment} and {term_assignment}')
-#                    status = evaluate_compatibility(and_assignment, term_assignment)
-#                    #if DEBUG: print(f'status = {status}')
-#                    if status == CompatibilityStatus.INCOMPATIBLE:
-#                        continue
-#                    if status == CompatibilityStatus.EQUAL or \
-#                         status == CompatibilityStatus.FIRST_COVERS_SECOND:
-#                        new_and_answer.assignments.add(and_assignment)
-#                    elif status == CompatibilityStatus.SECOND_COVERS_FIRST:
-#                        new_and_answer.assignments.add(term_assignment)
-#                    elif status == CompatibilityStatus.NO_COVERING:
-#                        new_assignment = VariablesAssignment()
-#                        for variable, value in and_assignment.assignment.items():
-#                            new_assignment.assign(variable, value)
-#                        for variable, value in term_assignment.assignment.items():
-#                            new_assignment.assign(variable, value)
-#                        new_assignment.freeze()
-#                        new_and_answer.assignments.add(new_assignment)
-#                    else:
-#                        raise ValueError(f'Invalid assignment status: {status}')
-#                    #if DEBUG: print(f'Updated new_and_answer = {new_and_answer}')
-#            and_answer = new_and_answer
-#            if DEBUG: print(f'New and_answer = {and_answer}')
-#        if DEBUG: print(f'negations = {forbidden_assignments}')
-#        for assignment in and_answer.assignments:
-#            if _check_assignment(assignment, forbidden_assignments):
-#                answer.assignments.add(assignment)
-#            else:
-#                if DEBUG: print(f'Excluding {assignment}')
-#        if DEBUG: print(f'AND result = {answer}')
-#        return bool(answer.assignments)
