@@ -26,8 +26,7 @@ class Assignment(ABC):
     TODO: documentation
     """
 
-    def __init__(self, ordered: bool):
-        self.ordered = ordered
+    def __init__(self):
         self.variables: Union[Set[str], FrozenSet] = set()
         self.hash: int = 0
         self.frozen = False
@@ -70,7 +69,6 @@ class OrderedAssignment(Assignment):
     """
 
     def __init__(self):
-        super().__init__(True)
         self.mapping: Dict[str, str] = {}
 
     def __repr__(self):
@@ -92,7 +90,7 @@ class OrderedAssignment(Assignment):
             return True
 
     def join(self, other: Assignment) -> Assignment:
-        if other.ordered:
+        if isinstance(other, OrderedAssignment):
             return self._join_ordered(other)
         else:
             return other.join(self)
@@ -142,10 +140,64 @@ class UnorderedAssignment(Assignment):
     """
     TODO: documentation
     """
-
     def __init__(self):
+        self.symbols: Dict[str, int] = {}
+        self.values: Dict[str, int] = {}
+
+    def __repr__(self):
+        return self.symbols.__repr__() + ' ' + self.values.__repr__()
+
+    def freeze(self):
+        assert super().freeze()
+        symbols_count = tuple(sorted(self.symbols.values()))
+        values_count = tuple(sorted(self.values.values()))
+        if vsymbols_count != values_count:
+            return False
+        self.hash = hash(tuple([hash(frozenset(self.symbols.items())), hash(frozenset(self.values.items()))]))
+        return True
+
+    def assign(self, variable: str, value: str) -> bool:
+        if variable is None or value is None or self.frozen:
+            raise ValueError(f'Invalid assignment: variable = {variable} value = {value} frozen = {self.frozen}')
+        self.variables[variable] = self.variables.get(variable, 0) + 1
+        self.values[value] = self.values.get(value, 0) + 1
+        self.variables.add(variable)
+        return True
+
+    def join(self, other: Assignment) -> Assignment:
+        if isinstance(other, CompositeAssignment):
+            return other.join(self)
+        else:
+            composite = CompositeAssignment(self)
+            return composite.join(other)
+
+    def contains_ordered(self, ordered_assignment) -> bool:
+        count_values = {}
+        for variable, value in ordered_assignment.items():
+            if variable not in self.variables:
+                return False
+            count_values[value] = count_values.get(value, 0) + 1
+        for value in count_values.keys():
+            if self.values.get(value, 0) < count_values[value]:
+                return False
+        return True
+
+    def check_negation(self, negation: Assignment) -> bool:
+AQUI: reescrever
+        if isinstance(negation, OrtderedAssignment):
+            return check != CompatibilityStatus.EQUAL and check != CompatibilityStatus.FIRST_COVERS_SECOND
+        else:
+            return not negation.contains_ordered(self)
+
+
+class CompositeAssignment(Assignment):
+    """
+    TODO: documentation
+    """
+
+    def __init__(self, assignment: UnorderedAssignment):
         super().__init__(False)
-        self.unordered_mappings: List[Tuple[Dict[str, int], Dict[str, int]]] = [({}, {})]
+        self.unordered_mappings: List[UnorderedAssignment] = [assignment]
         self.ordered_mappings: OrderedAssignment = None
         
 
@@ -156,28 +208,19 @@ class UnorderedAssignment(Assignment):
         assert super().freeze()
         assert self.ordered_mappings is None
         _hash = 1
-        for variables, values in self.unordered_mappings:
-            _hash ^= hash(tuple([hash(frozenset(variables.items())), hash(frozenset(values.items()))]))
-            variables_count = tuple(sorted(variables.values()))
-            values_count = tuple(sorted(values.values()))
-            if variables_count != values_count:
+        for unordered in self.unordered_mappings:
+            if not unordered.freeze():
                 return False
+            _hash ^= unordered.hash
         self.hash = _hash
         return True
 
     def assign(self, variable: str, value: str) -> bool:
-        if variable is None or value is None or self.frozen:
-            raise ValueError(f'Invalid assignment: variable = {variable} value = {value} frozen = {self.frozen}')
-        variables, values = self.unordered_mappings[-1]
-        variables[variable] = variables.get(variable, 0) + 1
-        values[value] = values.get(value, 0) + 1
-        if variable not in self.variables:
-            self.variables.add(variable)
-        return True
+        assert False
 
     def _contains_ordered(self, variables, values, ordered_mapping) -> bool:
         count_values = {}
-        for variable, value in ordered_mapping.mapping.items():
+        for variable, value in ordered_mappings.items():
             if variable not in variables:
                 return False
             count_values[value] = count_values.get(value, 0) + 1
@@ -187,9 +230,32 @@ class UnorderedAssignment(Assignment):
         return True
 
     def contains_ordered(self, other: OrderedAssignment) -> bool:
-        for variables, values in self.unordered_mappings:
+
+        for variables, values in self.unoprdered_mappings:
             if not self._contains_ordered(variables, values, other):
                 return False
+        return True
+
+        #AQUI: Reescrever
+
+        variables = other.mapping.keys()
+        if all(any(v not in unordered_variables for v in variables) for unordered_variables, _ in self.unordered_mappings):
+            return False
+        _unordered_mappings = deepcopy(self.unordered_mappings)
+        for variable, value in other.mapping.items():
+            for unordered_variables, unordered_values in _unordered_mappings:
+                if variable in unordered_variables:
+                    if unordered_variables.get(variable, 0) == 0 or unordered_values.get(value, 0) == 0:
+                        return False
+                    else:
+                        unordered_variables[variable] -= 1
+                        unordered_values[value] -= 1
+        print(f'variables = {variables}')
+        for unordered_variables, unordered_values in _unordered_mappings:
+            for ((var, cvar), (val, cval)) in zip(unordered_variables.items(), unordered_values.items()):
+                print(f'var = {var} val = {val} cvar = {cvar} cval = {cval}')
+                if var in variables and (cvar > 0 or cval > 0):
+                    return False
         return True
             
     def _check_viability(self) -> bool:
@@ -283,7 +349,7 @@ class UnorderedAssignment(Assignment):
                 return False
         return True
 
-    def _remove_unordered_mapping(self, negation: 'UnorderedAssignment') -> bool:
+    def _remove_unordered_mapping(self, negation: 'CompositeAssignment') -> bool:
         if not self._remove_ordered_mapping(negation.ordered_mappings):
             return False
         for other_variables, other_values in other.unordered_mappings:
@@ -409,7 +475,7 @@ class Link(Atom):
             answer.freeze()
             return answer
         else:
-            answer = UnorderedAssignment()
+            answer = CompositeAssignment()
             targets_to_match = []
             for atom in self.targets:
                 if isinstance(atom, Variable):
