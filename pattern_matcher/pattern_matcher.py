@@ -175,30 +175,21 @@ class UnorderedAssignment(Assignment):
             self.variables.add(variable)
         return True
 
-    def _contains_ordered(self, 
+    def _contains_ordered(self, variables, values, ordered_mapping) -> bool:
+        count_values = {}
+        for variable, value in ordered_mapping.mapping.items():
+            if variable not in variables:
+                return False
+            count_values[value] = count_values.get(value, 0) + 1
+        for value in count_values:
+            if values.get(value, 0) < count_values[value]:
+                return False
+        return True
 
     def contains_ordered(self, other: OrderedAssignment) -> bool:
-
-        #AQUI: Reescrever
-
-        variables = other.mapping.keys()
-        if all(any(v not in unordered_variables for v in variables) for unordered_variables, _ in self.unordered_mappings):
-            return False
-        _unordered_mappings = deepcopy(self.unordered_mappings)
-        for variable, value in other.mapping.items():
-            for unordered_variables, unordered_values in _unordered_mappings:
-                if variable in unordered_variables:
-                    if unordered_variables.get(variable, 0) == 0 or unordered_values.get(value, 0) == 0:
-                        return False
-                    else:
-                        unordered_variables[variable] -= 1
-                        unordered_values[value] -= 1
-        print(f'variables = {variables}')
-        for unordered_variables, unordered_values in _unordered_mappings:
-            for ((var, cvar), (val, cval)) in zip(unordered_variables.items(), unordered_values.items()):
-                print(f'var = {var} val = {val} cvar = {cvar} cval = {cval}')
-                if var in variables and (cvar > 0 or cval > 0):
-                    return False
+        for variables, values in self.unordered_mappings:
+            if not self._contains_ordered(variables, values, other):
+                return False
         return True
             
     def _check_viability(self) -> bool:
