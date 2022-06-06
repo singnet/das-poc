@@ -1,4 +1,5 @@
 import pytest
+from copy import deepcopy
 from stub_db import StubDB
 from pattern_matcher import CompatibilityStatus, OrderedAssignment, UnorderedAssignment, PatternMatchingAnswer, LogicalExpression, Variable, Node, Link
 
@@ -169,7 +170,7 @@ def test_unordered_assignment_sets():
 def _build_ordered_assignment(d):
     answer = OrderedAssignment()
     for key in d.keys():
-        answer.assign(key, d[key])
+        assert answer.assign(key, d[key])
     answer.freeze()
     return answer
 
@@ -177,7 +178,7 @@ def _build_unordered_assignment(d):
     answer = UnorderedAssignment()
     for key in d.keys():
         answer.assign(key, d[key])
-    answer.freeze()
+    assert answer.freeze()
     return answer
             
 def test_evaluate_compatibility():
@@ -255,6 +256,16 @@ def test_join():
     assert(not j2.contains_ordered(a6))
     assert(j2.contains_ordered(a7))
 
+    a1 = _build_ordered_assignment({'v1': 'c', 'v3': 'm', 'v2': 'h'})
+    b1 = _build_unordered_assignment({'v1': 'h', 'v2': 'c'})
+    b2 = _build_unordered_assignment({'v1': 'c', 'v2': 'h'})
+    j1 = a1.join(b1)
+    j2 = a1.join(b2)
+    assert(not j1.unordered_mappings)
+    assert(j1.contains_ordered(a1))
+    assert(not j2.unordered_mappings)
+    assert(j2.contains_ordered(a1))
+
 def test_check_negation():
 
     a1 = _build_ordered_assignment({'v1': '1', 'v2': '2'})
@@ -266,6 +277,7 @@ def test_check_negation():
     a7 = _build_ordered_assignment({'v4': '1', 'v5': '2', 'v6': '3'})
     a8 = _build_ordered_assignment({'v1': '4', 'v2': '5', 'v3': '6'})
     a9 = _build_ordered_assignment({'v1': '1', 'v2': '1'})
+    a10 = _build_ordered_assignment({'v1': '1', 'v2': '1', 'v4': '2'})
 
     b1 = _build_unordered_assignment({'v1': '1', 'v2': '2', 'v3': '3'})
 
@@ -287,16 +299,19 @@ def test_check_negation():
     assert(a6.check_negation(b1))
     assert(a7.check_negation(b1))
     assert(a8.check_negation(b1))
-    assert(a9.check_negation(b1))
+    assert(not a9.check_negation(b1))
+    assert(a10.check_negation(b1))
 
-    print('b1 antes: ', b1)
-    assert(b1.check_negation(a1))
-    print('b1 depois: ', b1)
-
-    assert False
-
-
-
+    assert(not deepcopy(b1).check_negation(a1))
+    assert(not deepcopy(b1).check_negation(a2))
+    assert(not deepcopy(b1).check_negation(a3))
+    assert(not deepcopy(b1).check_negation(a4))
+    assert(deepcopy(b1).check_negation(a5))
+    assert(deepcopy(b1).check_negation(a6))
+    assert(deepcopy(b1).check_negation(a7))
+    assert(deepcopy(b1).check_negation(a8))
+    assert(deepcopy(b1).check_negation(a9))
+    assert(deepcopy(b1).check_negation(a10))
 
 def _test_patterns():
 
