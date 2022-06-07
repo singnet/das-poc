@@ -233,39 +233,6 @@ def test_join():
     assert(a1.join(a7) is None)
     assert(a7.join(a1) is None)
 
-    j1 = a1.join(_build_unordered_assignment({'v1': '1', 'v2': '2', 'v3': '3'}))
-    assert(a1.evaluate_compatibility(j1.ordered_mappings) == CompatibilityStatus.EQUAL)
-    assert(not j1.contains_ordered(_build_ordered_assignment({'v1': '1'})))
-    assert(not j1.contains_ordered(_build_ordered_assignment({'v2': '2'})))
-    assert(j1.contains_ordered(_build_ordered_assignment({'v3': '3'})))
-    assert(not j1.contains_ordered(a1))
-    assert(not j1.contains_ordered(a2))
-    assert(not j1.contains_ordered(a4))
-
-    b1 = _build_unordered_assignment({'v1': '1', 'v2': '2', 'v3': '3'})
-    b2 = _build_unordered_assignment({'v1': '1', 'v2': '2'})
-    j2 = b1.join(b2)
-    assert(j2.ordered_mappings is None)
-    assert(j2.contains_ordered(_build_ordered_assignment({'v1': '1'})))
-    assert(j2.contains_ordered(_build_ordered_assignment({'v2': '2'})))
-    assert(not j2.contains_ordered(_build_ordered_assignment({'v3': '3'})))
-    assert(j2.contains_ordered(a1))
-    assert(j2.contains_ordered(a2))
-    assert(not j2.contains_ordered(a4))
-    assert(not j2.contains_ordered(a5))
-    assert(not j2.contains_ordered(a6))
-    assert(j2.contains_ordered(a7))
-
-    a1 = _build_ordered_assignment({'v1': 'c', 'v3': 'm', 'v2': 'h'})
-    b1 = _build_unordered_assignment({'v1': 'h', 'v2': 'c'})
-    b2 = _build_unordered_assignment({'v1': 'c', 'v2': 'h'})
-    j1 = a1.join(b1)
-    j2 = a1.join(b2)
-    assert(not j1.unordered_mappings)
-    assert(j1.contains_ordered(a1))
-    assert(not j2.unordered_mappings)
-    assert(j2.contains_ordered(a1))
-
 def test_check_negation():
 
     a1 = _build_ordered_assignment({'v1': '1', 'v2': '2'})
@@ -278,8 +245,10 @@ def test_check_negation():
     a8 = _build_ordered_assignment({'v1': '4', 'v2': '5', 'v3': '6'})
     a9 = _build_ordered_assignment({'v1': '1', 'v2': '1'})
     a10 = _build_ordered_assignment({'v1': '1', 'v2': '1', 'v4': '2'})
+    a11 = _build_ordered_assignment({'v1': '3', 'v2': '2', 'v3': '1'})
 
     b1 = _build_unordered_assignment({'v1': '1', 'v2': '2', 'v3': '3'})
+    b2 = _build_unordered_assignment({'v1': '1', 'v2': '2'})
 
     assert(not a1.check_negation(a1))
     assert(not a1.check_negation(a2))
@@ -291,16 +260,29 @@ def test_check_negation():
     assert(a3.check_negation(a2))
     assert(not a3.check_negation(a3))
 
-    assert(not a1.check_negation(b1))
-    assert(not a2.check_negation(b1))
-    assert(not a3.check_negation(b1))
+    assert(a1.check_negation(b1))
+    assert(a2.check_negation(b1))
+    assert(a3.check_negation(b1))
     assert(not a4.check_negation(b1))
     assert(a5.check_negation(b1))
     assert(a6.check_negation(b1))
     assert(a7.check_negation(b1))
     assert(a8.check_negation(b1))
-    assert(not a9.check_negation(b1))
+    assert(a9.check_negation(b1))
     assert(a10.check_negation(b1))
+    assert(not a11.check_negation(b1))
+
+    assert(not a1.check_negation(b2))
+    assert(a2.check_negation(b2))
+    assert(not a3.check_negation(b2))
+    assert(not a4.check_negation(b2))
+    assert(a5.check_negation(b2))
+    assert(a6.check_negation(b2))
+    assert(a7.check_negation(b2))
+    assert(a8.check_negation(b2))
+    assert(a9.check_negation(b2))
+    assert(not a10.check_negation(b2))
+    assert(not a11.check_negation(b2))
 
     assert(not deepcopy(b1).check_negation(a1))
     assert(not deepcopy(b1).check_negation(a2))
@@ -312,6 +294,7 @@ def test_check_negation():
     assert(deepcopy(b1).check_negation(a8))
     assert(deepcopy(b1).check_negation(a9))
     assert(deepcopy(b1).check_negation(a10))
+    assert(not deepcopy(b1).check_negation(a11))
 
 def _test_patterns():
 
