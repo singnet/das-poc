@@ -56,11 +56,11 @@ class Assignment(ABC):
         pass
 
     @abstractmethod
-    def check_negation(self, negation: 'Assignment') -> bool:
+    def join(self, other: 'Assignment') -> 'Assignment':
         pass
 
     @abstractmethod
-    def join(self, other: 'Assignment') -> 'Assignment':
+    def check_negation(self, negation: 'Assignment') -> bool:
         pass
 
 class OrderedAssignment(Assignment):
@@ -69,6 +69,7 @@ class OrderedAssignment(Assignment):
     """
 
     def __init__(self):
+        super().__init__()
         self.mapping: Dict[str, str] = {}
 
     def __repr__(self):
@@ -90,10 +91,18 @@ class OrderedAssignment(Assignment):
             return True
 
     def join(self, other: Assignment) -> Assignment:
+        assert self.frozen and other.frozen
         if isinstance(other, OrderedAssignment):
             return self._join_ordered(other)
         else:
             return other.join(self)
+
+    def check_negation(self, negation: Assignment) -> bool:
+        if isinstance(negation, OrderedAssignment):
+            check = self.evaluate_compatibility(negation)
+            return check != CompatibilityStatus.EQUAL and check != CompatibilityStatus.FIRST_COVERS_SECOND
+        else:
+            return not negation.is_covered_by_ordered(self)
 
     def _join_ordered(self, other):
         status = self.evaluate_compatibility(other)
@@ -129,18 +138,15 @@ class OrderedAssignment(Assignment):
         else:
             return CompatibilityStatus.NO_COVERING
 
-    def check_negation(self, negation: Assignment) -> bool:
-        if negation.ordered:
-            check = self.evaluate_compatibility(negation)
-            return check != CompatibilityStatus.EQUAL and check != CompatibilityStatus.FIRST_COVERS_SECOND
-        else:
-            return not negation.contains_ordered(self)
+    #def compatible(self, other) -> bool:
+    #    return self.evaluate_compatibility(other) != CompatibilityStatus.INCOMPATIBLE
 
 class UnorderedAssignment(Assignment):
     """
     TODO: documentation
     """
     def __init__(self):
+        super().__init__()
         self.symbols: Dict[str, int] = {}
         self.values: Dict[str, int] = {}
 
@@ -151,7 +157,7 @@ class UnorderedAssignment(Assignment):
         assert super().freeze()
         symbols_count = tuple(sorted(self.symbols.values()))
         values_count = tuple(sorted(self.values.values()))
-        if vsymbols_count != values_count:
+        if symbols_count != values_count:
             return False
         self.hash = hash(tuple([hash(frozenset(self.symbols.items())), hash(frozenset(self.values.items()))]))
         return True
@@ -159,21 +165,30 @@ class UnorderedAssignment(Assignment):
     def assign(self, variable: str, value: str) -> bool:
         if variable is None or value is None or self.frozen:
             raise ValueError(f'Invalid assignment: variable = {variable} value = {value} frozen = {self.frozen}')
-        self.variables[variable] = self.variables.get(variable, 0) + 1
+        self.symbols[variable] = self.symbols.get(variable, 0) + 1
         self.values[value] = self.values.get(value, 0) + 1
         self.variables.add(variable)
         return True
 
     def join(self, other: Assignment) -> Assignment:
+        assert self.frozen and other.frozen
         if isinstance(other, CompositeAssignment):
             return other.join(self)
         else:
             composite = CompositeAssignment(self)
             return composite.join(other)
 
+    def check_negation(self, negation: Assignment) -> bool:
+        if isinstance(negation, OrderedAssignment):
+            return not self.contains_ordered(negation)
+        elif isinstance(negation, UnorderedAssignment):
+            return not self.contains_unordered(negation)
+        else:
+            return all(not self.contains_unordered(unordered_negation) for unordered_negation in negation.unordered_mappings)
+
     def contains_ordered(self, ordered_assignment) -> bool:
         count_values = {}
-        for variable, value in ordered_assignment.items():
+        for variable, value in ordered_assignment.mapping.items():
             if variable not in self.variables:
                 return False
             count_values[value] = count_values.get(value, 0) + 1
@@ -182,13 +197,25 @@ class UnorderedAssignment(Assignment):
                 return False
         return True
 
-    def check_negation(self, negation: Assignment) -> bool:
-AQUI: reescrever
-        if isinstance(negation, OrtderedAssignment):
-            return check != CompatibilityStatus.EQUAL and check != CompatibilityStatus.FIRST_COVERS_SECOND
-        else:
-            return not negation.contains_ordered(self)
+    def is_covered_by_ordered(self, ordered_assignment) -> bool:
+        copy = deepcopy(self)
+        for variable, value in ordered_assignment.mapping.items():
+            copy.symbols[variable] = copy.symbols.get(variable, 0) - 1
+            copy.values[value] = copy.values.get(value, 0) - 1
+        return all(count <= 0 for count in copy.symbols.values()) and all(count <= 0 for count in copy.values.values())
+        
 
+    def contains_unordered(self, unordered_assignment) -> bool:
+        for symbol, count in unordered_assignment.items():
+            if self.symbols.get(symbol, 0) < count:
+                return False
+        for value, count in unordered_assignment.values.items():
+            if self.values.get(value, 0) < count:
+                return False
+        return True
+
+    #def compatible(self, other) -> bool:
+        
 
 class CompositeAssignment(Assignment):
     """
@@ -196,175 +223,101 @@ class CompositeAssignment(Assignment):
     """
 
     def __init__(self, assignment: UnorderedAssignment):
-        super().__init__(False)
+        super().__init__()
         self.unordered_mappings: List[UnorderedAssignment] = [assignment]
-        self.ordered_mappings: OrderedAssignment = None
-        
+        self.ordered_mapping: OrderedAssignment = None
+        self.variables = deepcopy(assignment.variables)
+        assert self._freeze()
 
     def __repr__(self):
-        return f'Ordered = {self.ordered_mappings} | Unordered = {self.unordered_mappings}'
+        return f'Ordered = {self.ordered_mapping} | Unordered = {self.unordered_mappings}'
 
-    def freeze(self):
+    def _freeze(self):
         assert super().freeze()
-        assert self.ordered_mappings is None
+        assert self.ordered_mapping is None
         _hash = 1
         for unordered in self.unordered_mappings:
-            if not unordered.freeze():
-                return False
             _hash ^= unordered.hash
         self.hash = _hash
         return True
 
+    def freeze(self):
+        assert False
+
     def assign(self, variable: str, value: str) -> bool:
         assert False
 
-    def _contains_ordered(self, variables, values, ordered_mapping) -> bool:
-        count_values = {}
-        for variable, value in ordered_mappings.items():
-            if variable not in variables:
+    def _check_ordered_viability(self) -> bool:
+        #print(f'_check_ordered_viability() self = {self}')
+        if not self.ordered_mapping:
+            if not self.unordered_mappings:
                 return False
-            count_values[value] = count_values.get(value, 0) + 1
-        for value in count_values:
-            if values.get(value, 0) < count_values[value]:
+            else:
+                return True
+        for unordered_assignment in self.unordered_mappings:
+            if not unordered_assignment.is_covered_by_ordered(self.ordered_mapping):
                 return False
-        return True
-
-    def contains_ordered(self, other: OrderedAssignment) -> bool:
-
-        for variables, values in self.unoprdered_mappings:
-            if not self._contains_ordered(variables, values, other):
-                return False
-        return True
-
-        #AQUI: Reescrever
-
-        variables = other.mapping.keys()
-        if all(any(v not in unordered_variables for v in variables) for unordered_variables, _ in self.unordered_mappings):
-            return False
-        _unordered_mappings = deepcopy(self.unordered_mappings)
-        for variable, value in other.mapping.items():
-            for unordered_variables, unordered_values in _unordered_mappings:
-                if variable in unordered_variables:
-                    if unordered_variables.get(variable, 0) == 0 or unordered_values.get(value, 0) == 0:
-                        return False
-                    else:
-                        unordered_variables[variable] -= 1
-                        unordered_values[value] -= 1
-        print(f'variables = {variables}')
-        for unordered_variables, unordered_values in _unordered_mappings:
-            for ((var, cvar), (val, cval)) in zip(unordered_variables.items(), unordered_values.items()):
-                print(f'var = {var} val = {val} cvar = {cvar} cval = {cval}')
-                if var in variables and (cvar > 0 or cval > 0):
-                    return False
-        return True
-            
-    def _check_viability(self) -> bool:
-        #print(f'_check_viability() self = {self}')
-        if not self.ordered_mappings and not self.unordered_mappings:
-            return False
-        _unordered_mappings = deepcopy(self.unordered_mappings)
-        if self.ordered_mappings is not None:
-            for variable, value in self.ordered_mappings.mapping.items():
-                for unordered_variables, unordered_values in _unordered_mappings:
-                    if variable in unordered_variables:
-                        if unordered_variables.get(variable, 0) == 0 or unordered_values.get(value, 0) == 0:
-                            #print(f'Return False on {variable} = {value}')
-                            return False
-                        else:
-                            unordered_variables[variable] -= 1
-                            unordered_values[value] -= 1
-        # TODO: check if this cleanup is really needed
-        new_unordered_mappings: List[Tuple[Dict[str, int], Dict[str, int]]] = []
-        for unordered_variables, unordered_values in _unordered_mappings:
-            if any(c1 != 0 or c2 != 0 for c1, c2 in zip(unordered_variables.values(), unordered_values.values())):
-                new_unordered_mappings.append(tuple([unordered_variables, unordered_values]))
-        self.unordered_mappings = new_unordered_mappings
         return True
 
     def _recompute_hash(self) -> None:
-        _hash = 1
-        for variables, values in self.unordered_mappings:
-            _hash ^= hash(tuple([hash(frozenset(variables.items())), hash(frozenset(values.items()))]))
-            variables_count = tuple(sorted(variables.values()))
-            values_count = tuple(sorted(values.values()))
-            assert variables_count == values_count
-        if self.ordered_mappings is not None:
-            _hash ^= self.ordered_mappings.hash
+        if self.ordered_mapping:
+            _hash = self.ordered_mapping.hash
+        else:
+            _hash = 1
+        for unordered_assignment in self.unordered_mappings:
+            _hash ^= unordered_assignment.hash
         self.hash = _hash
 
-    def _commit_changes(self) -> bool:
-        if self._check_viability():
+    def _add_ordered_mapping(self, other: OrderedAssignment) -> bool:
+        if self.ordered_mapping is None:
+            self.ordered_mapping = other
+        else:
+            self.ordered_mapping = self.ordered_mapping.join(other)
+            if self.ordered_mapping is None:
+                return False
+        if self._check_ordered_viability():
             self._recompute_hash()
             return True
         else:
             return False
 
-    def _add_ordered_mapping(self, other: OrderedAssignment) -> bool:
-        if self.ordered_mappings is None:
-            self.ordered_mappings = other
-        else:
-            self.ordered_mappings = self.ordered_mappings.join(other)
-            if self.ordered_mappings is None:
-                return False
-        return self._commit_changes()
-
-    def _add_unordered_mappings(self, others) -> bool:
-        self.unordered_mappings.extend(others)
-        return self._commit_changes()
-
-    def join(self, other: Assignment) -> Assignment:
-        answer = deepcopy(self)
-        if other.ordered:
-            return answer if answer._add_ordered_mapping(other) else None
-        else:
-            # TODO: why not joing the ordered part?
-            answer._add_unordered_mappings(other.unordered_mappings)
-            return answer if answer._add_ordered_mapping(other.ordered_mappings) else None
-
-    def _remove_ordered_mapping(self, other: OrderedAssignment) -> bool:
-        if self.ordered_mappings is not None:
-            check = self.ordered_mappings.evaluate_compatibility(negation)
-            if check == CompatibilityStatus.EQUAL or check == CompatibilityStatus.FIRST_COVERS_SECOND:
-                return False
-        new_mappings: List[Tuple[Dict[str, int], Dict[str, int]]] = []
-        for variables, values in self.unordered_mappings:
-            variables_copy = deepcopy(variables)
-            values_copy = deepcopy(values)
-            for variable, value in other.mapping.items():
-                if variables_copy.get(variable, 0) == 0 or values_copy.get(value, 0) == 0:
-                    new_mappings.append(tuple([variables, values]))
-                    continue
-                else:
-                    variables_copy[variable] -= 1
-                    values_copy[value] -= 1
-        self.unordered_mappings = new_mappings
-        return self._commit_changes()
-
-    def _is_covered_by(self, variables1, values1, variables2, values2):
-        for variable, count in variables1.items():
-            if variables2[variable] < count:
-                return False
-        for value, count in values1.items():
-            if values2[value] < count:
-                return False
+    def _add_unordered_mapping(self, unordered_assignment) -> bool:
+        if self.ordered_mapping and not unordered_assignment.contains_ordered(self.ordered_mapping):
+            return False
+        self.unordered_mappings.append(unordered_assignment)
         return True
 
-    def _remove_unordered_mapping(self, negation: 'CompositeAssignment') -> bool:
-        if not self._remove_ordered_mapping(negation.ordered_mappings):
-            return False
-        for other_variables, other_values in other.unordered_mappings:
-            new_mappings: List[Tuple[Dict[str, int], Dict[str, int]]] = []
-            for self_variables, self_values in self.unordered_mappings:
-                if not _is_covered_by(self_variables, self_values, other_variables, other_values):
-                    new_mappings.append(tuple([self_variables, self_values]))
-            self.unordered_mappings = new_mappings
-        return self._commit_changes()
+    def _add_unordered_mappings(self, others) -> bool:
+        return all(self._add_unordered_mapping(assignment) for assignment in others)
+
+    def join(self, other: Assignment) -> Assignment:
+        assert self.frozen and other.frozen
+        answer = deepcopy(self)
+        if isinstance(other, OrderedAssignment):
+            return answer if answer._add_ordered_mapping(other) else None
+        elif isinstance(other, UnorderedAssignment):
+            return answer if answer._add_unordered_mapping(other) else None
+        else:
+            if not answer._add_ordered_mapping(other.ordered_mapping):
+                return None
+            return answer if answer._add_unordered_mappings(other.unordered_mappings) else None
 
     def check_negation(self, negation: Assignment) -> bool:
-        if negation.ordered:
-            return self._remove_ordered_mapping(negation)
+        if isinstance(negation, OrderedAssignment):
+            return all(not assignment.contains_ordered(negation) for assignment in self.unordered_mappings)
+        elif isinstance(negation, UnorderedAssignment):
+            return all(not assignment.contains_unordered(negation) for assignment in self.unordered_mappings)
         else:
-            return self._remove_unordered_mapping(negation)
+            for assignment in self.unordered_assignments:
+                if all(assignment.contains_unordered(negation_assignment) for negation_assignment in negation.unordered_assignments):
+                    return False
+            return True
+
+    def contains_ordered(self, ordered_assignment) -> bool:
+        return all(assignment.contains_ordered(ordered_assignment) for assignment in self.unordered_mappings)
+
+    def contains_unordered(self, unordered_assignment) -> bool:
+        return all(assignment.contains_unordered(unordered_assignment) for assignment in self.unordered_mappings)
 
 class PatternMatchingAnswer:
     """
@@ -475,7 +428,7 @@ class Link(Atom):
             answer.freeze()
             return answer
         else:
-            answer = CompositeAssignment()
+            answer = UnorderedAssignment()
             targets_to_match = []
             for atom in self.targets:
                 if isinstance(atom, Variable):
@@ -550,8 +503,6 @@ class And(LogicalExpression):
         assert not answer.assignments
         and_answer = PatternMatchingAnswer()
         forbidden_assignments = set()
-        ordered_terms = []
-        unordered_terms = []
         for term in self.terms:
             term_answer = PatternMatchingAnswer()
             if not term.matched(db, term_answer):
@@ -581,9 +532,9 @@ class And(LogicalExpression):
                         joint_assignments.append(joint_assignment)
             and_answer.assignments = joint_assignments
             if DEBUG: print(f'and_answer after join:\n{and_answer}')
-        #print(f'FORBIDDEN = {forbidden_assignments}')
+        print(f'FORBIDDEN = {forbidden_assignments}')
         for assignment in and_answer.assignments:
-            #print(f'CHECK: {assignment}')
+            print(f'CHECK: {assignment}')
             if all(assignment.check_negation(tabu) for tabu in forbidden_assignments):
                 answer.assignments.add(assignment)
             else:
