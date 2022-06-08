@@ -79,8 +79,6 @@ match(db, Not(Link('Inheritance', [Variable('V1'), mammal], True)))
 match(db, Not(Link('Inheritance', [Variable('V1'), human], True)))
 match(db, And([inh1, inh2]))
 
-print('\n\n\n\n================================================================================\n')
-
 match(db, And([Link('Inheritance', [Variable('V1'), Variable('V2')], True),\
                Link('Similarity', [Variable('V1'), Variable('V2')], False)\
 ]))
@@ -93,4 +91,40 @@ match(db, And([Link('Inheritance', [Variable('V1'), Variable('V3')], True),\
                Not(Link('Similarity', [Variable('V1'), Variable('V2')], False))\
 ]))
 
+print('\n\n\n\n================================================================================\n')
 
+match(db, 
+    And([
+        Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        Link('Similarity', [Variable('V1'), Variable('V2')], True),
+    ])
+)
+
+match(db, 
+    And([
+        Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        Not(Link('Similarity', [Variable('V1'), Variable('V2')], True)),
+    ])
+)
+
+match(db, 
+    And([
+        Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        Link('Inheritance', [Variable('V1'), Variable('V2')], True),
+    ])
+)
+
+match(db, 
+    And([
+        Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
+    ])
+)
+
+match(db, 
+    And([
+        Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
+        Link('Similarity', [Variable('V1'), Variable('V2')], True),
+    ])
+)
