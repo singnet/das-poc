@@ -148,8 +148,8 @@ class OrderedAssignment(Assignment):
         else:
             return CompatibilityStatus.NO_COVERING
 
-    #def compatible(self, other) -> bool:
-    #    return self.evaluate_compatibility(other) != CompatibilityStatus.INCOMPATIBLE
+    def compatible(self, other) -> bool:
+        return self.evaluate_compatibility(other) != CompatibilityStatus.INCOMPATIBLE
 
 class UnorderedAssignment(Assignment):
     """
@@ -175,6 +175,8 @@ class UnorderedAssignment(Assignment):
     def assign(self, variable: str, value: str) -> bool:
         if variable is None or value is None or self.frozen:
             raise ValueError(f'Invalid assignment: variable = {variable} value = {value} frozen = {self.frozen}')
+        if variable in self.variables:
+            return False
         self.symbols[variable] = self.symbols.get(variable, 0) + 1
         self.values[value] = self.values.get(value, 0) + 1
         self.variables.add(variable)
@@ -216,7 +218,7 @@ class UnorderedAssignment(Assignment):
         
 
     def contains_unordered(self, unordered_assignment) -> bool:
-        for symbol, count in unordered_assignment.items():
+        for symbol, count in unordered_assignment.symbols.items():
             if self.symbols.get(symbol, 0) < count:
                 return False
         for value, count in unordered_assignment.values.items():
@@ -224,8 +226,22 @@ class UnorderedAssignment(Assignment):
                 return False
         return True
 
-    #def compatible(self, other) -> bool:
-        
+    def compatible(self, other) -> bool:
+        symbol_intersection = self.variables.intersection(other.variables)
+        sum_symbol_count_self = 0
+        sum_symbol_count_other = 0
+        for variable in symbol_intersection:
+            sum_symbol_count_self += self.symbols[variable]
+            sum_symbol_count_other += other.symbols[variable]
+        values_self = set(self.values.keys())
+        values_other = set(other.values.keys())
+        value_intersection = values_self.intersection(values_other)
+        sum_value_count_self = 0
+        sum_value_count_other = 0
+        for value in value_intersection:
+            sum_value_count_self += self.values[value]
+            sum_value_count_other += other.values[value]
+        return sum_value_count_other >= sum_symbol_count_self and sum_value_count_self >= sum_symbol_count_other
 
 class CompositeAssignment(Assignment):
     """
@@ -265,7 +281,8 @@ class CompositeAssignment(Assignment):
             else:
                 return True
         for unordered_assignment in self.unordered_mappings:
-            if not unordered_assignment.is_covered_by_ordered(self.ordered_mapping):
+            if not unordered_assignment.contains_ordered(self.ordered_mapping) and \
+               not unordered_assignment.is_covered_by_ordered(self.ordered_mapping):
                 return False
         return True
 
@@ -294,7 +311,10 @@ class CompositeAssignment(Assignment):
     def _add_unordered_mapping(self, unordered_assignment) -> bool:
         if self.ordered_mapping and not unordered_assignment.contains_ordered(self.ordered_mapping):
             return False
+        if any(not assignment.compatible(unordered_assignment) for assignment in self.unordered_mappings):
+            return False
         self.unordered_mappings.append(unordered_assignment)
+        self._recompute_hash()
         return True
 
     def _add_unordered_mappings(self, others) -> bool:
@@ -360,6 +380,7 @@ class LogicalExpression(ABC):
 class Atom(LogicalExpression, ABC):
     """
     TODO: documentation
+        
     """
     
     def __init__(self, atom_type: str):
@@ -423,6 +444,7 @@ class Link(Atom):
                 return None
             self.handle = db.get_link_handle(self.atom_type, target_handles)
         return self.handle
+        
 
     def _assign_variables(self, db: DBInterface, link: str) -> Optional[Assignment]:
         link_targets = db.get_link_targets(link)
@@ -435,8 +457,7 @@ class Link(Atom):
                 if isinstance(atom, Variable):
                     if not answer.assign(atom.name, handle):
                         return None
-            answer.freeze()
-            return answer
+            return answer if answer.freeze() else None
         else:
             answer = UnorderedAssignment()
             targets_to_match = []
@@ -447,7 +468,8 @@ class Link(Atom):
                     link_targets.remove(atom.get_handle(db))
             assert(len(targets_to_match) == len(link_targets))
             for atom, handle in zip(targets_to_match, link_targets):
-                answer.assign(atom.name, handle)
+                if not answer.assign(atom.name, handle):
+                    return None
             return answer if answer.freeze() else None
 
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
@@ -507,6 +529,11 @@ class And(LogicalExpression):
     def __repr__(self):
         return f'AND({self.terms})'
 
+    def post_process(self, assignment) -> Assignment:
+        if not isinstance(assignment, CompositeAssignment):
+            return assignment
+        return assignment
+
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
         if not self.terms:
             return False
@@ -546,7 +573,7 @@ class And(LogicalExpression):
         for assignment in and_answer.assignments:
             #print(f'CHECK: {assignment}')
             if all(assignment.check_negation(tabu) for tabu in forbidden_assignments):
-                answer.assignments.add(assignment)
+                answer.assignments.add(self.post_process(assignment))
             else:
                 if DEBUG: print(f'Excluding {assignment}')
         if DEBUG: print(f'AND result = {answer}')

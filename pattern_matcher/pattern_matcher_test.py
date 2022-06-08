@@ -120,12 +120,12 @@ def test_unordered_assignment_sets():
     va4.assign('v1', '1')
     va4.assign('v2', '2')
     va4.assign('v3', '3')
-    va5.assign('v1', '2')
-    va5.assign('v1', '1')
-    va5.assign('v2', '1')
-    va6.assign('v1', '1')
-    va6.assign('v1', '1')
-    va6.assign('v2', '2')
+    #va5.assign('v1', '2')
+    #va5.assign('v1', '1')
+    #va5.assign('v2', '1')
+    #va6.assign('v1', '1')
+    #va6.assign('v1', '1')
+    #va6.assign('v2', '2')
     va7.assign('v1', '1')
     va7.assign('v2', '2')
     va7.assign('v3', '2')
@@ -136,36 +136,39 @@ def test_unordered_assignment_sets():
         s2 = set([va1, va3])
     with pytest.raises(Exception):
         s3 = set([va1, va4])
-    with pytest.raises(Exception):
-        s4 = set([va1, va5])
-    with pytest.raises(Exception):
-        s5 = set([va1, va6])
+    #with pytest.raises(Exception):
+    #    s4 = set([va1, va5])
+    #with pytest.raises(Exception):
+    #    s5 = set([va1, va6])
 
     assert(va1.freeze())
     assert(va2.freeze())
     assert(va3.freeze())
     assert(va4.freeze())
-    assert(va5.freeze())
-    assert(va6.freeze())
+    #assert(va5.freeze())
+    #assert(va6.freeze())
     assert(not va7.freeze())
     s1 = set([va1, va2])
     s2 = set([va1, va3])
     s3 = set([va1, va4])
-    s4 = set([va1, va5])
-    s5 = set([va1, va6])
-    s6 = set([va5, va6])
+    #s4 = set([va1, va5])
+    #s5 = set([va1, va6])
+    #s6 = set([va5, va6])
     assert len(s1) == 1
     assert len(s2) == 1
-    assert va1 in s1 and va2 in s1 and va3 in s1 and va4 not in s1 and va5 not in s1
-    assert va1 in s2 and va2 in s2 and va3 in s2 and va4 not in s2 and va5 not in s2
+    #assert va1 in s1 and va2 in s1 and va3 in s1 and va4 not in s1 and va5 not in s1
+    #assert va1 in s2 and va2 in s2 and va3 in s2 and va4 not in s2 and va5 not in s2
+    assert va1 in s1 and va2 in s1 and va3 in s1 and va4 not in s1
+    assert va1 in s2 and va2 in s2 and va3 in s2 and va4 not in s2
     assert len(s3) == 2
-    assert len(s4) == 2
-    assert len(s5) == 2
-    assert va1 in s3 and va2 in s3 and va3 in s3 and va4 in s3 and va5 not in s3
-    assert va1 in s4 and va2 in s4 and va3 in s4 and va4 not in s4 and va5 in s4
-    assert va1 in s5 and va2 in s5 and va3 in s5 and va4 not in s5 and va5 in s5
-    assert len(s6) == 1
-    assert va1 not in s6 and va2 not in s6 and va3 not in s6 and va4 not in s6 and va5 in s6 and va6 in s6
+    #assert len(s4) == 2
+    #assert len(s5) == 2
+    #assert va1 in s3 and va2 in s3 and va3 in s3 and va4 in s3 and va5 not in s3
+    assert va1 in s3 and va2 in s3 and va3 in s3 and va4 in s3
+    #assert va1 in s4 and va2 in s4 and va3 in s4 and va4 not in s4 and va5 in s4
+    #assert va1 in s5 and va2 in s5 and va3 in s5 and va4 not in s5 and va5 in s5
+    #assert len(s6) == 1
+    #assert va1 not in s6 and va2 not in s6 and va3 not in s6 and va4 not in s6 and va5 in s6 and va6 in s6
 
 def _build_ordered_assignment(d):
     answer = OrderedAssignment()
@@ -414,5 +417,3 @@ def test_patterns():
             {'V1': '<Concept: chimp>', 'V3': '<Concept: mammal>', 'V2': '<Concept: rhino>'}
         ]
     )
-
-
