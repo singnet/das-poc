@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from db_interface import DBInterface
 
 WILDCARD = '*'
-DEBUG = True
+DEBUG = False
 
 CONFIG = {
     # Enforce different values for different variables in ordered assignments
@@ -542,9 +542,9 @@ class And(LogicalExpression):
                         joint_assignments.append(joint_assignment)
             and_answer.assignments = joint_assignments
             if DEBUG: print(f'and_answer after join:\n{and_answer}')
-        print(f'FORBIDDEN = {forbidden_assignments}')
+        #print(f'FORBIDDEN = {forbidden_assignments}')
         for assignment in and_answer.assignments:
-            print(f'CHECK: {assignment}')
+            #print(f'CHECK: {assignment}')
             if all(assignment.check_negation(tabu) for tabu in forbidden_assignments):
                 answer.assignments.add(assignment)
             else:

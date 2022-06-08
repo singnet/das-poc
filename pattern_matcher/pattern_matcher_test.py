@@ -1,7 +1,7 @@
 import pytest
 from copy import deepcopy
 from stub_db import StubDB
-from pattern_matcher import CompatibilityStatus, OrderedAssignment, UnorderedAssignment, PatternMatchingAnswer, LogicalExpression, Variable, Node, Link
+from pattern_matcher import CompatibilityStatus, OrderedAssignment, UnorderedAssignment, PatternMatchingAnswer, LogicalExpression, Variable, Node, Link, And, Not
 
 def test_basic_matching():
 
@@ -296,14 +296,32 @@ def test_check_negation():
     assert(deepcopy(b1).check_negation(a10))
     assert(not deepcopy(b1).check_negation(a11))
 
-def _test_patterns():
+def test_patterns():
 
+    def get_items(assignment):
+        if isinstance(assignment, OrderedAssignment):
+            return assignment.mapping.items()
+        elif isinstance(assignment, UnorderedAssignment):
+            symbols = []
+            for key in assignment.symbols:
+                for i in range(assignment.symbols[key]):
+                    symbols.append(key)
+            values = []
+            for key in assignment.values:
+                for i in range(assignment.values[key]):
+                    values.append(key)
+            mapping = []
+            for symbol, value in zip(symbols, values):
+                mapping.append(tuple([symbol, value]))
+            return mapping
+        else:
+            return assignment.ordered_mapping.mapping.items()
     def check_pattern(db, pattern, expected_match, assignments):
         answer: PatternMatchingAnswer = PatternMatchingAnswer()
         assert expected_match == pattern.matched(db, answer)
         if expected_match:
             assert len(answer.assignments) == len(assignments)
-            l1 = sorted([sorted([f'{x}={y}' for x, y in a.mapping.items()]) for a in answer.assignments])
+            l1 = sorted([sorted([f'{x}={y}' for x, y in get_items(a)]) for a in answer.assignments])
             l2 = sorted([sorted([f'{x}={y}' for x, y in d.items()]) for d in assignments])
             print(f'l1 = {l1}\nl2 = {l2}')
             assert l1 == l2
@@ -336,4 +354,65 @@ def _test_patterns():
             {'V1': '<Concept: ent>'}
         ]
     )
+
+    check_pattern(db,
+        And([Link('Inheritance', [Variable('V1'), Variable('V2')], True),\
+             Link('Similarity', [Variable('V1'), Variable('V2')], False)]),
+        False,
+        [
+        ]
+    )
+
+    check_pattern(db,
+        And([Link('Inheritance', [Variable('V1'), Variable('V3')], True),\
+               Link('Inheritance', [Variable('V2'), Variable('V3')], True),\
+               Link('Similarity', [Variable('V1'), Variable('V2')], False)]),
+        True,
+        [
+            {'V1': '<Concept: human>', 'V3': '<Concept: mammal>', 'V2': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V3': '<Concept: mammal>', 'V2': '<Concept: monkey>'},
+            {'V1': '<Concept: chimp>', 'V3': '<Concept: mammal>', 'V2': '<Concept: monkey>'},
+            {'V1': '<Concept: monkey>', 'V3': '<Concept: mammal>', 'V2': '<Concept: human>'},
+            {'V1': '<Concept: chimp>', 'V3': '<Concept: mammal>', 'V2': '<Concept: human>'},
+            {'V1': '<Concept: monkey>', 'V3': '<Concept: mammal>', 'V2': '<Concept: chimp>'}
+        ]
+    )
+
+    check_pattern(db,
+        And([Link('Inheritance', [Variable('V1'), Variable('V3')], True),\
+             Link('Inheritance', [Variable('V2'), Variable('V3')], True),\
+             Not(Link('Similarity', [Variable('V1'), Variable('V2')], False))]),
+        True,
+        [
+            {'V1': '<Concept: rhino>', 'V3': '<Concept: mammal>', 'V2': '<Concept: chimp>'},
+            {'V1': '<Concept: ent>', 'V3': '<Concept: plant>', 'V2': '<Concept: ent>'},
+            {'V1': '<Concept: ent>', 'V3': '<Concept: plant>', 'V2': '<Concept: vine>'},
+            {'V1': '<Concept: earthworm>', 'V3': '<Concept: animal>', 'V2': '<Concept: reptile>'},
+            {'V1': '<Concept: mammal>', 'V3': '<Concept: animal>', 'V2': '<Concept: reptile>'},
+            {'V1': '<Concept: chimp>', 'V3': '<Concept: mammal>', 'V2': '<Concept: chimp>'},
+            {'V1': '<Concept: earthworm>', 'V3': '<Concept: animal>', 'V2': '<Concept: mammal>'},
+            {'V1': '<Concept: human>', 'V3': '<Concept: mammal>', 'V2': '<Concept: rhino>'},
+            {'V1': '<Concept: mammal>', 'V3': '<Concept: animal>', 'V2': '<Concept: mammal>'},
+            {'V1': '<Concept: rhino>', 'V3': '<Concept: mammal>', 'V2': '<Concept: rhino>'},
+            {'V1': '<Concept: vine>', 'V3': '<Concept: plant>', 'V2': '<Concept: ent>'},
+            {'V1': '<Concept: reptile>', 'V3': '<Concept: animal>', 'V2': '<Concept: reptile>'},
+            {'V1': '<Concept: snake>', 'V3': '<Concept: reptile>', 'V2': '<Concept: dinosaur>'},
+            {'V1': '<Concept: human>', 'V3': '<Concept: mammal>', 'V2': '<Concept: human>'},
+            {'V1': '<Concept: dinosaur>', 'V3': '<Concept: reptile>', 'V2': '<Concept: dinosaur>'},
+            {'V1': '<Concept: vine>', 'V3': '<Concept: plant>', 'V2': '<Concept: vine>'},
+            {'V1': '<Concept: earthworm>', 'V3': '<Concept: animal>', 'V2': '<Concept: earthworm>'},
+            {'V1': '<Concept: monkey>', 'V3': '<Concept: mammal>', 'V2': '<Concept: monkey>'},
+            {'V1': '<Concept: rhino>', 'V3': '<Concept: mammal>', 'V2': '<Concept: human>'},
+            {'V1': '<Concept: triceratops>', 'V3': '<Concept: dinosaur>', 'V2': '<Concept: triceratops>'},
+            {'V1': '<Concept: dinosaur>', 'V3': '<Concept: reptile>', 'V2': '<Concept: snake>'},
+            {'V1': '<Concept: snake>', 'V3': '<Concept: reptile>', 'V2': '<Concept: snake>'},
+            {'V1': '<Concept: reptile>', 'V3': '<Concept: animal>', 'V2': '<Concept: earthworm>'},
+            {'V1': '<Concept: mammal>', 'V3': '<Concept: animal>', 'V2': '<Concept: earthworm>'},
+            {'V1': '<Concept: reptile>', 'V3': '<Concept: animal>', 'V2': '<Concept: mammal>'},
+            {'V1': '<Concept: rhino>', 'V3': '<Concept: mammal>', 'V2': '<Concept: monkey>'},
+            {'V1': '<Concept: monkey>', 'V3': '<Concept: mammal>', 'V2': '<Concept: rhino>'},
+            {'V1': '<Concept: chimp>', 'V3': '<Concept: mammal>', 'V2': '<Concept: rhino>'}
+        ]
+    )
+
 
