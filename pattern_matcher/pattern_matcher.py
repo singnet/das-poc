@@ -160,8 +160,22 @@ class UnorderedAssignment(Assignment):
         self.symbols: Dict[str, int] = {}
         self.values: Dict[str, int] = {}
 
+    #def __repr__(self):
+    #    return self.symbols.__repr__() + ' ' + self.values.__repr__()
+
     def __repr__(self):
-        return self.symbols.__repr__() + ' ' + self.values.__repr__()
+        symbols = [] 
+        for key in self.symbols: 
+            for i in range(self.symbols[key]): 
+                symbols.append(key) 
+        values = [] 
+        for key in self.values: 
+            for i in range(self.values[key]): 
+                values.append(key) 
+        mapping = {}
+        for symbol, value in zip(symbols, values): 
+            mapping[symbol] = value
+        return mapping.__repr__()
 
     def freeze(self):
         assert super().freeze()
