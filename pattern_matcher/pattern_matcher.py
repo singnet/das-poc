@@ -9,7 +9,10 @@ from db_interface import DBInterface
 WILDCARD = '*'
 DEBUG = True
 
-#TODO: Flag to enforce Vi != Vj for i != j
+CONFIG = {
+    # Enforce different values for different variables in ordered assignments
+    'no_overload': False, # Enforce different values for different variables in ordered assignments
+}
 
 class CompatibilityStatus(int, Enum):
     """
@@ -71,12 +74,14 @@ class OrderedAssignment(Assignment):
     def __init__(self):
         super().__init__()
         self.mapping: Dict[str, str] = {}
+        self.values: Union[Set[str], FrozenSet] = set()
 
     def __repr__(self):
         return self.mapping.__repr__()
 
     def freeze(self):
         assert super().freeze()
+        self.values = frozenset(self.values)
         self.hash = hash(frozenset(self.mapping.items()))
         return True
 
@@ -86,7 +91,10 @@ class OrderedAssignment(Assignment):
         if variable in self.variables:
             return self.mapping[variable] == value
         else:
+            if CONFIG['no_overload'] and value in self.values:
+                return False
             self.variables.add(variable)
+            self.values.add(value)
             self.mapping[variable] = value
             return True
 
@@ -116,9 +124,11 @@ class OrderedAssignment(Assignment):
         elif status == CompatibilityStatus.NO_COVERING:
             answer = OrderedAssignment()
             for variable, value in self.mapping.items():
-                answer.assign(variable, value)
+                if not answer.assign(variable, value):
+                    return None
             for variable, value in other.mapping.items():
-                answer.assign(variable, value)
+                if not answer.assign(variable, value):
+                    return None
             answer.freeze()
             return answer
         else:
