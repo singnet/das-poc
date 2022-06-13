@@ -1,6 +1,6 @@
 from db_interface import DBInterface
 from stub_db import StubDB
-from pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not, And
+from pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not, And, Or
 
 def match(db_api: DBInterface, expression: LogicalExpression):
     print(f"Matching {expression}")
@@ -91,19 +91,17 @@ match(db, And([Link('Inheritance', [Variable('V1'), Variable('V3')], True),\
                Not(Link('Similarity', [Variable('V1'), Variable('V2')], False))\
 ]))
 
-print('\n\n\n\n================================================================================\n')
-
 match(db, 
     And([
         Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
-        Link('Similarity', [Variable('V1'), Variable('V2')], True),
+        Link('Similarity', [Variable('V1'), Variable('V2')], False),
     ])
 )
 
 match(db, 
     And([
         Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
-        Not(Link('Similarity', [Variable('V1'), Variable('V2')], True)),
+        Not(Link('Similarity', [Variable('V1'), Variable('V2')], False)),
     ])
 )
 
@@ -125,6 +123,50 @@ match(db,
     And([
         Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
         Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
-        Link('Similarity', [Variable('V1'), Variable('V2')], True),
+        Link('Similarity', [Variable('V1'), Variable('V2')], False),
     ])
 )
+
+print('\n\n\n\n================================================================================\n')
+
+match(db, 
+    Or([
+        Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        Link('Similarity', [Variable('V1'), Variable('V2')], False),
+    ])
+)
+
+match(db, 
+    Or([
+        Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
+        Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+    ])
+)
+
+match(db, 
+    And([
+        Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        Not(
+            Or([
+                Link('Inheritance', [Variable('V1'), Variable('V2')], True),
+                Link('Similarity', [Variable('V1'), Variable('V2')], False),
+            ])
+        )
+    ])
+)
+
+match(db,
+    And([
+        Or([
+            Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+            Link('List', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], True),
+        ]),
+        Not(
+            Or([
+                Link('Inheritance', [Variable('V1'), Variable('V2')], True),
+                Link('Similarity', [Variable('V1'), Variable('V2')], False),
+            ])
+        )
+    ])
+)
+

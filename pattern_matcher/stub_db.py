@@ -54,10 +54,13 @@ class StubDB(DBInterface):
             ['List', _build_link_handle('Inheritance', [dinosaur, reptile]), _build_link_handle('Inheritance', [triceratops, dinosaur])],
             ['Set', _build_link_handle('Inheritance', [dinosaur, reptile]), _build_link_handle('Inheritance', [triceratops, dinosaur])],
             ['List', human, ent, monkey, chimp],
+            ['List', human, mammal, triceratops, vine],
             ['List', human, monkey, chimp],
+            ['List', triceratops, ent, monkey, snake],
             ['Set', triceratops, vine, monkey, snake],
             ['Set', triceratops, ent, monkey, snake],
             ['Set', human, ent, monkey, chimp],
+            #['Set', vine, monkey, plant, triceratops],
             ['Set', mammal, monkey, human, chimp],
             ['Set', human, monkey, chimp]
         ]
