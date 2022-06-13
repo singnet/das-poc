@@ -160,8 +160,22 @@ class UnorderedAssignment(Assignment):
         self.symbols: Dict[str, int] = {}
         self.values: Dict[str, int] = {}
 
+    #def __repr__(self):
+    #    return self.symbols.__repr__() + ' ' + self.values.__repr__()
+
     def __repr__(self):
-        return self.symbols.__repr__() + ' ' + self.values.__repr__()
+        symbols = [] 
+        for key in self.symbols: 
+            for i in range(self.symbols[key]): 
+                symbols.append(key) 
+        values = [] 
+        for key in self.values: 
+            for i in range(self.values[key]): 
+                values.append(key) 
+        mapping = {}
+        for symbol, value in zip(symbols, values): 
+            mapping[symbol] = value
+        return '*' + mapping.__repr__()
 
     def freeze(self):
         assert super().freeze()
@@ -518,6 +532,61 @@ class Not(LogicalExpression):
         answer.negation = not answer.negation
         return True
 
+class Or(LogicalExpression):
+    """
+    TODO: documentation
+    """
+
+    def __init__(self, terms: List[LogicalExpression]):
+        self.terms = terms
+
+    def __repr__(self):
+        return f"OR({self.terms})"
+
+    def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
+        if not self.terms:
+            return False
+        assert not answer.assignments
+        or_answer = PatternMatchingAnswer()
+        or_matched = False
+        negative_terms = set()
+        for term in self.terms:
+            term_answer = PatternMatchingAnswer()
+            if isinstance(term, Not):
+                if DEBUG: print(f'negative term: {term}')
+                negative_terms.add(term)
+                continue
+            if not term.matched(db, term_answer):
+                if DEBUG: print(f'NOT MATCHED: {term}')
+                continue
+            or_matched = True
+            if not term_answer.assignments:
+                if DEBUG: print(f'term_answer empty: {term}')
+                continue
+            if not or_answer.assignments:
+                if DEBUG: print(f'First term: {term}')
+                if DEBUG: print(f'term_answer:\n{term_answer}')
+                or_answer.assignments = term_answer.assignments
+                continue
+            if DEBUG: print(f'New term: {term}')
+            if DEBUG: print(f'term_answer:\n{term_answer}')
+            or_answer.assignments.update(term_answer.assignments)
+            if DEBUG: print(f'or_answer after extending:\n{or_answer}')
+        if negative_terms:
+            joint_negative_term = And([t.term for t in negative_terms])
+            if DEBUG: print(f'Joint negative term: {joint_negative_term}')
+            term_answer = PatternMatchingAnswer()
+            joint_negative_term.matched(db, term_answer)
+            #print('XXXX', f'term_answer.assignments = {term_answer.assignments}')
+            #print('XXXX', f'or_answer.assignments = {or_answer.assignments}')
+            answer.assignments = term_answer.assignments - or_answer.assignments
+            #print('XXXX', f'answer.assignments = {answer.assignments}')
+            answer.negation = True
+        else:
+            answer.assignments = or_answer.assignments
+        if DEBUG: print(f'OR result = {answer}')
+        return or_matched
+
 class And(LogicalExpression):
     """
     TODO: documentation
@@ -546,7 +615,7 @@ class And(LogicalExpression):
                 if DEBUG: print(f'NOT MATCHED: {term}')
                 return False
             if not term_answer.assignments:
-                if DEBUG: print('term_answer empty: {term}')
+                if DEBUG: print(f'term_answer empty: {term}')
                 continue
             if term_answer.negation:
                 if DEBUG: print(f'Negation: {term}')

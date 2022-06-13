@@ -301,7 +301,7 @@ def test_check_negation():
 
 def test_patterns():
 
-    def get_items(assignment):
+    def get_items(assignment, key=-1):
         if isinstance(assignment, OrderedAssignment):
             return assignment.mapping.items()
         elif isinstance(assignment, UnorderedAssignment):
@@ -318,13 +318,17 @@ def test_patterns():
                 mapping.append(tuple([symbol, value]))
             return mapping
         else:
-            return assignment.ordered_mapping.mapping.items()
-    def check_pattern(db, pattern, expected_match, assignments):
+            if key == -1:
+                return assignment.ordered_mapping.mapping.items()
+            else:
+                return get_items(assignment.unordered_mappings[key])
+
+    def check_pattern(db, pattern, expected_match, assignments, key=-1):
         answer: PatternMatchingAnswer = PatternMatchingAnswer()
         assert expected_match == pattern.matched(db, answer)
         if expected_match:
             assert len(answer.assignments) == len(assignments)
-            l1 = sorted([sorted([f'{x}={y}' for x, y in get_items(a)]) for a in answer.assignments])
+            l1 = sorted([sorted([f'{x}={y}' for x, y in get_items(a, key)]) for a in answer.assignments])
             l2 = sorted([sorted([f'{x}={y}' for x, y in d.items()]) for d in assignments])
             print(f'l1 = {l1}\nl2 = {l2}')
             assert l1 == l2
@@ -416,4 +420,156 @@ def test_patterns():
             {'V1': '<Concept: monkey>', 'V3': '<Concept: mammal>', 'V2': '<Concept: rhino>'},
             {'V1': '<Concept: chimp>', 'V3': '<Concept: mammal>', 'V2': '<Concept: rhino>'}
         ]
+    )
+
+    check_pattern(db,
+        And([
+            Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+        ]),
+        True,
+        [
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: triceratops>', 'V2': '<Concept: vine>', 'V3': '<Concept: monkey>', 'V4': '<Concept: snake>'}
+        ],
+        0
+    )
+
+    check_pattern(db,
+        And([
+            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+            Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        ]),
+        True,
+        [
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: triceratops>', 'V2': '<Concept: vine>', 'V3': '<Concept: monkey>', 'V4': '<Concept: snake>'}
+        ],
+        1
+    )
+
+    check_pattern(db,
+        And([
+            Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+            Not(Link('Similarity', [Variable('V1'), Variable('V2')], True)),
+        ]),
+        True,
+        [
+            {'V1': '<Concept: triceratops>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: snake>'}
+        ],
+        -1
+    )
+
+    check_pattern(db,
+        And([
+            Not(Link('Similarity', [Variable('V1'), Variable('V2')], True)),
+            Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        ]),
+        True,
+        [
+            {'V1': '<Concept: triceratops>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: snake>'}
+        ],
+        -1
+    )
+
+    check_pattern(db,
+        And([
+            Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+            Link('Inheritance', [Variable('V1'), Variable('V2')], True),
+        ]),
+        True,
+        [
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+        ],
+        0
+    )
+
+    check_pattern(db,
+        And([
+            Link('Inheritance', [Variable('V1'), Variable('V2')], True),
+            Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        ]),
+        True,
+        [
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: monkey>', 'V3': '<Concept: human>', 'V4': '<Concept: chimp>'},
+        ],
+        0
+    )
+
+    check_pattern(db,
+        And([
+            Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+            Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
+        ]),
+        True,
+        [
+            {'V1': '<Concept: triceratops>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: snake>'},
+            {'V1': '<Concept: triceratops>', 'V2': '<Concept: vine>', 'V3': '<Concept: monkey>', 'V4': '<Concept: snake>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+        ],
+        -1
+    )
+
+    check_pattern(db,
+        And([
+            Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
+            Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        ]),
+        True,
+        [
+            {'V1': '<Concept: triceratops>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: snake>'},
+            {'V1': '<Concept: triceratops>', 'V2': '<Concept: vine>', 'V3': '<Concept: monkey>', 'V4': '<Concept: snake>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+        ],
+        -1
+    )
+
+    check_pattern(db,
+        And([
+            Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+            Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
+            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+        ]),
+        True,
+        [
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: triceratops>', 'V2': '<Concept: vine>', 'V3': '<Concept: monkey>', 'V4': '<Concept: snake>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+        ],
+        0
+    )
+
+    check_pattern(db,
+        And([
+            Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
+            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+            Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
+        ]),
+        True,
+        [
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+            {'V1': '<Concept: triceratops>', 'V2': '<Concept: vine>', 'V3': '<Concept: monkey>', 'V4': '<Concept: snake>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
+        ],
+        1
     )
