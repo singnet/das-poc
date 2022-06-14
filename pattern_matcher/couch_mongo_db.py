@@ -1,9 +1,15 @@
+import os
 from typing import List
 
+from couchbase.auth import PasswordAuthenticator
+from couchbase.bucket import Bucket
+from couchbase.cluster import Cluster
+from couchbase.exceptions import DocumentNotFoundException
 from pymongo.collection import Collection
 from pymongo.database import Database
 
 from scripts.hashing import Hasher
+from scripts.helpers import get_mongodb
 
 from .db_interface import DBInterface
 
@@ -23,7 +29,10 @@ class CouchMongoDB(DBInterface):
         COLL_LINKS,
     ]
 
-    def __init__(self, couch_db, mongo_db: Database):
+    C_COLL_INCOMING_NAME = "IncomingSet"
+    C_COLL_OUTGOING_NAME = "OutgoingSet"
+
+    def __init__(self, couch_db: Bucket, mongo_db: Database):
         self.couch_db = couch_db
         self.mongo_db = mongo_db
 
@@ -87,7 +96,12 @@ class CouchMongoDB(DBInterface):
         return link["_id"]
 
     def get_link_targets(self, handle: str) -> List[str]:
-        ...
+        collection = self.couch_db.collection(self.C_COLL_OUTGOING_NAME)
+        try:
+            result = collection.get(handle)
+        except DocumentNotFoundException as e:
+            raise ValueError(f"invalid handle: {handle}") from e
+        return result.content
 
     def is_ordered(self, handle: str) -> bool:
         for collection in self.EXPRESSION_COLLS:

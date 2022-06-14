@@ -21,7 +21,7 @@ setup() {
       -p "${DAS_DATABASE_PASSWORD}" \
       --bucket das \
       --bucket-type couchbase \
-      --bucket-ramsize "${DAS_COUCHBASE_BUCKET_RAMSIZE}"
+      --bucket-ramsize "${DAS_COUCHBASE_BUCKET_RAMSIZE:-4086}"
 
     if [ "$?" == 0 ]; then
       echo "SUCCESS: Couchbase is ready."
