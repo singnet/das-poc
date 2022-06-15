@@ -68,7 +68,30 @@ def test_get_link_targets(cm_db: CouchMongoDB):
     res = cm_db.get_link_targets(handle)
     assert isinstance(res, list), "get_link_targets should return a list"
     assert len(res) == 3, f"handle '{handle}' should return 3 targets"
-    assert (
-        "13ba6904f6987307e3bce206c350fdf1" in res
-    ), "handle '{handle}' should contain '13ba6904f6987307e3bce206c350fdf1'"
 
+
+def test_get_matched_links(cm_db: CouchMongoDB):
+    res = cm_db.get_matched_links("Inheritance", ["*", "*"])
+    assert isinstance(res, list), "get_matched_links should return a list"
+    assert len(res) > 0, "get_matched_links should return at least one link"
+    assert all(
+        isinstance(h, str) for h in res
+    ), "get_matched_links should return a list of strings"
+
+    res = cm_db.get_matched_links(
+        "Inheritance", ["83638a4598185ca13b43140029b494f7", "*"]
+    )
+    assert isinstance(res, list), "get_matched_links should return a list"
+    assert len(res) > 0, "get_matched_links should return at least one link"
+    assert all(
+        isinstance(h, str) for h in res
+    ), "get_matched_links should return a list of strings"
+
+    res = cm_db.get_matched_links(
+        "Similarity", ["83638a4598185ca13b43140029b494f7", "*"]
+    )
+    assert isinstance(res, list), "get_matched_links should return a list"
+    assert len(res) > 0, "get_matched_links should return at least one link"
+    assert all(
+        isinstance(h, str) for h in res
+    ), "get_matched_links should return a list of strings"
