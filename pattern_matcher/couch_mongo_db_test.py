@@ -68,7 +68,4 @@ def test_get_link_targets(cm_db: CouchMongoDB):
     res = cm_db.get_link_targets(handle)
     assert isinstance(res, list), "get_link_targets should return a list"
     assert len(res) == 3, f"handle '{handle}' should return 3 targets"
-    assert (
-        "13ba6904f6987307e3bce206c350fdf1" in res
-    ), "handle '{handle}' should contain '13ba6904f6987307e3bce206c350fdf1'"
 
