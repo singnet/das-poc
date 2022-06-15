@@ -59,7 +59,7 @@ class CouchMongoDB(DBInterface):
     def _get_type_handle(self, type_: str) -> str:
         res = self._coll_node_types.find_one({"name": type_})
         if res is None:
-            raise ValueError("invalid type: {type_}")
+            raise ValueError(f"invalid type: {type_}")
         return res["_id"]
 
     def get_node_handle(self, node_type: str, node_name: str) -> str:
@@ -110,5 +110,30 @@ class CouchMongoDB(DBInterface):
                 return expr["set_from"] is None
         raise ValueError(f"invalid handle: {handle}")
 
+    def _generate_link_handle(
+        self, atom_type_handle: str, target_handles: List[str]
+    ) -> str:
+        target_handles = self._sort_link(atom_type_handle, target_handles)
+        handles = [atom_type_handle, *target_handles]
+        print(handles)
+        return Hasher().apply_alg("".join(handles))
+
+    def _sort_link(self, link_type: str, target_handles: List[str]) -> str:
+        if link_type in ["Set", "Similarity"]:
+            return sorted(target_handles)
+        return target_handles[:]
+
+    def _should_order(self, link_type: str) -> bool:
+        return link_type in ["Set", ""]
+
     def get_matched_links(self, link_type: str, target_handles: List[str]) -> str:
-        return ""
+        atom_type_handle = self._get_type_handle(link_type)
+        link_handle = self._generate_link_handle(atom_type_handle, target_handles)
+        collection = self.couch_db.collection(self.C_COLL_INCOMING_NAME)
+        try:
+            result = collection.get(link_handle)
+        except DocumentNotFoundException as e:
+            raise ValueError(
+                f"invalid params: link_type: {link_type}, target_handles: {target_handles}"
+            ) from e
+        return result.content
