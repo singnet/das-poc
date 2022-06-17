@@ -18,8 +18,9 @@ class Hasher:
     set_from = expression.SET_FROM - 1
     expression[set_from:] = sorted(expression[set_from:], key=lambda e: e._id)
 
-  def apply_alg(self, value: str) -> str:
-    return self.algorithm(value.encode("utf-8")).digest().hex()
+  @classmethod
+  def apply_alg(cls, value: str) -> str:
+    return cls.algorithm(value.encode("utf-8")).digest().hex()
 
   def search_by_name(self, name: str) -> AtomType:
     return self.atom_type_dict.get(name, None)
