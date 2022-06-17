@@ -199,7 +199,7 @@ def group_index_pattern_by_hash(index_pattern: dict[str, list[set[int]]], node_t
 
   d = {}
   for label, l in index_pattern.items():
-    assert label in node_type_to_hash
+    assert label in node_type_to_hash, f'label = {label} node_type_to_hash, = {node_type_to_hash,}'
     d[node_type_to_hash[label]] = l
 
   return d

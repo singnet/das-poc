@@ -122,6 +122,10 @@ class Translator:
     "ReactomeNode",
     "SmpNode",
     "UberonNode",
+    "EntrezNode",
+    "EnstNode",
+    "UniprotNode",
+    "RefseqNode",
   )
 
   IGNORED_SYMBOLS = ("stv",)
