@@ -1,4 +1,5 @@
 import os
+from signal import raise_signal
 from typing import List
 
 from couchbase.auth import PasswordAuthenticator
@@ -9,7 +10,6 @@ from pymongo.collection import Collection
 from pymongo.database import Database
 
 from scripts.hashing import Hasher
-from scripts.helpers import get_mongodb
 
 from .db_interface import DBInterface
 
@@ -45,8 +45,12 @@ class CouchMongoDB(DBInterface):
         return self.mongo_db.get_collection(self.COLL_NODES)
 
     @property
-    def NODE_COLLS(self) -> List[str]:
-        return [self._coll_node_types, self._coll_nodes]
+    def ALL_COLLS(self) -> List[str]:
+        return [
+            self.COLL_NODE_TYPES,
+            self.COLL_NODES,
+            *self.EXPRESSION_COLLS,
+        ]
 
     def node_exists(self, atom_type: str, node_name: str) -> bool:
         name = f'"{atom_type}:{node_name}"'
@@ -54,15 +58,47 @@ class CouchMongoDB(DBInterface):
         return len_results > 0
 
     def link_exists(self, atom_type: str, targets: List[str]) -> bool:
-        return self._get_link_handle(atom_type, targets) is not None
+        try:
+            return self._get_link_handle(atom_type, targets) is not None
+        except ValueError:
+            return False
 
     def _get_type_handle(self, type_: str) -> str:
+        """Returns the handle of the type.
+
+        :param type_: the type of the node as human readable name
+        :return: the handle of the type hashed with the algorithm"""
         res = self._coll_node_types.find_one({"name": type_})
         if res is None:
             raise ValueError(f"invalid type: {type_}")
         return res["_id"]
 
+    def _get_doc(self, handle: str, coll=None) -> dict:
+        """Returns the document with the given handle.
+        If the document is not found, raises a ValueError.
+
+        :param handle: the handle of the document
+        :param coll: the collection name to search in
+        :return: the document"""
+        if coll is None:
+            colls = self.ALL_COLLS
+        else:
+            if isinstance(coll, str):
+                colls = [coll]
+            else:
+                raise TypeError(f"coll must be a string")
+        for collection in colls:
+            node = self.mongo_db[collection].find_one({"_id": handle})
+            if node is not None:
+                return node
+        return None
+
     def get_node_handle(self, node_type: str, node_name: str) -> str:
+        """Returns the handle of the node.
+
+        :param node_type: the type of the node as human readable name
+        :param node_name: the name of the node as human readable name
+        :return: the handle of the node hashed with the algorithm"""
         name = f'"{node_type}:{node_name}"'
         node = self._coll_nodes.find_one({"name": name})
         if node is None:
@@ -79,17 +115,16 @@ class CouchMongoDB(DBInterface):
 
     def _get_link_handle(self, link_type: str, target_handles: List[str]) -> str:
         atom_type_handle = self._get_type_handle(link_type)
-        handles = [atom_type_handle, *target_handles]
-        link_handle = Hasher().apply_alg("".join(handles))
-        if len(handles) == 1:
-            collection = self.mongo_db[self.COLL_LINKS_1]
-        elif len(handles) == 2:
-            collection = self.mongo_db[self.COLL_LINKS_2]
-        elif len(handles) == 3:
-            collection = self.mongo_db[self.COLL_LINKS_3]
-        else:
-            collection = self.mongo_db[self.COLL_LINKS]
+        link_handle = self._generate_link_handle(atom_type_handle, target_handles)
+        targets_len = len(target_handles) + 1
 
+        collection_name = {
+            1: self.COLL_LINKS_1,
+            2: self.COLL_LINKS_2,
+            3: self.COLL_LINKS_3,
+        }.get(targets_len, self.COLL_LINKS)
+
+        collection = self.mongo_db[collection_name]
         link = collection.find_one({"_id": link_handle})
         if link is None:
             return None
@@ -110,25 +145,42 @@ class CouchMongoDB(DBInterface):
                 return expr["set_from"] is None
         raise ValueError(f"invalid handle: {handle}")
 
+    def _generate_type_link_handle(self, link_type_handle: str, target_handles: List[str]) -> str:
+        doc = self._get_doc(link_type_handle, self.COLL_NODE_TYPES)
+        salt = self._get_link_type_salt(doc["name"])
+        target_handles = self._sort_link(doc["name"], target_handles)
+        try:
+            targets_types = [self._get_doc(target)["type"] if target != '*' else '*' for target in target_handles]
+        except TypeError as e:
+            raise ValueError(f"invalid target handles: {target_handles}") from e
+        link = [doc["type"], *targets_types]
+
+        if salt_ := salt is not None:
+            link.insert(0, str(salt_))
+
+        return Hasher.apply_alg("".join(link))
+
     def _generate_link_handle(
-        self, atom_type_handle: str, target_handles: List[str]
+        self, link_type_handle: str, target_handles: List[str]
     ) -> str:
-        target_handles = self._sort_link(atom_type_handle, target_handles)
-        handles = [atom_type_handle, *target_handles]
-        print(handles)
-        return Hasher().apply_alg("".join(handles))
+        target_type = self._generate_type_link_handle(link_type_handle, target_handles)
+        handles = [target_type, link_type_handle, *target_handles]
+        return Hasher.apply_alg("".join(handles))
 
     def _sort_link(self, link_type: str, target_handles: List[str]) -> str:
         if link_type in ["Set", "Similarity"]:
             return sorted(target_handles)
         return target_handles[:]
 
-    def _should_order(self, link_type: str) -> bool:
-        return link_type in ["Set", ""]
+    def _get_link_type_salt(self, link_type: str) -> str:
+        return {
+            "Set": "1",
+            "Similarity": "2",
+        }.get(link_type, None)
 
     def get_matched_links(self, link_type: str, target_handles: List[str]) -> str:
         atom_type_handle = self._get_type_handle(link_type)
-        link_handle = self._generate_link_handle(atom_type_handle, target_handles)
+        link_handle = self._get_matched_handle(atom_type_handle, target_handles)
         collection = self.couch_db.collection(self.C_COLL_INCOMING_NAME)
         try:
             result = collection.get(link_handle)
@@ -137,3 +189,7 @@ class CouchMongoDB(DBInterface):
                 f"invalid params: link_type: {link_type}, target_handles: {target_handles}"
             ) from e
         return result.content
+
+    def _get_matched_handle(self, link_type: str, target_handles: List[str]) -> str:
+        target_handles = self._sort_link(link_type, target_handles)
+        return Hasher.apply_alg("".join([link_type, *target_handles]))
