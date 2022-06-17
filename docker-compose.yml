@@ -1,8 +1,8 @@
 version: "3.9"
 services:
-  scripts:
+  app:
     build: .
-    image: scripts:${DAS_TAG:-latest}
+    image: das:${DAS_TAG:-latest}
     environment:
       - DAS_MONGODB_HOSTNAME=${DAS_MONGODB_HOSTNAME:-mongo}
       - DAS_MONGODB_PORT=${DAS_MONGODB_PORT:-27017}
@@ -11,7 +11,9 @@ services:
       - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-das#secret}
     tty: true
     volumes:
-      - ./scripts:/scripts
+      - ./das:/app/das
+      - ./tests:/app/tests
+      - ./data:/app/data
     links:
       - mongo
       - couchbase
