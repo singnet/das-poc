@@ -1,8 +1,7 @@
 import argparse
 
-from ply.lex import lex
-
 from helpers import get_logger
+from ply.lex import lex
 
 logger = get_logger()
 

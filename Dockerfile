@@ -1,11 +1,13 @@
 FROM python:3.9
 
-ADD ./scripts /scripts
+ADD ./das /app/das
+ADD ./tests /app/tests
+ADD ./requirements.txt /app/requirements.txt
 ADD ./data/bio_atomspace/bio_atomspace.tar.gz /data
 ADD ./data/samples /data/samples
 
-WORKDIR /scripts
+WORKDIR /app
 
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 CMD [ "bash" ]

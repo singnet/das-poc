@@ -1,6 +1,8 @@
 from typing import List
-from pattern_matcher import WILDCARD
-from db_interface import DBInterface
+
+from das.pattern_matcher.db_interface import DBInterface
+from das.pattern_matcher.pattern_matcher import WILDCARD
+
 
 def _build_node_handle(node_type: str, node_name: str) -> str:
     return f'<{node_type}: {node_name}>'

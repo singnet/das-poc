@@ -1,4 +1,4 @@
-from scripts.atomese2metta.parser import Parser, MultiprocessingParser, LexParser
+from das.atomese2metta.parser import Parser, MultiprocessingParser, LexParser
 
 
 def test_when_split_string_to_two_chunks():
