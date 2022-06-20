@@ -78,3 +78,23 @@ Now, upload the data to couchbase by running:
 ```sh
 docker-compose exec app python das_upload_to_couch_from_file.py --file-path /tmp/all_pairs.txt
 ```
+
+## Tests
+
+There are 2 exceptional tests here to pay attention to:
+
+- `das/pattern_matching/pattern_matcher_test.py`; and
+- `das/pattern_matching/regression.py`.
+
+Both them are runned with different commands.
+
+The first one is runned with the following command:
+```bash
+pytest das/pattern_matching/pattern_matcher_test.py
+```
+> It is runned directly, not being captured just by running `pytest`.
+
+The second one is an integration test that is runned as follows:
+```bash
+PYTHONPATH=.:$PYTHONPATH python das/pattern_matching/regression.py
+```
