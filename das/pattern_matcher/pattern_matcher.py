@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from enum import Enum, auto
 from functools import cmp_to_key
-from typing import Dict, List, Optional, Set
+from typing import Dict, FrozenSet, List, Optional, Set, Union
 
 from das.pattern_matcher.db_interface import DBInterface
 
