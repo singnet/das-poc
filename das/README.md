@@ -1,4 +1,4 @@
-Scripts
+DAS
 ===
 
 These scripts run actions related to DAS context (Eg. conversion, loading).
@@ -33,14 +33,14 @@ The command creates three containers:
 
 - `das_couchbase_1`
 - `das_mongo_1`
-- `das_scripts_1`
+- `das_app_1`
 
 At this moment:
 
-- Is possible run scripts in `scripts` directory
+- Is possible run scripts in `das` directory
 - The mongo database instance is available on port `27017`
-- There are some `.metta` files available in `/data` directory into the `das_scripts_1` container
-    - Use `docker-compose exec scripts ls /data` to see them without need to attach the container.
+- There are some `.metta` files available in `/data` directory into the `das_app_1` container
+    - Use `docker-compose exec app ls /data` to see them without need to attach the container.
 
 ### `das.py`
 
@@ -48,14 +48,14 @@ This script loads MeTTa files into a specified mongo database.
 
 ```sh
 # show help message
-docker-compose exec scripts python das.py --help
+docker-compose exec app python das.py --help
 
 # load data from file.metta to mongo database with default config to connection
-docker-compose exec scripts python das.py file.metta
+docker-compose exec app python das.py file.metta
 
 # the following command load data from /data/Go-Plus-UBERON_2020-10-20.metta file
 # into a mongo database named UBERON
-docker-compose exec scripts python das.py -d UBERON /data/Go-Plus-UBERON_2020-10-20.metta
+docker-compose exec app python das.py -d UBERON /data/Go-Plus-UBERON_2020-10-20.metta
 ```
 
 ### Populating Couchbase from file
@@ -64,11 +64,11 @@ First, generate `(id, value)` file running:
 
 ```sh
 # This will use the MongoDB "das" database
-docker-compose exec scripts python das_generate_file.py --file-path /tmp/all_pairs.txt
+docker-compose exec app python das_generate_file.py --file-path /tmp/all_pairs.txt
 # To run it against a specific mongo database:
-docker-compose exec scripts python das_generate_file.py --file-path /tmp/all_pairs.txt -d UBERON
+docker-compose exec app python das_generate_file.py --file-path /tmp/all_pairs.txt -d UBERON
 # To run it using a index file
-docker-compose exec scripts python das_generate_file.py --file-path /tmp/all_pairs.txt --index-path /tmp/index.txt
+docker-compose exec app python das_generate_file.py --file-path /tmp/all_pairs.txt --index-path /tmp/index.txt
 # Where a valid content of `/tmp/index.txt` would be:
 # Evaluation 2 2 3
 ```
@@ -76,5 +76,5 @@ docker-compose exec scripts python das_generate_file.py --file-path /tmp/all_pai
 Now, upload the data to couchbase by running:
 
 ```sh
-docker-compose exec scripts python das_upload_to_couch_from_file.py --file-path /tmp/all_pairs.txt
+docker-compose exec app python das_upload_to_couch_from_file.py --file-path /tmp/all_pairs.txt
 ```
