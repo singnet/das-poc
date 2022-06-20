@@ -1,7 +1,7 @@
-import re
 import argparse
 import logging
 import os
+import re
 import shutil
 from typing import Iterator, Optional
 
@@ -9,9 +9,8 @@ from couchbase import exceptions as cb_exceptions
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.management.collections import CollectionSpec
-from pymongo.collection import Collection
-
 from helpers import get_logger, get_mongodb
+from pymongo.collection import Collection
 from util import AccumulatorClock, Clock, Statistics
 
 logger = get_logger()

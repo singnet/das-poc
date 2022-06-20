@@ -1,11 +1,11 @@
 import argparse
 from typing import Any, List, Union
 
-from ply.lex import lex
-
-from atomese2metta.translator import AtomType, Expression, MSet, UnorderedExpression
+from atomese2metta.translator import (AtomType, Expression, MSet,
+                                      UnorderedExpression)
 from hashing import Hasher
 from helpers import get_logger
+from ply.lex import lex
 
 logger = get_logger()
 

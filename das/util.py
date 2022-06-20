@@ -3,7 +3,6 @@ import time
 
 import numpy as np
 import pytest
-
 from helpers import get_logger
 
 logger = get_logger()

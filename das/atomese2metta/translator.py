@@ -1,7 +1,7 @@
 import re
 from abc import ABC
 from collections.abc import MutableSequence
-from typing import Iterable, Sequence, Union, Optional
+from typing import Iterable, Optional, Sequence, Union
 
 from .collections import OrderedSet
 

@@ -3,7 +3,7 @@ from hashlib import md5
 from operator import itemgetter
 from typing import Any, Union
 
-from .atomese2metta.translator import AtomType, Expression, MSet
+from das.atomese2metta.translator import AtomType, Expression, MSet
 
 
 class Hasher:

@@ -5,7 +5,7 @@ from os import path
 
 from atomese2metta.parser import LexParser
 from atomese2metta.translator import Translator
-from helpers import get_logger, get_filesize_mb, human_time
+from helpers import get_filesize_mb, get_logger, human_time
 
 logger = get_logger()
 

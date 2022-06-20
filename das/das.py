@@ -3,16 +3,16 @@ import glob
 import os
 from datetime import datetime
 
+from atomese2metta.translator import AtomType, Expression
+from hashing import Hasher
+from helpers import (evaluate_hash, get_filesize_mb, get_logger, get_mongodb,
+                     human_time)
+from metta_lex import MettaParser
 from pymongo.collection import Collection
 from pymongo.database import Database
 from pymongo.errors import DuplicateKeyError
 from pymongo.operations import DeleteMany
 from pymongo.results import InsertOneResult
-
-from atomese2metta.translator import AtomType, Expression
-from hashing import Hasher
-from helpers import get_mongodb, get_logger, evaluate_hash, get_filesize_mb, human_time
-from metta_lex import MettaParser
 
 logger = get_logger()
 

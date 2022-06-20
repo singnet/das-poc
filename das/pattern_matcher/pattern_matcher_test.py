@@ -1,13 +1,13 @@
 from copy import deepcopy
 
 import pytest
-from das.pattern_matcher.stub_db import StubDB
 
 from das.pattern_matcher.pattern_matcher import (And, CompatibilityStatus,
                                                  Link, LogicalExpression, Node,
                                                  Not, OrderedAssignment,
                                                  PatternMatchingAnswer,
                                                  UnorderedAssignment, Variable)
+from das.pattern_matcher.stub_db import StubDB
 
 
 def test_basic_matching():

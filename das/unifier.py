@@ -1,14 +1,14 @@
-from cmath import exp
-import os
 import argparse
-from typing import Any, List, Union
+import os
+from cmath import exp
 from pprint import pprint
+from typing import Any, List, Union
 
-from ply.lex import lex
-
-from atomese2metta.translator import AtomType, Expression, MSet, UnorderedExpression
+from atomese2metta.translator import (AtomType, Expression, MSet,
+                                      UnorderedExpression)
 from hashing import Hasher
 from helpers import get_mongodb
+from ply.lex import lex
 
 
 class DAS:

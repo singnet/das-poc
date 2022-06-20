@@ -5,12 +5,13 @@ from couchbase import exceptions as cb_exceptions
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.management.collections import CollectionSpec
-from helpers import get_logger
 from pymongo.collection import Collection
 from pymongo.mongo_client import MongoClient
-from util import Clock, Statistics, AccumulatorClock
+from util import AccumulatorClock, Clock, Statistics
 
-from cache import CachedCouchbaseClient, CouchbaseClient, DocumentNotFoundException
+from das.helpers import get_logger
+from das.research.cache import (CachedCouchbaseClient, CouchbaseClient,
+                                DocumentNotFoundException)
 
 logger = get_logger()
 
