@@ -5,8 +5,8 @@ from couchbase.auth import PasswordAuthenticator
 from couchbase.bucket import Bucket
 from couchbase.cluster import Cluster
 
-from pattern_matcher.couch_mongo_db import CouchMongoDB
-from scripts.helpers import get_mongodb
+from das.helpers import get_mongodb
+from das.pattern_matcher.couch_mongo_db import CouchMongoDB
 
 
 @pytest.fixture()

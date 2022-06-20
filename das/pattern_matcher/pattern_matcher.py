@@ -1,10 +1,10 @@
+from abc import ABC, abstractmethod
 from copy import deepcopy
 from enum import Enum, auto
-from typing import Optional, Dict, List, Set
 from functools import cmp_to_key
-from abc import ABC, abstractmethod
+from typing import Dict, List, Optional, Set
 
-from db_interface import DBInterface
+from das.pattern_matcher.db_interface import DBInterface
 
 WILDCARD = '*'
 DEBUG = False

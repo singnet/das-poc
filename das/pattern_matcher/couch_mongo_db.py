@@ -8,8 +8,7 @@ from couchbase.cluster import Cluster
 from couchbase.exceptions import DocumentNotFoundException
 from pymongo.collection import Collection
 from pymongo.database import Database
-
-from scripts.hashing import Hasher
+from das.hashing import Hasher
 
 from .db_interface import DBInterface
 

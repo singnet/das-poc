@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+
 class DBInterface(ABC):
     """
     TODO: documentation
