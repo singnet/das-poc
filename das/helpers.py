@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pymongo import MongoClient
 
-from .atomese2metta.translator import AtomType, Type
+from das.atomese2metta.translator import AtomType, Type
 
 
 def get_mongodb(mongodb_specs):

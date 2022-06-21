@@ -3,15 +3,16 @@ import logging
 import os
 import re
 import shutil
-from typing import Iterator, Optional
+from typing import Iterator
 
 from couchbase import exceptions as cb_exceptions
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.management.collections import CollectionSpec
-from helpers import get_logger, get_mongodb
 from pymongo.collection import Collection
-from util import AccumulatorClock, Clock, Statistics
+
+from das.helpers import get_logger, get_mongodb
+from das.util import AccumulatorClock, Clock, Statistics
 
 logger = get_logger()
 
@@ -36,7 +37,7 @@ acc_clock_block4 = AccumulatorClock()
 acc_clock_block5 = AccumulatorClock()
 acc_clock_full = AccumulatorClock()
 
-from hashing import Hasher
+from das.hashing import Hasher
 
 
 def populate_sets(hasher: Hasher, fh, collection: Collection, bucket, composite_keys_masks: dict[str, list[set[int]]]):

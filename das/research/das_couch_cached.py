@@ -7,11 +7,11 @@ from couchbase.cluster import Cluster
 from couchbase.management.collections import CollectionSpec
 from pymongo.collection import Collection
 from pymongo.mongo_client import MongoClient
-from util import AccumulatorClock, Clock, Statistics
 
 from das.helpers import get_logger
 from das.research.cache import (CachedCouchbaseClient, CouchbaseClient,
                                 DocumentNotFoundException)
+from das.util import AccumulatorClock, Clock, Statistics
 
 logger = get_logger()
 

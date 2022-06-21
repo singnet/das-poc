@@ -1,17 +1,7 @@
 import argparse
-import glob
 import os
-from datetime import datetime
 
-from atomese2metta.translator import AtomType, Expression
-from hashing import Hasher
-from helpers import get_mongodb
-from metta_lex import MettaParser
-from pymongo.collection import Collection
-from pymongo.database import Database
-from pymongo.errors import DuplicateKeyError
-from pymongo.operations import DeleteMany
-from pymongo.results import InsertOneResult
+from das.helpers import get_mongodb
 
 
 class QueryDas:

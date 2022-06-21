@@ -3,9 +3,9 @@ import argparse
 from datetime import datetime
 from os import path
 
-from atomese2metta.parser import LexParser
-from atomese2metta.translator import Translator
-from helpers import get_filesize_mb, get_logger, human_time
+from das.atomese2metta.parser import LexParser
+from das.atomese2metta.translator import Translator
+from das.helpers import get_filesize_mb, get_logger, human_time
 
 logger = get_logger()
 
