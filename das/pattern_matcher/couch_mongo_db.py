@@ -136,7 +136,7 @@ class CouchMongoDB(DBInterface):
             result = collection.get(handle)
         except DocumentNotFoundException as e:
             raise ValueError(f"invalid handle: {handle}") from e
-        return result.content
+        return result.content[1:]
 
     def is_ordered(self, handle: str) -> bool:
         for collection in self.EXPRESSION_COLLS:
@@ -178,18 +178,22 @@ class CouchMongoDB(DBInterface):
             "Similarity": "2",
         }.get(link_type, None)
 
-    def get_matched_links(self, link_type: str, target_handles: List[str]) -> str:
+    def get_matched_links(self, link_type: str, target_handles: List[str]) -> List[str]:
         atom_type_handle = self._get_type_handle(link_type)
         link_handle = self._get_matched_handle(atom_type_handle, target_handles)
         collection = self.couch_db.collection(self.C_COLL_INCOMING_NAME)
         try:
             result = collection.get(link_handle)
         except DocumentNotFoundException as e:
-            raise ValueError(
-                f"invalid params: link_type: {link_type}, target_handles: {target_handles}"
-            ) from e
+            return []
         return result.content
 
     def _get_matched_handle(self, link_type: str, target_handles: List[str]) -> str:
         target_handles = self._sort_link(link_type, target_handles)
         return Hasher.apply_alg("".join([link_type, *target_handles]))
+
+    def get_all_nodes(self, node_type: str) -> List[str]:
+        type_handle = self._get_type_handle(node_type)
+        return [node['name'][len(node_type) + 2:-1] for node in self._coll_nodes.find({"type": type_handle})]
+        
+

@@ -10,11 +10,11 @@ class DBInterface(ABC):
         return "<DBInterface>"
 
     @abstractmethod
-    def node_exists(self, atom_type: str, node_name: str) -> bool:
+    def node_exists(self, node_type: str, node_name: str) -> bool:
         pass
 
     @abstractmethod
-    def link_exists(self, atom_type: str, targets: List[str]) -> bool:
+    def link_exists(self, link_type: str, targets: List[str]) -> bool:
         pass
 
     @abstractmethod
@@ -34,5 +34,9 @@ class DBInterface(ABC):
         pass
 
     @abstractmethod
-    def get_matched_links(self, link_type: str, target_handles: List[str]) -> str:
+    def get_matched_links(self, link_type: str, target_handles: List[str]) -> List[str]:
+        pass
+
+    @abstractmethod
+    def get_all_nodes(self, node_type) -> List[str]:
         pass
