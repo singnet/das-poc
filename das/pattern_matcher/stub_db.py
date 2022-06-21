@@ -112,7 +112,7 @@ class StubDB(DBInterface):
                 return link[1:]
         return None
 
-    def get_matched_links(self, link_type:str, target_handles: List[str]) -> str:
+    def get_matched_links(self, link_type: str, target_handles: List[str]) -> List[str]:
         answer = []
         for link in self.all_links:
             if len(target_handles) == (len(link) - 1) and link[0] == link_type:
@@ -128,4 +128,7 @@ class StubDB(DBInterface):
                 else:
                     raise ValueError(f"Invalid link type: {link[0]}")
         return answer
+
+    def get_all_nodes(self, node_type: str) -> List[str]:
+        return self.all_nodes if node_type == 'Concept' else []
 
