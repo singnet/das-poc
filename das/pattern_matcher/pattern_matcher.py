@@ -7,7 +7,7 @@ from typing import Dict, FrozenSet, List, Optional, Set, Union
 from das.pattern_matcher.db_interface import DBInterface
 
 WILDCARD = '*'
-DEBUG = False
+DEBUG = True
 
 CONFIG = {
     # Enforce different values for different variables in ordered assignments
@@ -489,11 +489,14 @@ class Link(Atom):
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
         if not all(atom.matched(db, answer) for atom in self.targets):
             return False
+        print('XXXX', f'self = {self}')
         target_handles = [atom.get_handle(db) for atom in self.targets]
+        print('XXXX', f'target_handles = {target_handles}')
         if any(handle == WILDCARD for handle in target_handles):
             matched = db.get_matched_links(self.atom_type, target_handles)
+            print('XXXX', f'matched = {matched}')
             answer.assignments = set([asn for asn in [self._assign_variables(db, link) for link in matched] if asn is not None])
-            #print('matched()', 'answer.assignments = ', answer.assignments)
+            print('matched()', 'answer.assignments = ', answer.assignments)
             return bool(answer.assignments)
         else:
             return db.link_exists(self.atom_type, target_handles)

@@ -107,6 +107,7 @@ class CouchMongoDB(DBInterface):
 
     def get_link_handle(self, link_type: str, target_handles: List[str]) -> str:
         link_handle = self._get_link_handle(link_type, target_handles)
+        print('XXXX', link_handle)
         if link_handle is None:
             raise ValueError(
                 f"invalid link type/targets: type={link_type}, target={target_handles}"
@@ -133,6 +134,7 @@ class CouchMongoDB(DBInterface):
     def get_link_targets(self, handle: str) -> List[str]:
         collection = self.couch_db.collection(self.C_COLL_OUTGOING_NAME)
         try:
+            print('XXXX', f'handle = {handle}')
             result = collection.get(handle)
         except DocumentNotFoundException as e:
             raise ValueError(f"invalid handle: {handle}") from e
@@ -179,14 +181,21 @@ class CouchMongoDB(DBInterface):
         }.get(link_type, None)
 
     def get_matched_links(self, link_type: str, target_handles: List[str]) -> List[str]:
+        #print('XXXX', f'link_type = {link_type}')
+        #print('XXXX', f'target_handles = {target_handles}')
         atom_type_handle = self._get_type_handle(link_type)
+        #print('XXXX', f'atom_type_handle = {atom_type_handle}')
         link_handle = self._get_matched_handle(atom_type_handle, target_handles)
+        #print('XXXX', f'link_handle = {link_handle}')
         collection = self.couch_db.collection(self.C_COLL_INCOMING_NAME)
         try:
             result = collection.get(link_handle)
         except DocumentNotFoundException as e:
             return []
-        return result.content
+        #print('XXXX', f'result = {result}')
+        #print('XXXX', f'result.content = {result.content}')
+        #print('XXXX', f'type(result.content) = {type(result.content)}')
+        return result.content if isinstance(result.content, list) else [result.content]
 
     def _get_matched_handle(self, link_type: str, target_handles: List[str]) -> str:
         target_handles = self._sort_link(link_type, target_handles)
