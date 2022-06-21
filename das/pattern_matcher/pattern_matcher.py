@@ -462,7 +462,7 @@ class Link(Atom):
 
     def _assign_variables(self, db: DBInterface, link: str) -> Optional[Assignment]:
         link_targets = db.get_link_targets(link)
-        assert(len(link_targets) == len(self.targets))
+        assert(len(link_targets) == len(self.targets)), f'link_targets = {link_targets} self.targets = {self.targets}'
         answer = None
         # TODO: use self.ordered
         if db.is_ordered(link):
