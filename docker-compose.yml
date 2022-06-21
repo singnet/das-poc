@@ -9,6 +9,7 @@ services:
       - DAS_COUCHBASE_HOSTNAME=${DAS_COUCHBASE_HOSTNAME:-couchbase}
       - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-das#secret}
+      - PYTHONPATH=/app
     tty: true
     volumes:
       - ./das:/app/das
