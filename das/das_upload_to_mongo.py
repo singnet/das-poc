@@ -2,6 +2,7 @@ import argparse
 import glob
 import os
 from datetime import datetime
+from typing import List
 
 from pymongo.collection import Collection
 from pymongo.database import Database
@@ -44,7 +45,7 @@ class DAS:
     return self.db[self.LINKS]
 
   @staticmethod
-  def insert_many(collection: Collection, data: list[dict], step: int = 1000):
+  def insert_many(collection: Collection, data: List[dict], step: int = 1000):
     logger.info(f"Collection: {collection.name}")
     logger.info(f"Data length: {len(data)}")
     i = 0

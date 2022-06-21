@@ -194,4 +194,4 @@ The translation script used is in [scripts/atomese2metta](./scripts/atomese2mett
 
 ### Get it started:
 
-Go to [scripts/](./scripts) directory to get info about how to set up the necessary environment.
+Go to [das/](./das) directory to get info about how to set up the necessary environment.
