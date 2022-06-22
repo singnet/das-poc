@@ -5,6 +5,7 @@ from typing import List
 from couchbase.auth import PasswordAuthenticator
 from couchbase.bucket import Bucket
 from couchbase.cluster import Cluster
+from couchbase.collection import CBCollection
 from couchbase.exceptions import DocumentNotFoundException
 from pymongo.collection import Collection
 from pymongo.database import Database
@@ -35,6 +36,8 @@ class CouchMongoDB(DBInterface):
     def __init__(self, couch_db: Bucket, mongo_db: Database):
         self.couch_db = couch_db
         self.mongo_db = mongo_db
+        self.couch_incoming_collection = couch_db.collection(self.C_COLL_INCOMING_NAME)
+        self.couch_outgoing_collection = couch_db.collection(self.C_COLL_OUTGOING_NAME)
 
     @property
     def _coll_node_types(self) -> Collection:
@@ -130,13 +133,23 @@ class CouchMongoDB(DBInterface):
             return None
         return link["_id"]
 
-    def get_link_targets(self, handle: str) -> List[str]:
-        collection = self.couch_db.collection(self.C_COLL_OUTGOING_NAME)
+    def _retrieve_couchbase_value(self, collection: CBCollection, key: str) -> List[str]:
         try:
-            result = collection.get(handle)
+            value = collection.get(key)
         except DocumentNotFoundException as e:
-            raise ValueError(f"invalid handle: {handle}") from e
-        return result.content[1:]
+            return []
+        if isinstance(value.content, list):
+            return value.content
+        answer = []
+        for i in range(value.content):
+            answer.extend(collection.get(key + f'_{i}').content)
+        return answer
+
+    def get_link_targets(self, handle: str) -> List[str]:
+        answer = self._retrieve_couchbase_value(self.couch_outgoing_collection, handle)
+        if not answer:
+            raise ValueError(f"Invalid handle: {handle}")
+        return answer[1:]
 
     def is_ordered(self, handle: str) -> bool:
         for collection in self.EXPRESSION_COLLS:
@@ -181,12 +194,7 @@ class CouchMongoDB(DBInterface):
     def get_matched_links(self, link_type: str, target_handles: List[str]) -> List[str]:
         atom_type_handle = self._get_type_handle(link_type)
         link_handle = self._get_matched_handle(atom_type_handle, target_handles)
-        collection = self.couch_db.collection(self.C_COLL_INCOMING_NAME)
-        try:
-            result = collection.get(link_handle)
-        except DocumentNotFoundException as e:
-            return []
-        return result.content
+        return self._retrieve_couchbase_value(self.couch_incoming_collection, link_handle)
 
     def _get_matched_handle(self, link_type: str, target_handles: List[str]) -> str:
         target_handles = self._sort_link(link_type, target_handles)
