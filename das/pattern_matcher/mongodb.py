@@ -1,9 +1,7 @@
 from typing import List
 
-from pymongo.collection import Collection
 from pymongo.database import Database
 
-from das.hashing import Hasher
 from das.pattern_matcher.couch_mongo_db import CouchMongoDB
 
 
@@ -31,18 +29,31 @@ class DASMongoDB(CouchMongoDB):
             del self.couch_db
 
     def get_link_targets(self, handle: str) -> List[str]:
-        for col in self.ALL_COLLS:
+        for col in self.EXPRESSION_COLLS:
             res = self.mongo_db[col].find_one({"_id": handle})
             if res is not None:
-                return res
-        raise ValueError(f"invalid handle: {handle}") from e
+                return [v for k, v in sorted(res.items()) if k.startswith("key")]
+        raise ValueError(f"invalid handle: {handle}")
 
     def get_matched_links(self, link_type: str, target_handles: List[str]) -> List[str]:
-        atom_type_handle = self._get_type_handle(link_type)
-        link_handle = self._get_matched_handle(atom_type_handle, target_handles)
-        collection = self.couch_db.collection(self.C_COLL_INCOMING_NAME)
-        try:
-            result = collection.get(link_handle)
-        except DocumentNotFoundException as e:
-            return []
-        return result.content
+        link_type_handle = self._get_type_handle(link_type)
+        collection_name = {
+            1: self.COLL_LINKS_1,
+            2: self.COLL_LINKS_2,
+            3: self.COLL_LINKS_3,
+        }.get(len(target_handles) + 1, self.COLL_LINKS)
+
+        collection = self.mongo_db[collection_name]
+
+        filter_params = {
+            "key1": link_type_handle,
+        }
+
+        for i, handle in enumerate(target_handles, start=2):
+            if handle != "*":
+                filter_params.update({f"key{i}": handle})
+
+        if collection_name == self.COLL_LINKS:
+            raise NotImplementedError("Not implented yet")
+
+        return [doc["_id"] for doc in collection.find(filter_params)]
