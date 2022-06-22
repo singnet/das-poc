@@ -226,27 +226,26 @@ class DAS_Benchmark:
                 print()
 
     def run(self, print_query_results=False, progress_bar=False):
-        v1 = Variable('BiologicalProcess')
-        v2 = Variable('UniProt')
-        v3 = Variable('Reactome')
-        v4 = Variable('ReactomeName')
-        v5 = Variable('Location')
-        v6 = Variable('UniprotName')
-        v7 = Variable('Gene')
+        v1 = Variable('V_BiologicalProcess')
+        v2 = Variable('V_UniProt')
+        v3 = Variable('V_Reactome')
+        v4 = Variable('V_ReactomeName')
+        v5 = Variable('V_Location')
+        v6 = Variable('V_UniprotName')
+        v7 = Variable('V_Gene')
 
         expression = And([
-            _evaluation_link('has_name', v3, v4),
-            #_context_link(v2, v3, v5),
+            #_evaluation_link('has_name', v3, v4),
+            _context_link(v2, v3, v5),
             #_evaluation_link('has_name', v2, v6),
             #_member_link(v2, v1)
         ])
 
-        print(self.db.get_link_handle('List', ['*', '*']))
-        return
         print(expression)
         answer: PatternMatchingAnswer = PatternMatchingAnswer()
         print(expression.matched(self.db, answer))
         print(answer)
+        return
 
         count = 1
         self.results.start()

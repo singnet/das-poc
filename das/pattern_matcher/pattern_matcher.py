@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from enum import Enum, auto
@@ -464,8 +465,7 @@ class Link(Atom):
         link_targets = db.get_link_targets(link)
         assert(len(link_targets) == len(self.targets)), f'link_targets = {link_targets} self.targets = {self.targets}'
         answer = None
-        # TODO: use self.ordered
-        if db.is_ordered(link):
+        if self.ordered:
             answer = OrderedAssignment()
             for atom, handle in zip(self.targets, link_targets):
                 if isinstance(atom, Variable):
@@ -487,18 +487,36 @@ class Link(Atom):
             return answer if answer.freeze() else None
 
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
+        print('XXXX', 'matched()', f'entering self = {self}')
         if not all(atom.matched(db, answer) for atom in self.targets):
+            print('XXXX', 'matched()', f'leaving 0 self = {self}')
             return False
         print('XXXX', f'self = {self}')
         target_handles = [atom.get_handle(db) for atom in self.targets]
         print('XXXX', f'target_handles = {target_handles}')
         if any(handle == WILDCARD for handle in target_handles):
             matched = db.get_matched_links(self.atom_type, target_handles)
-            print('XXXX', f'matched = {matched}')
-            answer.assignments = set([asn for asn in [self._assign_variables(db, link) for link in matched] if asn is not None])
-            print('matched()', 'answer.assignments = ', answer.assignments)
+            #print('XXXX', f'matched = {matched}')
+            print('XXXX', f'len(matched) = {len(matched)}')
+            #answer.assignments = set([asn for asn in [self._assign_variables(db, link) for link in matched] if asn is not None])
+            count = 1
+            total = len(matched)
+            start = time.perf_counter()
+            answer.assignments = set()
+            for link in matched:
+                asn = self._assign_variables(db, link)
+                if asn:
+                    answer.assignments.add(asn)
+                if count % 10000 == 0:
+                    print(f'{count}/{total} {time.perf_counter() - start} seconds')
+                    start = time.perf_counter()
+                count += 1
+            print('XXXX', f'len(answer.assignments) = {len(answer.assignments)}')
+            #print('XXXX', f'answer.assignments = {answer.assignments}')
+            print('XXXX', 'matched()', f'leaving 1 self = {self}')
             return bool(answer.assignments)
         else:
+            print('XXXX', 'matched()', f'leaving 2 self = {self}')
             return db.link_exists(self.atom_type, target_handles)
 
 class Variable(Atom):
