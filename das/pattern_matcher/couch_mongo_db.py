@@ -195,5 +195,3 @@ class CouchMongoDB(DBInterface):
     def get_all_nodes(self, node_type: str) -> List[str]:
         type_handle = self._get_type_handle(node_type)
         return [node['name'][len(node_type) + 2:-1] for node in self._coll_nodes.find({"type": type_handle})]
-        
-
