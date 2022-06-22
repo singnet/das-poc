@@ -3,7 +3,8 @@ import time
 
 import numpy as np
 import pytest
-from helpers import get_logger
+
+from das.helpers import get_logger
 
 logger = get_logger()
 

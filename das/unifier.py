@@ -4,11 +4,12 @@ from cmath import exp
 from pprint import pprint
 from typing import Any, List, Union
 
-from atomese2metta.translator import (AtomType, Expression, MSet,
-                                      UnorderedExpression)
-from hashing import Hasher
-from helpers import get_mongodb
 from ply.lex import lex
+
+from das.atomese2metta.translator import (AtomType, Expression, MSet,
+                                      UnorderedExpression)
+from das.hashing import Hasher
+from das.helpers import get_mongodb
 
 
 class DAS:

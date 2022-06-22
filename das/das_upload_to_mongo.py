@@ -2,17 +2,19 @@ import argparse
 import glob
 import os
 from datetime import datetime
+from typing import List
 
-from atomese2metta.translator import AtomType, Expression
-from hashing import Hasher
-from helpers import (evaluate_hash, get_filesize_mb, get_logger, get_mongodb,
-                     human_time)
-from metta_lex import MettaParser
 from pymongo.collection import Collection
 from pymongo.database import Database
 from pymongo.errors import DuplicateKeyError
 from pymongo.operations import DeleteMany
 from pymongo.results import InsertOneResult
+
+from das.atomese2metta.translator import AtomType, Expression
+from das.hashing import Hasher
+from das.helpers import (evaluate_hash, get_filesize_mb, get_logger,
+                         get_mongodb, human_time)
+from das.metta_lex import MettaParser
 
 logger = get_logger()
 
@@ -43,7 +45,7 @@ class DAS:
     return self.db[self.LINKS]
 
   @staticmethod
-  def insert_many(collection: Collection, data: list[dict], step: int = 1000):
+  def insert_many(collection: Collection, data: List[dict], step: int = 1000):
     logger.info(f"Collection: {collection.name}")
     logger.info(f"Data length: {len(data)}")
     i = 0

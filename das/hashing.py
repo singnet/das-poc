@@ -1,7 +1,6 @@
 from collections import defaultdict
 from hashlib import md5
-from operator import itemgetter
-from typing import Any, Union
+from typing import Union
 
 from das.atomese2metta.translator import AtomType, Expression, MSet
 

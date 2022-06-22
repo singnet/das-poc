@@ -1,13 +1,14 @@
 import argparse
 import datetime
 import os
-from typing import Iterator
+from typing import Iterator, Tuple, List
 
 from couchbase import exceptions as cb_exceptions
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.management.collections import CollectionSpec
-from helpers import get_logger
+
+from das.helpers import get_logger
 
 logger = get_logger()
 
@@ -23,7 +24,7 @@ MAX_BLOCK_SIZE = 500000
 def key_value_generator(
   input_filename: str,
   *,
-  block_size: int = MAX_BLOCK_SIZE) -> Iterator[tuple[str, list[str], int]]:
+  block_size: int = MAX_BLOCK_SIZE) -> Iterator[Tuple[str, List[str], int]]:
   last_key = ''
   last_list = []
   counter = 0

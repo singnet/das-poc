@@ -1,16 +1,9 @@
 from das.pattern_matcher.db_interface import DBInterface
+from das.pattern_matcher.pattern_matcher import (And, Link, LogicalExpression,
+                                                 Node, Not, Or,
+                                                 PatternMatchingAnswer,
+                                                 Variable)
 from das.pattern_matcher.stub_db import StubDB
-
-from das.pattern_matcher.pattern_matcher import (
-    And,
-    Link,
-    LogicalExpression,
-    Node,
-    Not,
-    Or,
-    PatternMatchingAnswer,
-    Variable,
-)
 
 
 def match(db_api: DBInterface, expression: LogicalExpression):
