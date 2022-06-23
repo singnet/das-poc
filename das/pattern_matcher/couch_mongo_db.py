@@ -150,12 +150,6 @@ class CouchMongoDB(DBInterface):
         if not answer:
             raise ValueError(f"Invalid handle: {handle}")
         return answer[1:]
-        #collection = self.couch_db.collection(self.C_COLL_OUTGOING_NAME)
-        #try:
-        #    result = collection.get(handle)
-        #except DocumentNotFoundException as e:
-        #    raise ValueError(f"invalid handle: {handle}") from e
-        #return result.content[1:]
 
     def is_ordered(self, handle: str) -> bool:
         for collection in self.EXPRESSION_COLLS:
@@ -203,11 +197,7 @@ class CouchMongoDB(DBInterface):
         atom_type_handle = self._get_type_handle(link_type)
         #print('XXXX', f'atom_type_handle = {atom_type_handle}')
         link_handle = self._get_matched_handle(atom_type_handle, target_handles)
-        #print('XXXX', f'link_handle = {link_handle}')
-        result = self._retrieve_couchbase_value(self.couch_incoming_collection, link_handle)
-        #print('XXXX', f'result = {result}')
-        #print('XXXX', f'type(result) = {type(result)}')
-        return result
+        return self._retrieve_couchbase_value(self.couch_incoming_collection, link_handle)
 
     def _get_matched_handle(self, link_type: str, target_handles: List[str]) -> str:
         target_handles = self._sort_link(link_type, target_handles)

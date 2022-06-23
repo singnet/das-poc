@@ -18,6 +18,7 @@ logger = get_logger()
 
 INCOMING_COLL_NAME = "IncomingSet"
 OUTGOING_COLL_NAME = "OutgoingSet"
+PATTERNS_COLL_NAME = "Patterns"
 
 clock = Clock()
 incoming_clock = Clock()
@@ -40,7 +41,7 @@ acc_clock_full = AccumulatorClock()
 from das.hashing import Hasher
 
 
-def populate_sets(hasher: Hasher, fh, collection: Collection, bucket, composite_keys_masks: dict[str, list[set[int]]]):
+def populate_sets(hasher: Hasher, fh1, fh2, collection: Collection, bucket, composite_keys_masks: dict[str, list[set[int]]]):
 
   outgoing_set = bucket.collection(OUTGOING_COLL_NAME)
 
@@ -81,7 +82,7 @@ def populate_sets(hasher: Hasher, fh, collection: Collection, bucket, composite_
     incoming_clock.reset()
     for key, values in incoming_dict.items():
       for v in values:
-        fh.write("{},{}\n".format(key, v))
+        fh1.write("{},{}\n".format(key, v))
     incoming_time_statistics.add(incoming_clock.elapsed_time_ms())
     acc_clock_block4.pause()
 
@@ -91,7 +92,7 @@ def populate_sets(hasher: Hasher, fh, collection: Collection, bucket, composite_
         keys_copy = keys.copy()
         for pos in mask:
           keys_copy[pos-1] = '*'
-        fh.write("{},{}\n".format(hasher.apply_alg(''.join(keys_copy)), _id))
+        fh2.write("{},{},{}\n".format(hasher.apply_alg(''.join(keys_copy)), _id, ','.join(outgoing_list)))
     acc_clock_block5.pause()
 
     count += 1
@@ -213,7 +214,7 @@ def main(mongodb_specs, couchbase_specs, file_path, index_path):
 
   create_collections(
     bucket=bucket,
-    collections_names=[INCOMING_COLL_NAME, OUTGOING_COLL_NAME])
+    collections_names=[INCOMING_COLL_NAME, OUTGOING_COLL_NAME, PATTERNS_COLL_NAME])
 
   db = get_mongodb(mongodb_specs)
   hasher = Hasher()
@@ -223,21 +224,25 @@ def main(mongodb_specs, couchbase_specs, file_path, index_path):
     index_pattern = process_index_pattern_file(index_path)
     node_type_to_keys = group_index_pattern_by_hash(index_pattern, db["node_types"])
 
+  atoms_file_path = file_path + ".atoms"
+  patterns_file_path = file_path + ".patterns"
 
   # TODO: Cover all possible links_N collections.
-  with open(file_path, "w") as fh:
+  with open(atoms_file_path, "w") as fh1, open(patterns_file_path, "w") as fh2:
     logger.info("Indexing links_1")
-    populate_sets(hasher, fh, db["links_1"], bucket, node_type_to_keys)
+    populate_sets(hasher, fh1, fh2, db["links_1"], bucket, node_type_to_keys)
     logger.info("Indexing links_2")
-    populate_sets(hasher, fh, db["links_2"], bucket, node_type_to_keys)
+    populate_sets(hasher, fh1, fh2, db["links_2"], bucket, node_type_to_keys)
     logger.info("Indexing links_3")
-    populate_sets(hasher, fh, db["links_3"], bucket, node_type_to_keys)
+    populate_sets(hasher, fh1, fh2, db["links_3"], bucket, node_type_to_keys)
     logger.info("Indexing links")
-    populate_sets(hasher, fh, db["links"], bucket, [])
+    populate_sets(hasher, fh1, fh2, db["links"], bucket, [])
 
   # TODO: Use python. (?)
-  os.system(f"sort -t , -k 1,1 {file_path} > {file_path}.sorted")
-  shutil.move(f"{file_path}.sorted", file_path)
+  os.system(f"sort -t , -k 1,1 {atoms_file_path} > {atoms_file_path}.sorted")
+  os.system(f"sort -t , -k 1,1 {patterns_file_path} > {patterns_file_path}.sorted")
+  shutil.move(f"{atoms_file_path}.sorted", atoms_file_path)
+  shutil.move(f"{patterns_file_path}.sorted", patterns_file_path)
 
 
 def run():
