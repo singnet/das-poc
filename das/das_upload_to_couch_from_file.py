@@ -14,6 +14,7 @@ logger = get_logger()
 
 INCOMING_COLL_NAME = 'IncomingSet'
 OUTGOING_COLL_NAME = 'OutgoingSet'
+PATTERNS_COLL_NAME = 'Patterns'
 
 # There is a Couchbase limitation for long values (max: 20Mb)
 # So we set the it to ~15Mb, if this max size is reached
@@ -49,6 +50,34 @@ def key_value_generator(
   if last_key != '':
     yield last_key, last_list, counter
 
+def key_value_targets_generator(
+  input_filename: str,
+  *,
+  block_size: int = MAX_BLOCK_SIZE / 4) -> Iterator[Tuple[str, List[str], int]]:
+  last_key = ''
+  last_list = []
+  counter = 0
+  with open(input_filename, 'r') as fh:
+    for line in fh:
+      line = line.strip()
+      if line == '':
+        continue
+      key, value, *targets = line.split(',')
+      if last_key == key:
+        last_list.append([value, *targets])
+        if len(last_list) >= block_size:
+          yield last_key, last_list, counter
+          counter += 1
+          last_list = []
+      else:
+        if last_key != '':
+          yield last_key, last_list, counter
+        counter = 0
+        last_key = key
+        last_list = [value, *targets]
+  if last_key != '':
+    yield last_key, last_list, counter
+
 
 def create_collections(bucket, collections_names=None):
   if collections_names is None:
@@ -71,26 +100,48 @@ def main(couchbase_specs, input_filename: str) -> None:
     f'couchbase://{couchbase_specs["hostname"]}',
     authenticator=PasswordAuthenticator(couchbase_specs["username"], couchbase_specs["password"]))
   bucket = cluster.bucket('das')
-  collection = bucket.collection(INCOMING_COLL_NAME)
+  atoms_file_name = input_filename + '.atoms'
+  patterns_file_name = input_filename + '.patterns'
+  atoms_collection = bucket.collection(INCOMING_COLL_NAME)
+  patterns_collection = bucket.collection(PATTERNS_COLL_NAME)
 
   # TODO: Too over?
-  with open(input_filename, 'r') as f:
+  with open(atoms_file_name, 'r') as f:
     total_entries = len(f.readlines())
 
   i = 0
-  for k, v, c in key_value_generator(input_filename):
+  for k, v, c in key_value_generator(atoms_file_name):
     if c == 0:
-      collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
+      atoms_collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
     else:
       if c == 1:
-        first_block = collection.get(k)
-        collection.upsert(f"{k}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
-      collection.upsert(k, c + 1)
-      collection.upsert(f"{k}_{c}", v, timeout=datetime.timedelta(seconds=100))
+        first_block = atoms_collection.get(k)
+        atoms_collection.upsert(f"{k}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
+      atoms_collection.upsert(k, c + 1)
+      atoms_collection.upsert(f"{k}_{c}", v, timeout=datetime.timedelta(seconds=100))
 
     i += 1
     if i % 10000 == 0:
       logger.info(f'Entries uploaded: [{i}/{total_entries}]')
+
+  # TODO: Too over?
+  with open(patterns_file_name, 'r') as f:
+    total_entries = len(f.readlines())
+
+  i = 0
+  for k, v, c in key_value_targets_generator(patterns_file_name):
+    if c == 0:
+      patterns_collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
+    else:
+      if c == 1:
+        first_block = patterns_collection.get(k)
+        patterns_collection.upsert(f"{k}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
+      patterns_collection.upsert(k, c + 1)
+      patterns_collection.upsert(f"{k}_{c}", v, timeout=datetime.timedelta(seconds=100))
+
+    i += 1
+    if i % 10000 == 0:
+      logger.info(f'Patterns uploaded: [{i}/{total_entries}]')
 
 
 def run():
