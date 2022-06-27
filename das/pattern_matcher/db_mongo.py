@@ -25,7 +25,7 @@ class DASMongoDB(CouchMongoDB):
 
     def __init__(self, mongo_db: Database):
         self.mongo_db = mongo_db
-        if hasattr(self, 'couch_db'):
+        if hasattr(self, "couch_db"):
             del self.couch_db
 
     def get_link_targets(self, handle: str) -> List[str]:
@@ -36,22 +36,33 @@ class DASMongoDB(CouchMongoDB):
         raise ValueError(f"invalid handle: {handle}")
 
     def get_matched_links(self, link_type: str, target_handles: List[str]) -> List[str]:
+        is_hidden_link = link_type.title() in ["Set", "List"]
+
         link_type_handle = self._get_type_handle(link_type)
         collection_name = {
             1: self.COLL_LINKS_1,
             2: self.COLL_LINKS_2,
             3: self.COLL_LINKS_3,
-        }.get(len(target_handles) + 1, self.COLL_LINKS)
+        }.get(len(target_handles) + int(is_hidden_link), self.COLL_LINKS)
 
         collection = self.mongo_db[collection_name]
 
-        filter_params = {
-            "key1": link_type_handle,
-        }
+        filter_params = {}
+        key_index = 1
 
-        for i, handle in enumerate(target_handles, start=2):
-            if handle != "*":
-                filter_params.update({f"key{i}": handle})
+        if not is_hidden_link:
+            filter_params.update(
+                {
+                    f"key{key_index}": link_type_handle,
+                }
+            )
+            key_index += 1
+
+        filter_params.update({
+            f"key{i}": handle
+            for i, handle in enumerate(target_handles, start=key_index)
+            if handle != "*"
+        })
 
         if collection_name == self.COLL_LINKS:
             raise NotImplementedError("Not implented yet")

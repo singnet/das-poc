@@ -3,7 +3,7 @@ import os
 import pytest
 
 from das.helpers import get_mongodb
-from das.pattern_matcher.mongodb import DASMongoDB
+from das.pattern_matcher.db_mongo import DASMongoDB
 
 
 @pytest.fixture()
