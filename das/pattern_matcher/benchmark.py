@@ -12,6 +12,7 @@ from das.helpers import get_mongodb
 from das.pattern_matcher.db_interface import DBInterface
 from das.pattern_matcher.couch_mongo_db import CouchMongoDB
 from das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not, And, Or
+from das.pattern_matcher.pattern_matcher import List as PMList
 
 class DB_Architecture(int, Enum):
     """
@@ -54,7 +55,7 @@ def _context_link(va, vb, vc):
         Link('Member', [va, vb], True),
         Link('Evaluation', [
             Node('Predicate', 'has_location'),
-            Link('List', [va, vc], True)
+            PMList([va, vc])
         ], True)
     ], True)
 
@@ -62,7 +63,7 @@ def _evaluation_link(p, va, vb):
     return \
     Link('Evaluation', [
         Node('Predicate', p),
-        Link('List', [va, vb], True),
+        PMList([va, vb]),
     ], True)
 
 def _member_link(va, vb):
@@ -158,7 +159,7 @@ class DAS_Benchmark:
         self.test_layout = test_layout
         #TODO Refactory to put these collection names just in one place
         mongodb_specs = {
-            "hostname": "localhost",
+            "hostname": "mongo",
             "port":  27017,
             "username": "dbadmin",
             "password": "das#secret",
@@ -170,7 +171,7 @@ class DAS_Benchmark:
             #"database": os.environ.get("DAS_DATABASE_NAME", "BIO"),
         }
         couchbase_specs = {
-            "hostname": "localhost",
+            "hostname": "couchbase",
             "username": "dbadmin",
             "password": "das#secret",
             #"hostname": os.environ.get("DAS_COUCHBASE_HOSTNAME", "localhost"),
@@ -236,9 +237,9 @@ class DAS_Benchmark:
 
         expression = And([
             #_evaluation_link('has_name', v3, v4),
-            _context_link(v2, v3, v5),
+            #_context_link(v2, v3, v5),
             #_evaluation_link('has_name', v2, v6),
-            #_member_link(v2, v1)
+            _member_link(v2, v1)
         ])
 
         print(expression)

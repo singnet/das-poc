@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Dict
 
 
 class DBInterface(ABC):
@@ -34,7 +34,7 @@ class DBInterface(ABC):
         pass
 
     @abstractmethod
-    def get_matched_links(self, link_type: str, target_handles: List[str]) -> List[str]:
+    def get_matched_links(self, link_type: str, target_handles: List[str]) -> Dict:
         pass
 
     @abstractmethod
