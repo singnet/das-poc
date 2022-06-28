@@ -1,6 +1,6 @@
 import os
 from signal import raise_signal
-from typing import List
+from typing import List, Dict
 
 from couchbase.auth import PasswordAuthenticator
 from couchbase.bucket import Bucket
@@ -32,12 +32,14 @@ class CouchMongoDB(DBInterface):
 
     C_COLL_INCOMING_NAME = "IncomingSet"
     C_COLL_OUTGOING_NAME = "OutgoingSet"
+    C_COLL_PATTERNS_NAME = "Patterns"
 
     def __init__(self, couch_db: Bucket, mongo_db: Database):
         self.couch_db = couch_db
         self.mongo_db = mongo_db
         self.couch_incoming_collection = couch_db.collection(self.C_COLL_INCOMING_NAME)
         self.couch_outgoing_collection = couch_db.collection(self.C_COLL_OUTGOING_NAME)
+        self.couch_patterns_collection = couch_db.collection(self.C_COLL_PATTERNS_NAME)
 
     @property
     def _coll_node_types(self) -> Collection:
@@ -191,10 +193,12 @@ class CouchMongoDB(DBInterface):
             "Similarity": "2",
         }.get(link_type, None)
 
-    def get_matched_links(self, link_type: str, target_handles: List[str]) -> List[str]:
+    def get_matched_links(self, link_type: str, target_handles: List[str]) -> Dict:
+        # TODO: sort targets of ordered links
         atom_type_handle = self._get_type_handle(link_type)
         link_handle = self._get_matched_handle(atom_type_handle, target_handles)
-        return self._retrieve_couchbase_value(self.couch_incoming_collection, link_handle)
+        result = self._retrieve_couchbase_value(self.couch_patterns_collection, link_handle)
+        return result
 
     def _get_matched_handle(self, link_type: str, target_handles: List[str]) -> str:
         target_handles = self._sort_link(link_type, target_handles)

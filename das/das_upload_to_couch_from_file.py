@@ -64,7 +64,7 @@ def key_value_targets_generator(
         continue
       key, value, *targets = line.split(',')
       if last_key == key:
-        last_list.append([value, *targets])
+        last_list.append({'handle':value, 'targets': targets})
         if len(last_list) >= block_size:
           yield last_key, last_list, counter
           counter += 1
@@ -75,6 +75,7 @@ def key_value_targets_generator(
         counter = 0
         last_key = key
         last_list = [value, *targets]
+        last_list = [{'handle':value, 'targets': targets}]
   if last_key != '':
     yield last_key, last_list, counter
 
@@ -110,6 +111,7 @@ def main(couchbase_specs, input_filename: str) -> None:
     total_entries = len(f.readlines())
 
   i = 0
+  done = 0
   for k, v, c in key_value_generator(atoms_file_name):
     if c == 0:
       atoms_collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
@@ -121,27 +123,42 @@ def main(couchbase_specs, input_filename: str) -> None:
       atoms_collection.upsert(f"{k}_{c}", v, timeout=datetime.timedelta(seconds=100))
 
     i += 1
-    if i % 10000 == 0:
-      logger.info(f'Entries uploaded: [{i}/{total_entries}]')
+    done += len(v)
+    if i % 100000 == 0:
+      logger.info(f'Entries uploaded: [{done}/{total_entries}]')
+  logger.info(f'Entries uploaded: [{done}/{total_entries}]')
 
   # TODO: Too over?
   with open(patterns_file_name, 'r') as f:
     total_entries = len(f.readlines())
 
   i = 0
+  done = 0
   for k, v, c in key_value_targets_generator(patterns_file_name):
     if c == 0:
       patterns_collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
     else:
       if c == 1:
         first_block = patterns_collection.get(k)
+        logger.info(f'XXXXX c = {c}')
+        logger.info(f'XXXXX k = {k}')
+        logger.info(f'XXXXX type(first_block.content) = {type(first_block.content)}')
+        logger.info(f'XXXXX type(first_block.content[0]) = {type(first_block.content[0])}')
+        logger.info(f'XXXXX len(first_block.content) = {len(first_block.content)}')
         patterns_collection.upsert(f"{k}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
+      logger.info(f'XXXXX c = {c}')
+      logger.info(f'XXXXX k = {k}')
+      logger.info(f'XXXXX type(v) = {type(v)}')
+      logger.info(f'XXXXX type(v[0]) = {type(v[0])}')
+      logger.info(f'XXXXX len(v) = {len(v)}')
       patterns_collection.upsert(k, c + 1)
       patterns_collection.upsert(f"{k}_{c}", v, timeout=datetime.timedelta(seconds=100))
 
     i += 1
-    if i % 10000 == 0:
-      logger.info(f'Patterns uploaded: [{i}/{total_entries}]')
+    done += len(v)
+    if i % 100000 == 0:
+      logger.info(f'Patterns uploaded: [{done}/{total_entries}]')
+  logger.info(f'Patterns uploaded: [{done}/{total_entries}]')
 
 
 def run():

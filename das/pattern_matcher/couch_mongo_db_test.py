@@ -12,11 +12,11 @@ from das.pattern_matcher.couch_mongo_db import CouchMongoDB
 @pytest.fixture()
 def mongo_db():
     mongodb_specs = {
-        "hostname": os.environ.get("DAS_MONGODB_HOSTNAME", "localhost"),
-        "port": os.environ.get("DAS_MONGODB_PORT", 27017),
-        "username": os.environ.get("DAS_DATABASE_USERNAME", "dbadmin"),
-        "password": os.environ.get("DAS_DATABASE_PASSWORD", "das#secret"),
-        "database": os.environ.get("DAS_DATABASE_NAME", "toy"),
+        "hostname": "mongo",
+        "port": 27017,
+        "username": "dbadmin",
+        "password": "das#secret",
+        "database": "toy",
     }
     return get_mongodb(mongodb_specs)
 
@@ -24,9 +24,9 @@ def mongo_db():
 @pytest.fixture()
 def couch_db():
     couchbase_specs = {
-        "hostname": os.environ.get("DAS_COUCHBASE_HOSTNAME", "localhost"),
-        "username": os.environ.get("DAS_DATABASE_USERNAME", "dbadmin"),
-        "password": os.environ.get("DAS_DATABASE_PASSWORD", "das#secret"),
+        "hostname": "couchbase",
+        "username": "dbadmin",
+        "password": "das#secret",
     }
     cluster = Cluster(
         f'couchbase://{couchbase_specs["hostname"]}',
