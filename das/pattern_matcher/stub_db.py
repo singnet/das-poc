@@ -112,7 +112,7 @@ class StubDB(DBInterface):
                 return link[1:]
         return None
 
-    def get_matched_links(self, link_type: str, target_handles: List[str]) -> Dict:
+    def get_matched_links(self, link_type: str, target_handles: List[str]):
         answer = []
         for link in self.all_links:
             if len(target_handles) == (len(link) - 1) and link[0] == link_type:

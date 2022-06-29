@@ -1,13 +1,15 @@
 import os
 
+from typing import List
 import pytest
 from couchbase.auth import PasswordAuthenticator
 from couchbase.bucket import Bucket
 from couchbase.cluster import Cluster
 
 from das.helpers import get_mongodb
-from das.pattern_matcher.couch_mongo_db import CouchMongoDB
-
+from das.pattern_matcher.couch_mongo_db import CouchMongoDB, build_mongo_node_name
+from das.couchbase_schema import CollectionNames as CouchbaseCollectionNames
+from das.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
 
 @pytest.fixture()
 def mongo_db():
@@ -16,7 +18,7 @@ def mongo_db():
         "port": 27017,
         "username": "dbadmin",
         "password": "das#secret",
-        "database": "toy",
+        "database": "TOY",
     }
     return get_mongodb(mongodb_specs)
 
@@ -38,104 +40,190 @@ def couch_db():
 
 
 @pytest.fixture()
-def cm_db(couch_db, mongo_db):
+def db(couch_db, mongo_db):
     return CouchMongoDB(couch_db, mongo_db)
 
 
-def test_node_exists(cm_db: CouchMongoDB):
-    assert cm_db.node_exists("Concept", "ent"), "Concept:ent should exist"
-    assert not cm_db.node_exists("Concept", "none"), "Concept:none shouldn't exist"
-    assert not cm_db.node_exists(
-        "concept", "ent"
-    ), "concept:ent (all lower case) shouldn't exist"
+def test_db_creation(db: CouchMongoDB):
+    assert db.couch_db
+    assert db.mongo_db
+    assert db.couch_incoming_collection
+    assert db.couch_outgoing_collection
+    assert db.couch_patterns_collection
+    assert len(db.node_documents) == 14
+    assert len(db.node_handles) == 14
+    assert len(db.atom_type_hash) == 5
+    assert len(db.type_hash) == 5
+
+def test_node_exists(db: CouchMongoDB):
+    assert db.node_exists('Concept', 'human')
+    assert db.node_exists('Concept', 'monkey')
+    assert db.node_exists('Concept', 'chimp')
+    assert db.node_exists('Concept', 'snake')
+    assert db.node_exists('Concept', 'earthworm')
+    assert db.node_exists('Concept', 'rhino')
+    assert db.node_exists('Concept', 'triceratops')
+    assert db.node_exists('Concept', 'vine')
+    assert db.node_exists('Concept', 'ent')
+    assert db.node_exists('Concept', 'mammal')
+    assert db.node_exists('Concept', 'animal')
+    assert db.node_exists('Concept', 'reptile')
+    assert db.node_exists('Concept', 'dinosaur')
+    assert db.node_exists('Concept', 'plant')
+    assert not db.node_exists('blah', 'plant')
+    assert not db.node_exists('Concept', 'blah')
+
+def _check_link(db: CouchMongoDB, handle: str, link_type: str, target1: str, target2: str):
+    collection = db.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_2)
+    document = collection.find_one({'_id': handle})
+    type_handle = db.atom_type_hash[link_type]
+    assert document
+    assert document['key1'] == type_handle
+    assert document['key2'] == target1
+    assert document['key3'] == target2
+
+def _get_mongo_document(db: CouchMongoDB, handle: str):
+    collection = db.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_2)
+    document = collection.find_one({'_id': handle})
+    return document
+    
+def test_get_link_handle(db: CouchMongoDB):
+    human = db.get_node_handle('Concept', 'human')
+    monkey = db.get_node_handle('Concept', 'monkey')
+    mammal = db.get_node_handle('Concept', 'mammal')
+    handle = db.get_link_handle('Inheritance', [human, mammal])
+    _check_link(db, handle, 'Inheritance', human, mammal)
+    handle = db.get_link_handle('Inheritance', [monkey, mammal])
+    _check_link(db, handle, 'Inheritance', monkey, mammal)
+    with pytest.raises(ValueError):
+        db.get_link_handle('Inheritance', [monkey, human])
+    handle = db.get_link_handle('Similarity', [human, monkey])
+    _check_link(db, handle, 'Similarity', human, monkey)
+    handle = db.get_link_handle('Similarity', [monkey, human])
+    _check_link(db, handle, 'Similarity', human, monkey)
+    with pytest.raises(ValueError):
+        db.get_link_handle('Similarity', [mammal, human])
+    with pytest.raises(ValueError):
+        db.get_link_handle('Similarity', [human, mammal])
+
+def test_link_exists(db: CouchMongoDB):
+    human = db.get_node_handle('Concept', 'human')
+    monkey = db.get_node_handle('Concept', 'monkey')
+    mammal = db.get_node_handle('Concept', 'mammal')
+    assert db.link_exists('Inheritance', [human, mammal])
+    assert db.link_exists('Inheritance', [monkey, mammal])
+    assert not db.link_exists('Inheritance', [monkey, human])
+    assert db.link_exists('Similarity', [human, monkey])
+    assert db.link_exists('Similarity', [monkey, human])
+    assert not db.link_exists('Similarity', [mammal, human])
+    assert not db.link_exists('Similarity', [human, mammal])
+
+def test_get_node_handle(db: CouchMongoDB):
+    node_names = ['human', 'monkey', 'chimp', 'snake', 'earthworm', 'rhino', 'triceratops',
+                  'vine', 'ent', 'mammal', 'animal', 'reptile', 'dinosaur', 'plant']
+    for name in node_names:
+        handle = db.get_node_handle('Concept', name)
+        collection = db.mongo_db.get_collection(MongoCollectionNames.NODES)
+        document = collection.find_one({'_id': handle})
+        assert document[MongoFieldNames.NODE_NAME] == build_mongo_node_name('Concept', name)
+    with pytest.raises(ValueError):
+        db.get_node_handle('Concept', 'blah')
+
+def _check_link_targets(db: CouchMongoDB, handle: str, target_handles: List[str], ordered: bool):
+    assert len(target_handles) == 2
+    document = _get_mongo_document(db, handle)
+    if ordered:
+        assert document['key2'] == target_handles[0]
+        assert document['key3'] == target_handles[1]
+    else:
+        assert document['key2'] == target_handles[0] or document['key2'] == target_handles[1]
+        assert document['key3'] == target_handles[0] or document['key3'] == target_handles[1]
+
+def test_get_link_targets(db: CouchMongoDB):
+    human = db.get_node_handle('Concept', 'human')
+    monkey = db.get_node_handle('Concept', 'monkey')
+    mammal = db.get_node_handle('Concept', 'mammal')
+    handle = db.get_link_handle('Inheritance', [human, mammal])
+    _check_link_targets(db, handle, [human, mammal], True)
+    with pytest.raises(AssertionError):
+        _check_link_targets(db, handle, [mammal, human], True)
+    handle = db.get_link_handle('Inheritance', [monkey, mammal])
+    _check_link_targets(db, handle, [monkey, mammal], True)
+    with pytest.raises(AssertionError):
+        _check_link_targets(db, handle, [mammal, monkey], True)
+    with pytest.raises(AssertionError):
+        _check_link_targets(db, handle, [monkey, monkey], True)
+    handle = db.get_link_handle('Similarity', [human, monkey])
+    _check_link_targets(db, handle, [human, monkey], False)
+    _check_link_targets(db, handle, [monkey, human], False)
+    handle = db.get_link_handle('Similarity', [monkey, human])
+    _check_link_targets(db, handle, [human, monkey], False)
+    _check_link_targets(db, handle, [monkey, human], False)
+    with pytest.raises(AssertionError):
+        _check_link_targets(db, handle, [monkey, mammal], False)
+    with pytest.raises(AssertionError):
+        _check_link_targets(db, handle, [mammal, monkey], False)
+
+def test_is_ordered(db: CouchMongoDB):
+    human = db.get_node_handle('Concept', 'human')
+    monkey = db.get_node_handle('Concept', 'monkey')
+    mammal = db.get_node_handle('Concept', 'mammal')
+    assert db.is_ordered(db.get_link_handle('Inheritance', [human, mammal]))
+    assert not db.is_ordered(db.get_link_handle('Similarity', [human, monkey]))
+    with pytest.raises(ValueError):
+        db.is_ordered(db.get_link_handle('Inheritance', [human, monkey]))
+
+def test_get_all_nodes(db: CouchMongoDB):
+    node_specs = [('Concept', 'human'),
+                  ('Concept', 'monkey'),
+                  ('Concept', 'chimp'),
+                  ('Concept', 'snake'),
+                  ('Concept', 'earthworm'),
+                  ('Concept', 'rhino'),
+                  ('Concept', 'triceratops'),
+                  ('Concept', 'vine'),
+                  ('Concept', 'ent'),
+                  ('Concept', 'mammal'),
+                  ('Concept', 'animal'),
+                  ('Concept', 'reptile'),
+                  ('Concept', 'dinosaur'),
+                  ('Concept', 'plant')]
+    nodes_in_db = db.get_all_nodes('Concept')
+    assert len(nodes_in_db) == 14
+    for node_type, node_name in node_specs:
+        node = db.get_node_handle(node_type, node_name)
+        assert node in nodes_in_db
+    nodes_in_db = db.get_all_nodes('blah')
+    assert nodes_in_db == []
+    
+def test_get_matched_links(db: CouchMongoDB):
+    mammal = db.get_node_handle('Concept', 'mammal')
+    animal = db.get_node_handle('Concept', 'animal')
+    human = db.get_node_handle('Concept', 'human')
+    monkey = db.get_node_handle('Concept', 'monkey')
+    assert len(db.get_matched_links('Inheritance', ['*', '*'])) == 12
+    assert len(db.get_matched_links('Inheritance', ['*', mammal])) == 4
+    assert len(db.get_matched_links('Inheritance', [mammal, '*'])) == 1
+    assert len(db.get_matched_links('Inheritance', ['*', animal])) == 3
+    assert len(db.get_matched_links('Inheritance', [animal, '*'])) == 0
+    assert len(db.get_matched_links('Inheritance', [mammal, animal])) == 1
+    assert len(db.get_matched_links('Inheritance', [animal, mammal])) == 0
+    assert len(db.get_matched_links('Similarity', ['*', '*'])) == 7
+    assert len(db.get_matched_links('Similarity', [human, '*'])) == 2
+    assert len(db.get_matched_links('Similarity', ['*', human])) == 2
+    assert len(db.get_matched_links('Similarity', [monkey, '*'])) == 2
+    assert len(db.get_matched_links('Similarity', ['*', monkey])) == 2
+    assert len(db.get_matched_links('Similarity', [monkey, human])) == 1
+    assert len(db.get_matched_links('Similarity', [human, monkey])) == 1
+    assert len(db.get_matched_links('Similarity', [human, mammal])) == 0
+    assert len(db.get_matched_links('Similarity', [mammal, human])) == 0
+    
 
 
-def test_link_exists(cm_db: CouchMongoDB):
-    assert cm_db.link_exists(
-        "Inheritance",
-        ["83638a4598185ca13b43140029b494f7", "4581aeda36530cca36f83d53d6fff0c3"],
-    )
-    assert not cm_db.link_exists("Similarity", ["0123456789abcdef", "fedcba9876543210"])
 
 
-def test_get_node_handle(cm_db: CouchMongoDB):
-    assert cm_db.get_node_handle("Concept", "ent") == "13ba6904f6987307e3bce206c350fdf1"
-
-    with pytest.raises(ValueError) as excinfo:
-        cm_db.get_node_handle("Concept", "none")
-    assert "invalid node: type: Concept, name: none" == str(excinfo.value)
 
 
-def test_get_link_targets(cm_db: CouchMongoDB):
-    with pytest.raises(ValueError, match=r".* inexistent key$") as excinfo:
-        cm_db.get_link_targets("inexistent key")
-    assert "invalid handle: inexistent key" == str(
-        excinfo.value
-    ), "handle 'inexistent key' should raise an error"
-    handle = "187208d65719605d601f56ad8767998b"
-    res = cm_db.get_link_targets(handle)
-    assert isinstance(res, list), "get_link_targets should return a list"
-    assert len(res) == 3, f"handle '{handle}' should return 3 targets"
 
 
-def test_get_matched_links(cm_db: CouchMongoDB):
-    res = cm_db.get_matched_links("Inheritance", ["*", "*"])
-    assert isinstance(res, list), "get_matched_links should return a list"
-    assert len(res) > 0, "get_matched_links should return at least one link"
-    assert all(
-        isinstance(h, str) for h in res
-    ), "get_matched_links should return a list of strings"
 
-    res = cm_db.get_matched_links(
-        "Inheritance", ["83638a4598185ca13b43140029b494f7", "*"]
-    )
-    assert isinstance(res, list), "get_matched_links should return a list"
-    assert len(res) > 0, "get_matched_links should return at least one link"
-    assert all(
-        isinstance(h, str) for h in res
-    ), "get_matched_links should return a list of strings"
-
-    res = cm_db.get_matched_links(
-        "Similarity", ["83638a4598185ca13b43140029b494f7", "*"]
-    )
-    assert isinstance(res, list), "get_matched_links should return a list"
-    assert len(res) > 0, "get_matched_links should return at least one link"
-    assert all(
-        isinstance(h, str) for h in res
-    ), "get_matched_links should return a list of strings"
-
-
-def test_get_link_handle_should_be_equal_to_generate_link_handle(cm_db: CouchMongoDB):
-    link_handle = cm_db.get_link_handle(
-        "Similarity",
-        ["83638a4598185ca13b43140029b494f7", "c8ec81db392b765d010fa1eaf052b51e"],
-    )
-    generated_link_handle = cm_db._generate_link_handle(
-        "df5aa67f61bf6485dc74cd319e5681a0",
-        ["83638a4598185ca13b43140029b494f7", "c8ec81db392b765d010fa1eaf052b51e"],
-    )
-    assert (
-        link_handle == generated_link_handle
-    ), "link_handle and generated_link_handle should be equal"
-
-
-def test_generate_link_handle(cm_db: CouchMongoDB):
-    handle = cm_db._generate_link_handle(
-        "8c9f9d98fbfd0563ce23bf8ed77a7ee8",
-        ["83638a4598185ca13b43140029b494f7", "4581aeda36530cca36f83d53d6fff0c3"],
-    )
-    assert handle == "bd49fe6a8f57c7e6ec77d7b8898372d6", "handle should be equal to 'bd49fe6a8f57c7e6ec77d7b8898372d6'"
-
-
-def test_get_doc(cm_db: CouchMongoDB):
-    doc = cm_db._get_doc("bd49fe6a8f57c7e6ec77d7b8898372d6")
-    assert isinstance(doc, dict), "get_doc should return a dict"
-    assert "_id" in doc, "get_doc should return a dict with an _id"
-
-    doc = cm_db._get_doc("bd49fe6a8f57c7e6ec77d7b8898372d6", cm_db.COLL_LINKS_3)
-    assert isinstance(doc, dict), "get_doc should return a dict"
-    assert "_id" in doc, "get_doc should return a dict with an _id"
-
-    assert cm_db._get_doc("inexistent key", cm_db.COLL_LINKS) is None, "get_doc should return None for inexistent key"
-
-    assert cm_db._get_doc("bd49fe6a8f57c7e6ec77d7b8898372d6", cm_db.COLL_LINKS) is None, "get_doc should return None if the doc doesn't exist"
