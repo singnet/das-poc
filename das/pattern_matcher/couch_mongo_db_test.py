@@ -193,8 +193,8 @@ def test_get_all_nodes(db: CouchMongoDB):
     for node_type, node_name in node_specs:
         node = db.get_node_handle(node_type, node_name)
         assert node in nodes_in_db
-    nodes_in_db = db.get_all_nodes('blah')
-    assert nodes_in_db == []
+    with pytest.raises(ValueError):
+        nodes_in_db = db.get_all_nodes('blah')
     
 def test_get_matched_links(db: CouchMongoDB):
     mammal = db.get_node_handle('Concept', 'mammal')
@@ -217,13 +217,34 @@ def test_get_matched_links(db: CouchMongoDB):
     assert len(db.get_matched_links('Similarity', [human, monkey])) == 1
     assert len(db.get_matched_links('Similarity', [human, mammal])) == 0
     assert len(db.get_matched_links('Similarity', [mammal, human])) == 0
-    
 
+def test_build_hash_template(db: CouchMongoDB):
+    v1 = db._build_hash_template(['Inheritance', 'Concept', 'Concept'])
+    v2 = db._build_hash_template(['Similarity', 'Concept', 'Concept'])
+    v3 = db._build_hash_template(['Similarity', 'Concept', ['Inheritance', 'Concept', 'Concept']])
+    assert len(v1) == 3
+    assert len(v2) == 3
+    assert len(v3) == 3
+    assert len(v3[2]) == 3
+    assert v1[1] == v1[2] and v1[0] != v1[1]
+    assert v2[1] == v2[2] and v2[0] != v2[1]
+    assert v1[0] != v2[0] and v1[1] == v2[1]
+    assert v3[0] == v2[0]
+    assert v3[1] == v1[1]
+    assert v3[2][0] == v1[0]
+    assert v3[2][1] == v1[1]
+    assert v3[2][2] == v1[2]
 
-
-
-
-
-
-
-
+def test_get_matched_type_template(db: CouchMongoDB):
+    v1 = db.get_matched_type_template(['Inheritance', 'Concept', 'Concept'])
+    v2 = db.get_matched_type_template(['Similarity', 'Concept', 'Concept'])
+    with pytest.raises(ValueError):
+        v3 = db.get_matched_type_template(['Inheritance', 'Concept', 'blah'])
+    with pytest.raises(ValueError):
+        v4 = db.get_matched_type_template(['Similarity', 'blah', 'Concept'])
+    assert(len(v1) == 12)
+    assert(len(v2) == 7)
+    v5 = db.get_matched_links('Inheritance', ['*', '*'])
+    v6 = db.get_matched_links('Similarity', ['*', '*'])
+    assert(v1 == v5)
+    assert(v2 == v6)

@@ -1,6 +1,6 @@
 import os
 from signal import raise_signal
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union, Any
 
 from couchbase.auth import PasswordAuthenticator
 from couchbase.bucket import Bucket
@@ -10,7 +10,7 @@ from couchbase.exceptions import DocumentNotFoundException
 from pymongo.collection import Collection
 from pymongo.database import Database
 
-from das.hashing import Hasher
+from das.hashing import Hasher, flatten_list
 from das.couchbase_schema import CollectionNames as CouchbaseCollectionNames
 from das.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
 
@@ -30,6 +30,7 @@ class CouchMongoDB(DBInterface):
         self.couch_incoming_collection = couch_db.collection(CouchbaseCollectionNames.INCOMING_SET)
         self.couch_outgoing_collection = couch_db.collection(CouchbaseCollectionNames.OUTGOING_SET)
         self.couch_patterns_collection = couch_db.collection(CouchbaseCollectionNames.PATTERNS)
+        self.couch_templates_collection = couch_db.collection(CouchbaseCollectionNames.TEMPLATES)
         self.mongo_link_collection = {
             '1': self.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_1),
             '2': self.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_2),
@@ -108,6 +109,16 @@ class CouchMongoDB(DBInterface):
         hash_input = [link_composite_type_hash, link_type_hash, *target_handles]
         return Hasher.apply_alg("".join(hash_input))
 
+    def _build_hash_template(self, template: Union[str, List[Any]]) -> List[Any]:
+        if isinstance(template, str):
+            return self.atom_type_hash[template]
+        else:
+            answer = []
+            for element in template:
+                v = self._build_hash_template(element)
+                answer.append(v)
+            return answer
+
     # DB interface methods
 
     def node_exists(self, node_type: str, node_name: str) -> bool:
@@ -161,8 +172,16 @@ class CouchMongoDB(DBInterface):
     def get_all_nodes(self, node_type: str) -> List[str]:
         node_type_hash = self.atom_type_hash.get(node_type, None)
         if not node_type_hash:
-            return []
+            raise ValueError(f'Invalid node type: {node_type}')
         return [\
             document[MongoFieldNames.ID_HASH] \
             for document in self.node_documents.values() \
             if document[MongoFieldNames.TYPE] == node_type_hash]
+
+    def get_matched_type_template(self, template: List[Any]) -> List[str]:
+        try:
+            template = self._build_hash_template(template)
+            template_hash = Hasher.apply_alg(flatten_list(template))
+        except KeyError as exception:
+            raise ValueError(f'{exception}\nInvalid type')
+        return self._retrieve_couchbase_value(self.couch_templates_collection, template_hash)

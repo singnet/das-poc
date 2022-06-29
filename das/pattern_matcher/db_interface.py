@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict
+from typing import List, Dict, Any
 
 WILDCARD = '*'
 
@@ -39,5 +39,9 @@ class DBInterface(ABC):
         pass
 
     @abstractmethod
-    def get_all_nodes(self, node_type) -> List[str]:
+    def get_all_nodes(self, node_type: str) -> List[str]:
+        pass
+
+    @abstractmethod
+    def get_matched_type_template(self, template: List[Any]) -> List[str]:
         pass
