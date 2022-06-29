@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import shutil
-from typing import Iterator
+from typing import Iterator, List, Any, Union
 
 from couchbase import exceptions as cb_exceptions
 from couchbase.auth import PasswordAuthenticator
@@ -41,6 +41,16 @@ acc_clock_full = AccumulatorClock()
 
 from das.hashing import Hasher, flatten_list
 
+
+def _build_template(template: Union[str, List[Any]]) -> List[Any]:
+  if isinstance(template, str):
+    return template
+  else:
+    answer = []
+    for element in template:
+        v = _build_template(element)
+        answer.append(v)
+    return answer
 
 def populate_sets(hasher: Hasher, fh1, fh2, fh3, collection: Collection, bucket, composite_keys_masks: dict[str, list[set[int]]]):
 
@@ -95,7 +105,8 @@ def populate_sets(hasher: Hasher, fh1, fh2, fh3, collection: Collection, bucket,
           keys_copy[pos-1] = '*'
         fh2.write("{},{},{}\n".format(hasher.apply_alg(''.join(keys_copy)), _id, ','.join(outgoing_list[1:])))
 
-    template_key = hasher.apply_alg(flatten_list(doc['type']))
+    template = _build_template(doc['type'])
+    template_key = hasher.apply_alg(flatten_list(template))
     fh3.write("{},{},{}\n".format(template_key, _id, ','.join(outgoing_list[1:])))
     acc_clock_block5.pause()
 

@@ -88,6 +88,7 @@ class DAS:
   def expression_to_dict(self, expression: Expression) -> dict:
     keys_hashes = [self.retrieve_id(e) for e in expression]
     type_ = self.retrieve_expression_type(expression)
+    type_ = [keys_hashes[0], *type_[1:]]
 
     result = {
       "_id": expression._id,

@@ -15,6 +15,7 @@ services:
       - ./das:/app/das
       - ./tests:/app/tests
       - ./data:/app/data
+      - /tmp:/tmp
     links:
       - mongo
       - couchbase
@@ -28,6 +29,7 @@ services:
       - ${DAS_MONGODB_PORT:-27017}:${DAS_MONGODB_PORT:-27017}
     volumes:
       - mongodbdata:/data/db
+      - /tmp:/tmp
     command: mongod --port ${DAS_MONGODB_PORT:-27017}
 
   couchbase:
@@ -44,6 +46,7 @@ services:
       - "8094"
     volumes:
       - couchbasedata:/opt/couchbase/var
+      - /tmp:/tmp
 
 volumes:
   mongodbdata: { }
