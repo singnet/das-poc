@@ -4,6 +4,8 @@ from typing import Union
 
 from das.atomese2metta.translator import AtomType, Expression, MSet
 
+def flatten_list(s):
+  return str(s)
 
 class Hasher:
   atom_type_dict = dict()

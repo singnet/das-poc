@@ -15,6 +15,7 @@ logger = get_logger()
 INCOMING_COLL_NAME = 'IncomingSet'
 OUTGOING_COLL_NAME = 'OutgoingSet'
 PATTERNS_COLL_NAME = 'Patterns'
+TEMPLATES_COLL_NAME = 'Templates'
 
 # There is a Couchbase limitation for long values (max: 20Mb)
 # So we set the it to ~15Mb, if this max size is reached
@@ -103,13 +104,14 @@ def main(couchbase_specs, input_filename: str) -> None:
   bucket = cluster.bucket('das')
   atoms_file_name = input_filename + '.atoms'
   patterns_file_name = input_filename + '.patterns'
+  templates_file_name = input_filename + '.templates'
   atoms_collection = bucket.collection(INCOMING_COLL_NAME)
   patterns_collection = bucket.collection(PATTERNS_COLL_NAME)
+  templates_collection = bucket.collection(TEMPLATES_COLL_NAME)
 
-  # TODO: Too over?
+  # Incoming/outgoing
   with open(atoms_file_name, 'r') as f:
     total_entries = len(f.readlines())
-
   i = 0
   done = 0
   for k, v, c in key_value_generator(atoms_file_name):
@@ -121,17 +123,15 @@ def main(couchbase_specs, input_filename: str) -> None:
         atoms_collection.upsert(f"{k}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
       atoms_collection.upsert(k, c + 1)
       atoms_collection.upsert(f"{k}_{c}", v, timeout=datetime.timedelta(seconds=100))
-
     i += 1
     done += len(v)
     if i % 100000 == 0:
       logger.info(f'Entries uploaded: [{done}/{total_entries}]')
   logger.info(f'Entries uploaded: [{done}/{total_entries}]')
 
-  # TODO: Too over?
+  # Patterns
   with open(patterns_file_name, 'r') as f:
     total_entries = len(f.readlines())
-
   i = 0
   done = 0
   for k, v, c in key_value_targets_generator(patterns_file_name):
@@ -140,26 +140,34 @@ def main(couchbase_specs, input_filename: str) -> None:
     else:
       if c == 1:
         first_block = patterns_collection.get(k)
-        logger.info(f'XXXXX c = {c}')
-        logger.info(f'XXXXX k = {k}')
-        logger.info(f'XXXXX type(first_block.content) = {type(first_block.content)}')
-        logger.info(f'XXXXX type(first_block.content[0]) = {type(first_block.content[0])}')
-        logger.info(f'XXXXX len(first_block.content) = {len(first_block.content)}')
         patterns_collection.upsert(f"{k}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
-      logger.info(f'XXXXX c = {c}')
-      logger.info(f'XXXXX k = {k}')
-      logger.info(f'XXXXX type(v) = {type(v)}')
-      logger.info(f'XXXXX type(v[0]) = {type(v[0])}')
-      logger.info(f'XXXXX len(v) = {len(v)}')
       patterns_collection.upsert(k, c + 1)
       patterns_collection.upsert(f"{k}_{c}", v, timeout=datetime.timedelta(seconds=100))
-
     i += 1
     done += len(v)
     if i % 100000 == 0:
       logger.info(f'Patterns uploaded: [{done}/{total_entries}]')
   logger.info(f'Patterns uploaded: [{done}/{total_entries}]')
 
+  # Templates
+  with open(templates_file_name, 'r') as f:
+    total_entries = len(f.readlines())
+  i = 0
+  done = 0
+  for k, v, c in key_value_generator(templates_file_name):
+    if c == 0:
+      templates_collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
+    else:
+      if c == 1:
+        first_block = templates_collection.get(k)
+        templates_collection.upsert(f"{k}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
+      templates_collection.upsert(k, c + 1)
+      templates_collection.upsert(f"{k}_{c}", v, timeout=datetime.timedelta(seconds=100))
+    i += 1
+    done += len(v)
+    if i % 100000 == 0:
+      logger.info(f'Templates uploaded: [{done}/{total_entries}]')
+  logger.info(f'Templates uploaded: [{done}/{total_entries}]')
 
 def run():
   parser = argparse.ArgumentParser()
