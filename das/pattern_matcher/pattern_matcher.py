@@ -503,7 +503,7 @@ class Link(Atom):
             answer.assignments = set()
             for match in matched:
                 link = match['handle']
-                targets = match['targets'][1:]
+                targets = match['targets']
                 #print('XXXX', f'match = {match}')
                 #print('XXXX', f'link = {link}')
                 #print('XXXX', f'targets = {targets}')

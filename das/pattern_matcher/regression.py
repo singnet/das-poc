@@ -285,9 +285,10 @@ if __name__ == "__main__":
         ),
     )
 
+    print(db.get_all_nodes('Concept'))
+    print(db.get_all_nodes('blah'))
+
     print(
         "\n\n\n\n================================================================================\n"
     )
 
-    print(db.get_all_nodes('Concept'))
-    print(db.get_all_nodes('blah'))

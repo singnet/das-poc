@@ -328,6 +328,8 @@ def test_patterns():
             if key == -1:
                 return assignment.ordered_mapping.mapping.items()
             else:
+                print('XXXXX', 'key', key)
+                print('XXXXX', 'assignment.unordered_mappings', assignment.unordered_mappings)
                 return get_items(assignment.unordered_mappings[key])
 
     def check_pattern(db, pattern, expected_match, assignments, key=-1):
@@ -432,7 +434,7 @@ def test_patterns():
     check_pattern(db,
         And([
             Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
-            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+            Link('Similarity', [Variable('V1'), Variable('V2')], False),
         ]),
         True,
         [
@@ -450,7 +452,7 @@ def test_patterns():
 
     check_pattern(db,
         And([
-            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+            Link('Similarity', [Variable('V1'), Variable('V2')], False),
             Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
         ]),
         True,
@@ -470,7 +472,7 @@ def test_patterns():
     check_pattern(db,
         And([
             Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
-            Not(Link('Similarity', [Variable('V1'), Variable('V2')], True)),
+            Not(Link('Similarity', [Variable('V1'), Variable('V2')], False)),
         ]),
         True,
         [
@@ -551,7 +553,7 @@ def test_patterns():
         And([
             Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
             Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
-            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+            Link('Similarity', [Variable('V1'), Variable('V2')], False),
         ]),
         True,
         [
@@ -567,7 +569,7 @@ def test_patterns():
     check_pattern(db,
         And([
             Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
-            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+            Link('Similarity', [Variable('V1'), Variable('V2')], False),
             Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
         ]),
         True,
