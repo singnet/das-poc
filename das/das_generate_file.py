@@ -19,6 +19,7 @@ logger = get_logger()
 INCOMING_COLL_NAME = "IncomingSet"
 OUTGOING_COLL_NAME = "OutgoingSet"
 PATTERNS_COLL_NAME = "Patterns"
+TEMPLATES_COLL_NAME = "Templates"
 
 clock = Clock()
 incoming_clock = Clock()
@@ -38,10 +39,10 @@ acc_clock_block4 = AccumulatorClock()
 acc_clock_block5 = AccumulatorClock()
 acc_clock_full = AccumulatorClock()
 
-from das.hashing import Hasher
+from das.hashing import Hasher, flatten_list
 
 
-def populate_sets(hasher: Hasher, fh1, fh2, collection: Collection, bucket, composite_keys_masks: dict[str, list[set[int]]]):
+def populate_sets(hasher: Hasher, fh1, fh2, fh3, collection: Collection, bucket, composite_keys_masks: dict[str, list[set[int]]]):
 
   outgoing_set = bucket.collection(OUTGOING_COLL_NAME)
 
@@ -92,7 +93,10 @@ def populate_sets(hasher: Hasher, fh1, fh2, collection: Collection, bucket, comp
         keys_copy = keys.copy()
         for pos in mask:
           keys_copy[pos-1] = '*'
-        fh2.write("{},{},{}\n".format(hasher.apply_alg(''.join(keys_copy)), _id, ','.join(outgoing_list)))
+        fh2.write("{},{},{}\n".format(hasher.apply_alg(''.join(keys_copy)), _id, ','.join(outgoing_list[1:])))
+
+    template_key = hasher.apply_alg(flatten_list(doc['type']))
+    fh3.write("{},{}\n".format(template_key, _id))
     acc_clock_block5.pause()
 
     count += 1
@@ -215,7 +219,7 @@ def main(mongodb_specs, couchbase_specs, file_path, index_path):
 
   create_collections(
     bucket=bucket,
-    collections_names=[INCOMING_COLL_NAME, OUTGOING_COLL_NAME, PATTERNS_COLL_NAME])
+    collections_names=[INCOMING_COLL_NAME, OUTGOING_COLL_NAME, PATTERNS_COLL_NAME, TEMPLATES_COLL_NAME])
 
   db = get_mongodb(mongodb_specs)
   hasher = Hasher()
@@ -227,23 +231,30 @@ def main(mongodb_specs, couchbase_specs, file_path, index_path):
 
   atoms_file_path = file_path + ".atoms"
   patterns_file_path = file_path + ".patterns"
+  templates_file_path = file_path + ".templates"
 
   # TODO: Cover all possible links_N collections.
-  with open(atoms_file_path, "w") as fh1, open(patterns_file_path, "w") as fh2:
+  with open(atoms_file_path, "w") as fh1, open(patterns_file_path, "w") as fh2, open(templates_file_path, "w") as fh3:
     logger.info("Indexing links_1")
-    populate_sets(hasher, fh1, fh2, db["links_1"], bucket, node_type_to_keys)
+    populate_sets(hasher, fh1, fh2, fh3, db["links_1"], bucket, node_type_to_keys)
     logger.info("Indexing links_2")
-    populate_sets(hasher, fh1, fh2, db["links_2"], bucket, node_type_to_keys)
+    populate_sets(hasher, fh1, fh2, fh3, db["links_2"], bucket, node_type_to_keys)
     logger.info("Indexing links_3")
-    populate_sets(hasher, fh1, fh2, db["links_3"], bucket, node_type_to_keys)
+    populate_sets(hasher, fh1, fh2, fh3, db["links_3"], bucket, node_type_to_keys)
     logger.info("Indexing links")
-    populate_sets(hasher, fh1, fh2, db["links"], bucket, [])
+    populate_sets(hasher, fh1, fh2, fh3, db["links"], bucket, [])
 
   # TODO: Use python. (?)
+  logger.info("Sorting index files (1/4)")
   os.system(f"sort -t , -k 1,1 {atoms_file_path} > {atoms_file_path}.sorted")
+  logger.info("Sorting index files (2/4)")
   os.system(f"sort -t , -k 1,1 {patterns_file_path} > {patterns_file_path}.sorted")
+  logger.info("Sorting index files (3/4)")
+  os.system(f"sort -t , -k 1,1 {templates_file_path} > {templates_file_path}.sorted")
+  logger.info("Sorting index files (4/4)")
   shutil.move(f"{atoms_file_path}.sorted", atoms_file_path)
   shutil.move(f"{patterns_file_path}.sorted", patterns_file_path)
+  shutil.move(f"{templates_file_path}.sorted", templates_file_path)
 
 
 def run():
