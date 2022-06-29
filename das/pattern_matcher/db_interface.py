@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict
 
+WILDCARD = '*'
 
 class DBInterface(ABC):
     """
@@ -34,7 +35,7 @@ class DBInterface(ABC):
         pass
 
     @abstractmethod
-    def get_matched_links(self, link_type: str, target_handles: List[str]) -> Dict:
+    def get_matched_links(self, link_type: str, target_handles: List[str]):
         pass
 
     @abstractmethod
