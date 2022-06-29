@@ -96,7 +96,7 @@ def populate_sets(hasher: Hasher, fh1, fh2, fh3, collection: Collection, bucket,
         fh2.write("{},{},{}\n".format(hasher.apply_alg(''.join(keys_copy)), _id, ','.join(outgoing_list[1:])))
 
     template_key = hasher.apply_alg(flatten_list(doc['type']))
-    fh3.write("{},{}\n".format(template_key, _id))
+    fh3.write("{},{},{}\n".format(template_key, _id, ','.join(outgoing_list[1:])))
     acc_clock_block5.pause()
 
     count += 1
