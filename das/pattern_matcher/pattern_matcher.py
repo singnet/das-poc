@@ -7,7 +7,7 @@ from typing import Dict, FrozenSet, List, Optional, Set, Union
 
 from das.pattern_matcher.db_interface import DBInterface, WILDCARD
 
-DEBUG = True
+DEBUG = False
 
 CONFIG = {
     # Enforce different values for different variables in ordered assignments
@@ -389,7 +389,7 @@ class LogicalExpression(ABC):
         pass
 
     def __repr__(self):
-        return "<LogicalExpression>"
+        return '<LogicalExpression>'
 
 class Atom(LogicalExpression, ABC):
     """
@@ -417,7 +417,7 @@ class Node(Atom):
         self.name = node_name
 
     def __repr__(self):
-        return f"<{super().__repr__()}: {self.name}>"
+        return f'<{super().__repr__()}: {self.name}>'
 
     def get_handle(self, db: DBInterface) -> str:
         if not self.handle:
@@ -433,6 +433,7 @@ class Link(Atom):
     """
 
     def __init__(self, link_type: str, targets: List[Atom], ordered: bool):
+        assert not any(isinstance(target, TypedVariable) for target in targets)
         super().__init__(link_type)
         def comparator(t1, t2):
             if isinstance(t1, Variable):
@@ -448,7 +449,7 @@ class Link(Atom):
             self.targets = sorted(targets, key=cmp_to_key(comparator))
 
     def __repr__(self):
-        return f"<{super().__repr__()}: {self.targets}>"
+        return f'<{super().__repr__()}: {self.targets}>'
 
     def get_handle(self, db: DBInterface) -> str:
         if not self.handle:
@@ -503,7 +504,7 @@ class Link(Atom):
             answer.assignments = set()
             for match in matched:
                 link = match['handle']
-                targets = match['targets'][1:]
+                targets = match['targets']
                 #print('XXXX', f'match = {match}')
                 #print('XXXX', f'link = {link}')
                 #print('XXXX', f'targets = {targets}')
@@ -532,13 +533,71 @@ class Variable(Atom):
         self.name = variable_name
 
     def __repr__(self):
-        return f"{self.name}"
+        return f'{self.name}'
 
     def get_handle(self, db: DBInterface) -> str:
         return WILDCARD
 
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
         return True
+
+class TypedVariable(Variable):
+    """
+    TODO: documentation
+    """
+
+    def __init__(self, variable_name: str, variable_type: str):
+        super().__init__(variable_name)
+        self.type = variable_type
+
+    def __repr__(self):
+        return f'{self.name}: {self.type}'
+
+    def get_handle(self, db: DBInterface) -> str:
+        return WILDCARD
+
+    def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
+        return True
+
+class LinkTemplate(LogicalExpression):
+    """
+    TODO: documentation
+    """
+
+    def __init__(self, link_type: str, targets: List[str], ordered: bool):
+        assert all(isinstance(target, TypedVariable) for target in targets)
+        self.link_type = link_type
+        self.targets = targets
+        self.ordered = ordered
+
+    def __repr__(self):
+        return f'<{self.link_type}: {self.targets}>'
+
+    def get_handle(self):
+        return None
+
+    def _assign_variables(self, db: DBInterface, link: str, link_targets: List[str]) -> Optional[Assignment]:
+        assert(len(link_targets) == len(self.targets)), f'link_targets = {link_targets} self.targets = {self.targets}'
+        answer = None
+        if self.ordered:
+            answer = OrderedAssignment()
+        else:
+            answer = UnorderedAssignment()
+        for variable, handle in zip(self.targets, link_targets):
+            if not answer.assign(variable.name, handle):
+                return None
+        return answer if answer.freeze() else None
+
+    def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
+        matched = db.get_matched_type_template([self.link_type, *[v.type for v in self.targets]])
+        answer.assignments = set()
+        for match in matched:
+            link = match['handle']
+            targets = match['targets']
+            asn = self._assign_variables(db, link, targets)
+            if asn:
+                answer.assignments.add(asn)
+        return bool(answer.assignments)
 
 class Not(LogicalExpression):
     """
@@ -549,7 +608,7 @@ class Not(LogicalExpression):
         self.term = term
 
     def __repr__(self):
-        return f"NOT({self.term})"
+        return f'NOT({self.term})'
 
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
         self.term.matched(db, answer)
@@ -565,7 +624,7 @@ class Or(LogicalExpression):
         self.terms = terms
 
     def __repr__(self):
-        return f"OR({self.terms})"
+        return f'OR({self.terms})'
 
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
         if not self.terms:

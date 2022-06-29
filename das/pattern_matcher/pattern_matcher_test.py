@@ -5,8 +5,8 @@ import pytest
 from das.pattern_matcher.pattern_matcher import (And, CompatibilityStatus,
                                                  Link, LogicalExpression, Node,
                                                  Not, OrderedAssignment,
-                                                 PatternMatchingAnswer,
-                                                 UnorderedAssignment, Variable)
+                                                 PatternMatchingAnswer, LinkTemplate,
+                                                 UnorderedAssignment, Variable, TypedVariable)
 from das.pattern_matcher.stub_db import StubDB
 
 
@@ -432,7 +432,7 @@ def test_patterns():
     check_pattern(db,
         And([
             Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
-            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+            Link('Similarity', [Variable('V1'), Variable('V2')], False),
         ]),
         True,
         [
@@ -450,7 +450,7 @@ def test_patterns():
 
     check_pattern(db,
         And([
-            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+            Link('Similarity', [Variable('V1'), Variable('V2')], False),
             Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
         ]),
         True,
@@ -470,7 +470,7 @@ def test_patterns():
     check_pattern(db,
         And([
             Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
-            Not(Link('Similarity', [Variable('V1'), Variable('V2')], True)),
+            Not(Link('Similarity', [Variable('V1'), Variable('V2')], False)),
         ]),
         True,
         [
@@ -551,7 +551,7 @@ def test_patterns():
         And([
             Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
             Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
-            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+            Link('Similarity', [Variable('V1'), Variable('V2')], False),
         ]),
         True,
         [
@@ -567,7 +567,7 @@ def test_patterns():
     check_pattern(db,
         And([
             Not(Link('Inheritance', [Variable('V1'), Variable('V2')], True)),
-            Link('Similarity', [Variable('V1'), Variable('V2')], True),
+            Link('Similarity', [Variable('V1'), Variable('V2')], False),
             Link('Set', [Variable('V1'), Variable('V2'), Variable('V3'), Variable('V4')], False),
         ]),
         True,
@@ -579,4 +579,47 @@ def test_patterns():
             {'V1': '<Concept: human>', 'V2': '<Concept: ent>', 'V3': '<Concept: monkey>', 'V4': '<Concept: chimp>'},
         ],
         1
+    )
+
+    check_pattern(db,
+        LinkTemplate(
+            'Inheritance',
+            [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], 
+            True
+        ),
+        True,
+        [
+            {'V1': '<Concept: chimp>', 'V2': '<Concept: mammal>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: mammal>'},
+            {'V1': '<Concept: triceratops>', 'V2': '<Concept: dinosaur>'},
+            {'V1': '<Concept: monkey>', 'V2': '<Concept: mammal>'},
+            {'V1': '<Concept: reptile>', 'V2': '<Concept: animal>'},
+            {'V1': '<Concept: mammal>', 'V2': '<Concept: animal>'},
+            {'V1': '<Concept: earthworm>', 'V2': '<Concept: animal>'},
+            {'V1': '<Concept: rhino>', 'V2': '<Concept: mammal>'},
+            {'V1': '<Concept: snake>', 'V2': '<Concept: reptile>'},
+            {'V1': '<Concept: dinosaur>', 'V2': '<Concept: reptile>'},
+            {'V1': '<Concept: ent>', 'V2': '<Concept: plant>'},
+            {'V1': '<Concept: vine>', 'V2': '<Concept: plant>'},
+        ],
+        -1
+    )
+
+    check_pattern(db,
+        LinkTemplate(
+            'Similarity',
+            [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], 
+            True
+        ),
+        True,
+        [
+            {'V1': '<Concept: snake>', 'V2': '<Concept: vine>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: chimp>'},
+            {'V1': '<Concept: rhino>', 'V2': '<Concept: triceratops>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: monkey>'},
+            {'V1': '<Concept: human>', 'V2': '<Concept: ent>'},
+            {'V1': '<Concept: snake>', 'V2': '<Concept: earthworm>'},
+            {'V1': '<Concept: chimp>', 'V2': '<Concept: monkey>'},
+        ],
+        -1
     )

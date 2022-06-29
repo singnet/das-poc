@@ -1,4 +1,5 @@
-from typing import List
+import re
+from typing import List, Any, Tuple
 
 from das.pattern_matcher.db_interface import DBInterface
 from das.pattern_matcher.pattern_matcher import WILDCARD
@@ -6,6 +7,10 @@ from das.pattern_matcher.pattern_matcher import WILDCARD
 
 def _build_node_handle(node_type: str, node_name: str) -> str:
     return f'<{node_type}: {node_name}>'
+
+def _split_node_handle(node_handle: str) -> Tuple[str, str]:
+    v = re.split('[<: >]', node_handle)
+    return tuple([v[1], v[3]])
 
 def _build_link_handle(link_type: str, target_handles: List[str]) -> str:
     if link_type == 'Similarity' or link_type == 'Set':
@@ -66,7 +71,19 @@ class StubDB(DBInterface):
             ['Set', mammal, monkey, human, chimp],
             ['Set', human, monkey, chimp]
         ]
-
+        self.template_index = {}
+        for link in self.all_links:
+            key = [link[0]]
+            for target in link[1:]:
+                node_type, node_name = _split_node_handle(target)
+                key.append(node_type)
+            key = str(key)
+            v = self.template_index.get(key, [])
+            v.append({
+                'handle': _build_link_handle(link[0], link[1:]),
+                'targets': link[1:]
+            })
+            self.template_index[key] = v
 
     def __repr__(self):
         return '<StubDB>'
@@ -133,4 +150,10 @@ class StubDB(DBInterface):
 
     def get_all_nodes(self, node_type: str) -> List[str]:
         return self.all_nodes if node_type == 'Concept' else []
+
+    def get_matched_type_template(self, template: List[Any]) -> List[str]:
+        assert len(template) == 3
+        return self.template_index.get(str(template), [])
+        
+
 

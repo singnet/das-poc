@@ -1,8 +1,8 @@
 from das.pattern_matcher.db_interface import DBInterface
 from das.pattern_matcher.pattern_matcher import (And, Link, LogicalExpression,
-                                                 Node, Not, Or,
+                                                 Node, Not, Or, LinkTemplate,
                                                  PatternMatchingAnswer,
-                                                 Variable)
+                                                 Variable, TypedVariable)
 from das.pattern_matcher.stub_db import StubDB
 
 
@@ -285,9 +285,13 @@ if __name__ == "__main__":
         ),
     )
 
+    print(db.get_all_nodes('Concept'))
+    print(db.get_all_nodes('blah'))
+
+    match(db, LinkTemplate("Inheritance", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
+    match(db, LinkTemplate("Similarity", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
+
     print(
         "\n\n\n\n================================================================================\n"
     )
 
-    print(db.get_all_nodes('Concept'))
-    print(db.get_all_nodes('blah'))
