@@ -154,7 +154,7 @@ def main(couchbase_specs, input_filename: str) -> None:
     total_entries = len(f.readlines())
   i = 0
   done = 0
-  for k, v, c in key_value_generator(templates_file_name):
+  for k, v, c in key_value_targets_generator(templates_file_name):
     if c == 0:
       templates_collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
     else:
