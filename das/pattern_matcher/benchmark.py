@@ -11,8 +11,7 @@ from couchbase.cluster import Cluster
 from das.helpers import get_mongodb
 from das.pattern_matcher.db_interface import DBInterface
 from das.pattern_matcher.couch_mongo_db import CouchMongoDB
-from das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not, And, Or
-from das.pattern_matcher.pattern_matcher import List as PMList
+from das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not, And, Or, LinkTemplate, TypedVariable
 
 class DB_Architecture(int, Enum):
     """
@@ -49,13 +48,29 @@ def _random_selection(v, n=1):
         selected.append(s)
     return selected
 
+def _member_template_link(va, vb):
+    assert(all(isinstance(v, TypedVariable) for v in [va, vb]))
+    return LinkTemplate('Member', [va, vb], True)
+
+def _member_link(a, b):
+    assert(not any(isinstance(v, TypedVariable) for v in [a, b]))
+    return Link('Member', [a, b], True)
+
+def _list_template_link(va, vb):
+    assert(all(isinstance(v, TypedVariable) for v in [va, vb]))
+    return LinkTemplate('List', [va, vb], True)
+
+def _list_link(a, b):
+    assert(not any(isinstance(v, TypedVariable) for v in [a, b]))
+    return Link('List', [va, vb], True)
+
 def _context_link(va, vb, vc):
     return \
     Link('Context', [
-        Link('Member', [va, vb], True),
+        _member_template_link(va, vb),
         Link('Evaluation', [
             Node('Predicate', 'has_location'),
-            PMList([va, vc])
+            _list_template_link(va, vc)
         ], True)
     ], True)
 
@@ -63,32 +78,28 @@ def _evaluation_link(p, va, vb):
     return \
     Link('Evaluation', [
         Node('Predicate', p),
-        PMList([va, vb]),
+        _list_template_link(va, vb)
     ], True)
 
-def _member_link(va, vb):
-    return Link('Member', [va, vb], True)
-
 def _same_biological_process(gene_list: List[str]):
-    v1 = Variable('BiologicalProcess')
+    v1 = Variable('V_BiologicalProcess')
     gene_nodes = [Node('Gene', name) for name in gene_list]
     member_links = [_member_link(gene_node, v1) for gene_node in gene_nodes]
     return And(member_links)
 
 def _linked_reactome_uniprot(gene_list: List[str]):
-    v1 = Variable('BiologicalProcess')
-    v2 = Variable('UniProt')
-    v3 = Variable('Reactome')
-    v4 = Variable('ReactomeName')
-    v5 = Variable('Location')
-    v6 = Variable('UniprotName')
-    
+    v1 = TypedVariable('V_BiologicalProcess', 'BiologicalProcess')
+    v2 = TypedVariable('V_Uniprot', 'Uniprot')
+    v3 = TypedVariable('V_Reactome', 'Reactome')
+    v4 = TypedVariable('V_ReactomeName', 'Concept')
+    v5 = TypedVariable('V_Location', 'Concept')
+    v6 = TypedVariable('V_UniprotName', 'Concept')
     return And([
         _same_biological_process(gene_list),
-        _evaluation_link('has_name', v3, v4),
-        _context_link(v2, v3, v5),
+        _member_template_link(v2, v1),
         _evaluation_link('has_name', v2, v6),
-        _member_link(v2, v1)
+        _context_link(v2, v3, v5),
+        _evaluation_link('has_name', v3, v4),
     ])
 
 def build_query(query_type: QueryType, gene_list: List[str]):
@@ -116,8 +127,8 @@ class BenchmarkResults:
         stdev = np.std(wall_time)
         txt = []
         txt.append(f'{len(wall_time)} runs ({self.matched_queries} matched)')
-        txt.append(f'Total time: {self.total_wall_time:.2f} seconds')
-        txt.append(f'Average time per round: {mean:.2f} seconds (stdev: {stdev:.2f})')
+        txt.append(f'Total time: {self.total_wall_time:.3f} seconds')
+        txt.append(f'Average time per round: {mean:.3f} seconds (stdev: {stdev:.3f})')
         return '\n'.join(txt)
 
     def elapsed_time(self):
@@ -192,7 +203,7 @@ class DAS_Benchmark:
         self.results = BenchmarkResults()
 
     def _populate_all_genes(self):
-        self.all_genes = self.db.get_all_nodes('Gene')
+        self.all_genes = self.db.get_all_nodes('Gene', names=True)
 
     def _plain_query(self, query_type, print_query_results):
         gene_list = _random_selection(self.all_genes, self.gene_count)
@@ -227,27 +238,6 @@ class DAS_Benchmark:
                 print()
 
     def run(self, print_query_results=False, progress_bar=False):
-        v1 = Variable('V_BiologicalProcess')
-        v2 = Variable('V_UniProt')
-        v3 = Variable('V_Reactome')
-        v4 = Variable('V_ReactomeName')
-        v5 = Variable('V_Location')
-        v6 = Variable('V_UniprotName')
-        v7 = Variable('V_Gene')
-
-        expression = And([
-            #_evaluation_link('has_name', v3, v4),
-            #_context_link(v2, v3, v5),
-            #_evaluation_link('has_name', v2, v6),
-            _member_link(v2, v1)
-        ])
-
-        print(expression)
-        answer: PatternMatchingAnswer = PatternMatchingAnswer()
-        print(expression.matched(self.db, answer))
-        print(answer)
-        return
-
         count = 1
         self.results.start()
         for i in range(self.rounds):
@@ -264,7 +254,7 @@ class DAS_Benchmark:
 
 #benchmark = DAS_Benchmark(
 #    DB_Architecture.COUCHBASE_AND_MONGODB,
-#    100,
+#    1000,
 #    2,
 #    TestLayout.SIMPLE_AND_QUERY
 #)
@@ -273,12 +263,12 @@ class DAS_Benchmark:
 
 benchmark = DAS_Benchmark(
     DB_Architecture.COUCHBASE_AND_MONGODB,
-    1000,
+    100,
     2,
     TestLayout.COMPLEX_AND_QUERY
 )
-benchmark.run(print_query_results=False, progress_bar=True)
-#print(benchmark.results)
+benchmark.run(print_query_results=True, progress_bar=True)
+print(benchmark.results)
 
 
 

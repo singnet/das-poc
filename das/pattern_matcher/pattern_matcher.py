@@ -485,9 +485,24 @@ class Link(Atom):
                     return None
             return answer if answer.freeze() else None
 
+    def _typed_variable_matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
+        first_typed_variable = True
+        for target in self.targets:
+            if isinstance(target, Variable):
+                return False
+            if isinstance(target, TypedVariable):
+                if not first_typed_variable:
+                    return False
+                first_typed_variable = False
+        return all(target.matched(db, answer) for target in self.targets)
+
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
+        if any(isinstance(atom, LinkTemplate) for atom in self.targets):
+            return self._typed_variable_matched(db, answer)
         #print('XXXX', 'matched()', f'entering self = {self}')
         if not all(atom.matched(db, answer) for atom in self.targets):
+            #for atom in self.targets:
+                #print('XXXX', 'atom', atom, 'atom.matched(db, answer)', atom.matched(db, answer))
             #print('XXXX', 'matched()', f'leaving 0 self = {self}')
             return False
         #print('XXXX', f'self = {self}')
@@ -497,7 +512,6 @@ class Link(Atom):
             matched = db.get_matched_links(self.atom_type, target_handles)
             #print('XXXX', f'matched = {matched}')
             #print('XXXX', f'len(matched) = {len(matched)}')
-            #answer.assignments = set([asn for asn in [self._assign_variables(db, link) for link in matched] if asn is not None])
             count = 1
             total = len(matched)
             start = time.perf_counter()
@@ -564,17 +578,15 @@ class LinkTemplate(LogicalExpression):
     TODO: documentation
     """
 
-    def __init__(self, link_type: str, targets: List[str], ordered: bool):
+    def __init__(self, link_type: str, targets: List[TypedVariable], ordered: bool):
         assert all(isinstance(target, TypedVariable) for target in targets)
         self.link_type = link_type
         self.targets = targets
         self.ordered = ordered
+        self.handle = None
 
     def __repr__(self):
         return f'<{self.link_type}: {self.targets}>'
-
-    def get_handle(self):
-        return None
 
     def _assign_variables(self, db: DBInterface, link: str, link_targets: List[str]) -> Optional[Assignment]:
         assert(len(link_targets) == len(self.targets)), f'link_targets = {link_targets} self.targets = {self.targets}'
@@ -648,16 +660,16 @@ class Or(LogicalExpression):
                 continue
             if not or_answer.assignments:
                 if DEBUG: print(f'First term: {term}')
-                if DEBUG: print(f'term_answer:\n{term_answer}')
+                #if DEBUG: print(f'term_answer:\n{term_answer}')
                 or_answer.assignments = term_answer.assignments
                 continue
             if DEBUG: print(f'New term: {term}')
-            if DEBUG: print(f'term_answer:\n{term_answer}')
+            #if DEBUG: print(f'term_answer:\n{term_answer}')
             or_answer.assignments.update(term_answer.assignments)
-            if DEBUG: print(f'or_answer after extending:\n{or_answer}')
+            #if DEBUG: print(f'or_answer after extending:\n{or_answer}')
         if negative_terms:
             joint_negative_term = And([t.term for t in negative_terms])
-            if DEBUG: print(f'Joint negative term: {joint_negative_term}')
+            #if DEBUG: print(f'Joint negative term: {joint_negative_term}')
             term_answer = PatternMatchingAnswer()
             joint_negative_term.matched(db, term_answer)
             #print('XXXX', f'term_answer.assignments = {term_answer.assignments}')
@@ -667,7 +679,7 @@ class Or(LogicalExpression):
             answer.negation = True
         else:
             answer.assignments = or_answer.assignments
-        if DEBUG: print(f'OR result = {answer}')
+        #if DEBUG: print(f'OR result = {answer}')
         return or_matched
 
 class And(LogicalExpression):
@@ -702,7 +714,7 @@ class And(LogicalExpression):
                 continue
             if term_answer.negation:
                 if DEBUG: print(f'Negation: {term}')
-                if DEBUG: print(f'term_answer:\n{term_answer}')
+                #if DEBUG: print(f'term_answer:\n{term_answer}')
                 forbidden_assignments.update(term_answer.assignments)
                 continue
             if not and_answer.assignments:
@@ -716,14 +728,14 @@ class And(LogicalExpression):
             for and_assignment in and_answer.assignments:
                 for term_assignment in term_answer.assignments:
                     joint_assignment = and_assignment.join(term_assignment)
-                    #print(f'ea = {and_assignment}\nta = {term_assignment}\nja = {joint_assignment}\n')
+                    #print(f'XXXX ea = {and_assignment}\nta = {term_assignment}\nja = {joint_assignment}\n')
                     if joint_assignment is not None:
                         joint_assignments.append(joint_assignment)
             and_answer.assignments = joint_assignments
             if DEBUG: print(f'and_answer after join:\n{and_answer}')
         #print(f'FORBIDDEN = {forbidden_assignments}')
         for assignment in and_answer.assignments:
-            #print(f'CHECK: {assignment}')
+            #print(f'XXXX CHECK: {assignment}')
             if all(assignment.check_negation(tabu) for tabu in forbidden_assignments):
                 answer.assignments.add(self.post_process(assignment))
             else:

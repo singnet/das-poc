@@ -148,8 +148,18 @@ class StubDB(DBInterface):
                     raise ValueError(f"Invalid link type: {link[0]}")
         return answer
 
-    def get_all_nodes(self, node_type: str) -> List[str]:
+    def get_all_nodes(self, node_type: str, names: bool = False) -> List[str]:
         return self.all_nodes if node_type == 'Concept' else []
+        if node_type != 'Concept':
+            return []
+        answer = []
+        for node in self.all_nodes:
+            if names:
+                t, n = _split_node_handle(node)
+                answer.append(n)
+            else:
+                answer.append(node)
+        return answer
 
     def get_matched_type_template(self, template: List[Any]) -> List[str]:
         assert len(template) == 3

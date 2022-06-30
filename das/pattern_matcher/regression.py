@@ -4,7 +4,11 @@ from das.pattern_matcher.pattern_matcher import (And, Link, LogicalExpression,
                                                  PatternMatchingAnswer,
                                                  Variable, TypedVariable)
 from das.pattern_matcher.stub_db import StubDB
-
+from das.pattern_matcher.couch_mongo_db import CouchMongoDB
+from couchbase.auth import PasswordAuthenticator
+from couchbase.bucket import Bucket
+from couchbase.cluster import Cluster
+from das.helpers import get_mongodb
 
 def match(db_api: DBInterface, expression: LogicalExpression):
     print(f"Matching {expression}")
@@ -21,7 +25,27 @@ if __name__ == "__main__":
         "---------------------------- Integration tests ---------------------------------"
     )
 
+    mongodb_specs = {
+        "hostname": "mongo",
+        "port":  27017,
+        "username": "dbadmin",
+        "password": "das#secret",
+        "database": "TOY",
+    }
+    couchbase_specs = {
+        "hostname": "couchbase",
+        "username": "dbadmin",
+        "password": "das#secret",
+    }
+    cluster = Cluster(
+        f'couchbase://{couchbase_specs["hostname"]}',
+        authenticator=PasswordAuthenticator(
+            couchbase_specs["username"], couchbase_specs["password"]
+        ),
+    )
+
     db: DBInterface = StubDB()
+    #db: DBInterface = CouchMongoDB(cluster.bucket("das"), get_mongodb(mongodb_specs))
 
     n1 = Node("Concept", "human")
     n2 = Node("Concept", "mammal")
@@ -294,4 +318,10 @@ if __name__ == "__main__":
     print(
         "\n\n\n\n================================================================================\n"
     )
+
+    match(db, Link("Inheritance", [Variable("V1"), Variable("V2")], True))
+    match(db, LinkTemplate("Inheritance", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
+    match(db, Link("List", [Variable("V1"), Variable("V2")], True))
+    match(db, LinkTemplate("List", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
+
 

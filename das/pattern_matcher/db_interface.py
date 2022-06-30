@@ -39,7 +39,7 @@ class DBInterface(ABC):
         pass
 
     @abstractmethod
-    def get_all_nodes(self, node_type: str) -> List[str]:
+    def get_all_nodes(self, node_type: str, names: bool = False) -> List[str]:
         pass
 
     @abstractmethod

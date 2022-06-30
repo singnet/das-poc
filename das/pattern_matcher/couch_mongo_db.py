@@ -122,7 +122,8 @@ class CouchMongoDB(DBInterface):
     # DB interface methods
 
     def node_exists(self, node_type: str, node_name: str) -> bool:
-        return build_mongo_node_name(node_type, node_name) in self.node_handles
+        #return build_mongo_node_name(node_type, node_name) in self.node_handles
+        return node_name in self.node_handles
 
     def link_exists(self, link_type: str, target_handles: List[str]) -> bool:
         link_handle = self._build_link_handle(link_type, target_handles)
@@ -131,7 +132,8 @@ class CouchMongoDB(DBInterface):
 
     def get_node_handle(self, node_type: str, node_name: str) -> str:
         try:
-            return self.node_handles[build_mongo_node_name(node_type, node_name)]
+            #return self.node_handles[build_mongo_node_name(node_type, node_name)]
+            return self.node_handles[node_name]
         except KeyError:
             raise ValueError(f'Invalid node: type={node_type} name={node_name}')
 
@@ -169,14 +171,20 @@ class CouchMongoDB(DBInterface):
         pattern_hash = Hasher.apply_alg("".join([link_type_hash, *target_handles]))
         return self._retrieve_couchbase_value(self.couch_patterns_collection, pattern_hash)
 
-    def get_all_nodes(self, node_type: str) -> List[str]:
+    def get_all_nodes(self, node_type: str, names: bool = False) -> List[str]:
         node_type_hash = self.atom_type_hash.get(node_type, None)
         if not node_type_hash:
             raise ValueError(f'Invalid node type: {node_type}')
-        return [\
-            document[MongoFieldNames.ID_HASH] \
-            for document in self.node_documents.values() \
-            if document[MongoFieldNames.TYPE] == node_type_hash]
+        if names:
+            return [\
+                document[MongoFieldNames.NODE_NAME] \
+                for document in self.node_documents.values() \
+                if document[MongoFieldNames.TYPE] == node_type_hash]
+        else:
+            return [\
+                document[MongoFieldNames.ID_HASH] \
+                for document in self.node_documents.values() \
+                if document[MongoFieldNames.TYPE] == node_type_hash]
 
     def get_matched_type_template(self, template: List[Any]) -> List[str]:
         try:
