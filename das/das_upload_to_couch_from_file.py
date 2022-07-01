@@ -126,8 +126,8 @@ def main(couchbase_specs, input_filename: str) -> None:
     i += 1
     done += len(v)
     if i % 100000 == 0:
-      logger.info(f'Entries uploaded: [{done}/{total_entries}]')
-  logger.info(f'Entries uploaded: [{done}/{total_entries}]')
+      logger.info(f'Entries uploaded: [{done:n}/{total_entries:n}]')
+  logger.info(f'Entries uploaded: [{done:n}/{total_entries:n}]')
 
   # Patterns
   with open(patterns_file_name, 'r') as f:
@@ -146,8 +146,8 @@ def main(couchbase_specs, input_filename: str) -> None:
     i += 1
     done += len(v)
     if i % 100000 == 0:
-      logger.info(f'Patterns uploaded: [{done}/{total_entries}]')
-  logger.info(f'Patterns uploaded: [{done}/{total_entries}]')
+      logger.info(f'Patterns uploaded: [{done:n}/{total_entries:n}]')
+  logger.info(f'Patterns uploaded: [{done:n}/{total_entries:n}]')
 
   # Templates
   with open(templates_file_name, 'r') as f:
@@ -166,8 +166,8 @@ def main(couchbase_specs, input_filename: str) -> None:
     i += 1
     done += len(v)
     if i % 100000 == 0:
-      logger.info(f'Templates uploaded: [{done}/{total_entries}]')
-  logger.info(f'Templates uploaded: [{done}/{total_entries}]')
+      logger.info(f'Templates uploaded: [{done:n}/{total_entries:n}]')
+  logger.info(f'Templates uploaded: [{done:n}/{total_entries:n}]')
 
 def run():
   parser = argparse.ArgumentParser()
