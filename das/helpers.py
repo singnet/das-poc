@@ -2,10 +2,12 @@ import logging
 import math
 import os
 from pathlib import Path
+from typing import Any, Dict
 
 from pymongo import MongoClient
 
 from das.atomese2metta.translator import AtomType, Type
+from das.mongo_schema import FieldNames
 
 
 def get_mongodb(mongodb_specs):
@@ -89,3 +91,9 @@ def get_logger(name='das'):
   debug = debug == 'true' or debug == '1'
   logger.setLevel(logging.DEBUG if debug else logging.INFO)
   return logger
+
+def keys_as_list(link_document: Dict[str, Any]):
+  if FieldNames.KEYS in link_document:
+    return link_document[FieldNames.KEYS]
+  key_value = sorted(link_document.items(), key=lambda x: x[0])
+  return [v for k, v in key_value if k.startswith(FieldNames.KEY_PREFIX)]
