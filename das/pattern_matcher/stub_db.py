@@ -165,5 +165,6 @@ class StubDB(DBInterface):
         assert len(template) == 3
         return self.template_index.get(str(template), [])
         
-
-
+    def get_node_name(self, node_handle: str) -> str:
+        _, name = _split_node_handle(node)
+        return name

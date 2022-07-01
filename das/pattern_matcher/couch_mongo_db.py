@@ -193,3 +193,9 @@ class CouchMongoDB(DBInterface):
         except KeyError as exception:
             raise ValueError(f'{exception}\nInvalid type')
         return self._retrieve_couchbase_value(self.couch_templates_collection, template_hash)
+
+    def get_node_name(self, node_handle: str) -> str:
+        document = self.node_documents.get(node_handle, None)
+        if not document:
+            raise ValueError(f'Invalid node handle: {node_handle}')
+        return document[MongoFieldNames.NODE_NAME]
