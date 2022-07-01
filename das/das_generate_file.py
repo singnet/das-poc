@@ -113,7 +113,7 @@ def populate_sets(hasher: Hasher, fh1, fh2, fh3, collection: Collection, bucket,
     count += 1
     if count % 100000 == 0:
       logger.debug("\n")
-      logger.info("Documents processed: [{}/{}]".format(count, total))
+      logger.info("Documents processed: [{:n}/{:n}]".format(count, total))
       logger.debug("Batch time (sec):         {}".format(batch_clock.elapsed_time_seconds()))
       logger.debug("Block full (sec):         {}".format(acc_clock_full.acc_seconds()))
       logger.debug("Block1 (sec):             {}".format(acc_clock_block1.acc_seconds()))
@@ -149,7 +149,7 @@ def populate_sets(hasher: Hasher, fh1, fh2, fh3, collection: Collection, bucket,
     acc_clock_full.pause()
 
   cursor.close()
-  logger.info("Documents processed: [{}/{}]".format(count, total))
+  logger.info("Documents processed: [{:n}/{:n}]".format(count, total))
 
 
 def create_collections(bucket, collections_names=None):
@@ -256,16 +256,15 @@ def main(mongodb_specs, couchbase_specs, file_path, index_path):
     populate_sets(hasher, fh1, fh2, fh3, db["links"], bucket, [])
 
   # TODO: Use python. (?)
-  logger.info("Sorting index files (1/4)")
+  logger.info("Sorting index files (1/3)")
   os.system(f"sort -t , -k 1,1 {atoms_file_path} > {atoms_file_path}.sorted")
-  logger.info("Sorting index files (2/4)")
+  logger.info("Sorting index files (2/3)")
   os.system(f"sort -t , -k 1,1 {patterns_file_path} > {patterns_file_path}.sorted")
-  logger.info("Sorting index files (3/4)")
+  logger.info("Sorting index files (3/3)")
   os.system(f"sort -t , -k 1,1 {templates_file_path} > {templates_file_path}.sorted")
-  logger.info("Sorting index files (4/4)")
-  shutil.move(f"{atoms_file_path}.sorted", atoms_file_path)
-  shutil.move(f"{patterns_file_path}.sorted", patterns_file_path)
-  shutil.move(f"{templates_file_path}.sorted", templates_file_path)
+  os.rename(f"{atoms_file_path}.sorted", atoms_file_path)
+  os.rename(f"{patterns_file_path}.sorted", patterns_file_path)
+  os.rename(f"{templates_file_path}.sorted", templates_file_path)
 
 
 def run():

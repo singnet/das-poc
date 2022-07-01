@@ -45,3 +45,7 @@ class DBInterface(ABC):
     @abstractmethod
     def get_matched_type_template(self, template: List[Any]) -> List[str]:
         pass
+
+    @abstractmethod
+    def get_node_name(self, node_handle: str) -> str:
+        pass
