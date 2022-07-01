@@ -90,3 +90,14 @@ def test_get_matched_links(das_db: DASMongoDB):
     assert all(
         isinstance(h, str) for h in res
     ), "get_matched_links should return a list of strings"
+
+
+def test_get_node_name(das_db: DASMongoDB):
+    assert (
+        das_db.get_node_name("13ba6904f6987307e3bce206c350fdf1")
+        == "\"Concept:ent\""
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        das_db.get_node_name("invalid_handle")
+    assert "Invalid node handle: invalid_handle" == str(excinfo.value)
