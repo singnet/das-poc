@@ -213,3 +213,9 @@ class DASMongoDB(DBInterface):
 
     def get_matched_type_template(self, template: List[Any]) -> List[str]:
         return list(self._retrieve_mongo_documents_by_type_match(template))
+
+    def get_node_name(self, node_handle: str) -> str:
+        document = self.node_documents.get(node_handle, None)
+        if not document:
+            raise ValueError(f'Invalid node handle: {node_handle}')
+        return document[MongoFieldNames.NODE_NAME]
