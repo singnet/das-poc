@@ -13,3 +13,4 @@ class FieldNames(str, Enum):
     ID_HASH = '_id'
     TYPE = 'type'
     KEY_PREFIX = 'key'
+    KEYS = 'keys'
