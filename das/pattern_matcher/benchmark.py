@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 import time
-from typing import List
+from typing import List, Dict
 from enum import Enum, auto
 import numpy as np
-import os
+import re
 from couchbase.auth import PasswordAuthenticator
 from couchbase.bucket import Bucket
 from couchbase.cluster import Cluster
@@ -24,6 +24,7 @@ class QueryType(int, Enum):
     TODO: documentation
     """
     SAME_BIOLOGICAL_PROCESS = auto()
+    SAME_OR_INHERITED_BIOLOGICAL_PROCESS = auto()
     REACTOME_LINKED_TO_UNIPROT = auto()
 
 class TestLayout(int, Enum):
@@ -31,6 +32,7 @@ class TestLayout(int, Enum):
     TODO: documentation
     """
     SIMPLE_AND_QUERY = auto()
+    SIMPLE_OR_QUERY = auto()
     COMPLEX_AND_QUERY = auto()
 
 def _single_random_selection(v):
@@ -47,6 +49,14 @@ def _random_selection(v, n=1):
         a.remove(s)
         selected.append(s)
     return selected
+
+def _inheritance_template_link(va, vb):
+    assert(all(isinstance(v, TypedVariable) for v in [va, vb]))
+    return LinkTemplate('Inheritance', [va, vb], True)
+
+def _inheritance_link(a, b):
+    assert(not any(isinstance(v, TypedVariable) for v in [a, b]))
+    return Link('Inheritance', [a, b], True)
 
 def _member_template_link(va, vb):
     assert(all(isinstance(v, TypedVariable) for v in [va, vb]))
@@ -87,6 +97,26 @@ def _same_biological_process(gene_list: List[str]):
     member_links = [_member_link(gene_node, v1) for gene_node in gene_nodes]
     return And(member_links)
 
+def _same_or_inherited_biological_process(gene_list: List[str]):
+    v1 = Variable('V1_BiologicalProcess')
+    v2 = Variable('V2_BiologicalProcess')
+    tv1 = TypedVariable('V1_BiologicalProcess', 'BiologicalProcess')
+    tv2 = TypedVariable('V2_BiologicalProcess', 'BiologicalProcess')
+    tv3 = TypedVariable('V3_BiologicalProcess', 'BiologicalProcess')
+    gene_node1 = Node('Gene', gene_list[0])
+    gene_node2 = Node('Gene', gene_list[1])
+    return And([
+        _member_link(gene_node1, v1),
+        Or([
+            And([
+                _member_link(gene_node2, v2),
+                _inheritance_template_link(tv2, tv3),
+                _inheritance_template_link(tv1, tv3),
+            ]),
+            _member_link(gene_node2, v1),
+        ])
+    ])
+
 def _linked_reactome_uniprot(gene_list: List[str]):
     v1 = TypedVariable('V_BiologicalProcess', 'BiologicalProcess')
     v2 = TypedVariable('V_Uniprot', 'Uniprot')
@@ -105,10 +135,12 @@ def _linked_reactome_uniprot(gene_list: List[str]):
 def build_query(query_type: QueryType, gene_list: List[str]):
     if query_type == QueryType.SAME_BIOLOGICAL_PROCESS:
         return _same_biological_process(gene_list)
+    elif query_type == QueryType.SAME_OR_INHERITED_BIOLOGICAL_PROCESS:
+        return _same_or_inherited_biological_process(gene_list)
     elif query_type == QueryType.REACTOME_LINKED_TO_UNIPROT:
         return _linked_reactome_uniprot(gene_list)
     else:
-        raise ValueError("Invalid query type: {query_type}")
+        raise ValueError(f"Invalid query type: {query_type.name}")
 
 class BenchmarkResults:
 
@@ -128,7 +160,7 @@ class BenchmarkResults:
         txt = []
         txt.append(f'{len(wall_time)} runs ({self.matched_queries} matched)')
         txt.append(f'Total time: {self.total_wall_time:.3f} seconds')
-        txt.append(f'Average time per round: {mean:.3f} seconds (stdev: {stdev:.3f})')
+        txt.append(f'Average time per query: {mean:.3f} seconds (stdev: {stdev:.3f})')
         return '\n'.join(txt)
 
     def elapsed_time(self):
@@ -175,19 +207,11 @@ class DAS_Benchmark:
             "username": "dbadmin",
             "password": "das#secret",
             "database": "BIO",
-            #"hostname": os.environ.get("DAS_MONGODB_HOSTNAME", "localhost"),
-            #"port": os.environ.get("DAS_MONGODB_PORT", 27017),
-            #"username": os.environ.get("DAS_DATABASE_USERNAME", "dbadmin"),
-            #"password": os.environ.get("DAS_DATABASE_PASSWORD", "das#secret"),
-            #"database": os.environ.get("DAS_DATABASE_NAME", "BIO"),
         }
         couchbase_specs = {
             "hostname": "couchbase",
             "username": "dbadmin",
             "password": "das#secret",
-            #"hostname": os.environ.get("DAS_COUCHBASE_HOSTNAME", "localhost"),
-            #"username": os.environ.get("DAS_DATABASE_USERNAME", "dbadmin"),
-            #"password": os.environ.get("DAS_DATABASE_PASSWORD", "das#secret"),
         }
         cluster = Cluster(
             f'couchbase://{couchbase_specs["hostname"]}',
@@ -198,12 +222,24 @@ class DAS_Benchmark:
         if architecture == DB_Architecture.COUCHBASE_AND_MONGODB:
             self.db = CouchMongoDB(cluster.bucket("das"), get_mongodb(mongodb_specs))
         else:
-            raise ValueError("Invalid DB architecture: {architecture}")
+            raise ValueError(f"Invalid DB architecture: {architecture.name}")
         self._populate_all_genes()
         self.results = BenchmarkResults()
 
     def _populate_all_genes(self):
         self.all_genes = self.db.get_all_nodes('Gene', names=True)
+
+    def _add_node_names(self, query_answer: PatternMatchingAnswer):
+        txt = str(query_answer)
+        handles = re.findall("'[a-z0-9]{32}'", txt)
+        for quoted_handle in handles:
+            handle = quoted_handle[1:-1]
+            try:
+                node_name = self.db.get_node_name(handle)
+                txt = re.sub(quoted_handle, f'{quoted_handle} ({node_name})', txt)
+            except Exception:
+                pass
+        return txt
 
     def _plain_query(self, query_type, print_query_results):
         gene_list = _random_selection(self.all_genes, self.gene_count)
@@ -217,9 +253,13 @@ class DAS_Benchmark:
             if print_query_results:
                 print(query)
                 print(query_answer)
+                print(self._add_node_names(query_answer))
 
     def _simple_and_query(self, print_query_results):
         self._plain_query(QueryType.SAME_BIOLOGICAL_PROCESS, print_query_results)
+
+    def _simple_or_query(self, print_query_results):
+        self._plain_query(QueryType.SAME_OR_INHERITED_BIOLOGICAL_PROCESS, print_query_results)
 
     def _complex_and_query(self, print_query_results):
         self._plain_query(QueryType.REACTOME_LINKED_TO_UNIPROT, print_query_results)
@@ -243,31 +283,42 @@ class DAS_Benchmark:
         for i in range(self.rounds):
             if self.test_layout == TestLayout.SIMPLE_AND_QUERY:
                 self._simple_and_query(print_query_results)
+            elif self.test_layout == TestLayout.SIMPLE_OR_QUERY:
+                self._simple_or_query(print_query_results)
             elif self.test_layout == TestLayout.COMPLEX_AND_QUERY:
                 self._complex_and_query(print_query_results)
             else:
-                raise ValueError("Invalid test layout: {self.test_layout}")
+                raise ValueError(f"Invalid test layout: {self.test_layout.name}")
             if progress_bar:
                 self._print_progress_bar(count, self.rounds)
             count += 1
         self.results.stop()
 
-#benchmark = DAS_Benchmark(
-#    DB_Architecture.COUCHBASE_AND_MONGODB,
-#    1000,
-#    2,
-#    TestLayout.SIMPLE_AND_QUERY
-#)
-#benchmark.run(print_query_results=False, progress_bar=True)
-#print(benchmark.results)
+benchmark = DAS_Benchmark(
+    DB_Architecture.COUCHBASE_AND_MONGODB,
+    1000,
+    2,
+    TestLayout.SIMPLE_AND_QUERY
+)
+benchmark.run(print_query_results=False, progress_bar=True)
+print(benchmark.results)
 
 benchmark = DAS_Benchmark(
     DB_Architecture.COUCHBASE_AND_MONGODB,
-    100,
+    1000,
     2,
     TestLayout.COMPLEX_AND_QUERY
 )
-benchmark.run(print_query_results=True, progress_bar=True)
+benchmark.run(print_query_results=False, progress_bar=True)
+print(benchmark.results)
+
+benchmark = DAS_Benchmark(
+    DB_Architecture.COUCHBASE_AND_MONGODB,
+    1000,
+    2,
+    TestLayout.SIMPLE_OR_QUERY
+)
+benchmark.run(print_query_results=False, progress_bar=True)
 print(benchmark.results)
 
 
