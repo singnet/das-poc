@@ -1,4 +1,5 @@
 import os
+import re
 
 from typing import List
 import pytest
@@ -7,7 +8,7 @@ from couchbase.bucket import Bucket
 from couchbase.cluster import Cluster
 
 from das.helpers import get_mongodb
-from das.pattern_matcher.couch_mongo_db import CouchMongoDB, build_mongo_node_name
+from das.pattern_matcher.couch_mongo_db import CouchMongoDB
 from das.couchbase_schema import CollectionNames as CouchbaseCollectionNames
 from das.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
 
@@ -43,6 +44,16 @@ def couch_db():
 def db(couch_db, mongo_db):
     return CouchMongoDB(couch_db, mongo_db)
 
+def _add_node_names(db, txt):
+    handles = re.findall("'[a-z0-9]{32}'", txt)
+    for quoted_handle in handles:
+        handle = quoted_handle[1:-1]
+        try:
+            node_name = db.get_node_name(handle)
+            txt = re.sub(quoted_handle, f'{quoted_handle} ({node_name})', txt, count=1)
+        except Exception:
+            pass
+    return txt
 
 def test_db_creation(db: CouchMongoDB):
     assert db.couch_db
@@ -125,7 +136,7 @@ def test_get_node_handle(db: CouchMongoDB):
         handle = db.get_node_handle('Concept', name)
         collection = db.mongo_db.get_collection(MongoCollectionNames.NODES)
         document = collection.find_one({'_id': handle})
-        assert document[MongoFieldNames.NODE_NAME] == build_mongo_node_name('Concept', name)
+        assert document[MongoFieldNames.NODE_NAME] == name
     with pytest.raises(ValueError):
         db.get_node_handle('Concept', 'blah')
 
@@ -201,18 +212,22 @@ def test_get_matched_links(db: CouchMongoDB):
     animal = db.get_node_handle('Concept', 'animal')
     human = db.get_node_handle('Concept', 'human')
     monkey = db.get_node_handle('Concept', 'monkey')
+    chimp = db.get_node_handle('Concept', 'chimp')
     assert len(db.get_matched_links('Inheritance', ['*', '*'])) == 12
     assert len(db.get_matched_links('Inheritance', ['*', mammal])) == 4
     assert len(db.get_matched_links('Inheritance', [mammal, '*'])) == 1
     assert len(db.get_matched_links('Inheritance', ['*', animal])) == 3
     assert len(db.get_matched_links('Inheritance', [animal, '*'])) == 0
     assert len(db.get_matched_links('Inheritance', [mammal, animal])) == 1
+    assert len(db.get_matched_links('Inheritance', [chimp, mammal])) == 1
     assert len(db.get_matched_links('Inheritance', [animal, mammal])) == 0
     assert len(db.get_matched_links('Similarity', ['*', '*'])) == 7
-    assert len(db.get_matched_links('Similarity', [human, '*'])) == 2
-    assert len(db.get_matched_links('Similarity', ['*', human])) == 2
+    assert len(db.get_matched_links('Similarity', [human, '*'])) == 3
+    assert len(db.get_matched_links('Similarity', ['*', human])) == 3
     assert len(db.get_matched_links('Similarity', [monkey, '*'])) == 2
     assert len(db.get_matched_links('Similarity', ['*', monkey])) == 2
+    assert len(db.get_matched_links('Similarity', [chimp, '*'])) == 2
+    assert len(db.get_matched_links('Similarity', ['*', chimp])) == 2
     assert len(db.get_matched_links('Similarity', [monkey, human])) == 1
     assert len(db.get_matched_links('Similarity', [human, monkey])) == 1
     assert len(db.get_matched_links('Similarity', [human, mammal])) == 0

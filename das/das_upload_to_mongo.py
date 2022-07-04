@@ -82,7 +82,7 @@ class DAS:
       "type": self.retrieve_id(atom_type.type)
       if atom_type.type is not None
       else None,
-      "name": atom_type.symbol,
+      "name": atom_type.symbol.replace('"', ''),
     }
 
   def expression_to_dict(self, expression: Expression) -> dict:
