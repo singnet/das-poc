@@ -64,6 +64,7 @@ def test_db_creation(db: CouchMongoDB):
     assert len(db.node_documents) == 14
     assert len(db.node_handles) == 14
     assert len(db.atom_type_hash) == 5
+    assert len(db.atom_type_hash_reverse) == 5
     assert len(db.type_hash) == 5
 
 def test_node_exists(db: CouchMongoDB):
