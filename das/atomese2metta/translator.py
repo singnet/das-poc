@@ -171,8 +171,9 @@ class Translator:
   @staticmethod
   def replace_nodesymbol(type_, value) -> Symbol:
     if re.match(r'^".*"$', value):
-      return f'"{type_}:{value[1:]}'
-    return f"{type_}:{value}"
+      return f'"{value[1:]}'
+    else:
+      return f"{value}"
 
   @staticmethod
   def symbol_name2metta(symbol) -> Symbol:

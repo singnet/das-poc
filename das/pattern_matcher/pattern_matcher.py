@@ -502,13 +502,14 @@ class Link(Atom):
         #print('XXXX', 'matched()', f'entering self = {self}')
         if not all(atom.matched(db, answer) for atom in self.targets):
             #for atom in self.targets:
-                #print('XXXX', 'atom', atom, 'atom.matched(db, answer)', atom.matched(db, answer))
+            #    print('XXXX', 'atom', atom, 'atom.matched(db, answer)', atom.matched(db, answer))
             #print('XXXX', 'matched()', f'leaving 0 self = {self}')
             return False
         #print('XXXX', f'self = {self}')
         target_handles = [atom.get_handle(db) for atom in self.targets]
         #print('XXXX', f'target_handles = {target_handles}')
         if any(handle == WILDCARD for handle in target_handles):
+            #print('XXXX', f'self.atom_type = {self.atom_type} target_handles = {target_handles}')
             matched = db.get_matched_links(self.atom_type, target_handles)
             #print('XXXX', f'matched = {matched}')
             #print('XXXX', f'len(matched) = {len(matched)}')

@@ -19,9 +19,6 @@ from .db_interface import DBInterface, WILDCARD
 
 UNORDERED_LINK_TYPES = ['Similarity', 'Set']
 
-def build_mongo_node_name(node_type: str, node_name: str) -> str:
-    return f'"{node_type}:{node_name}"'
-
 class CouchMongoDB(DBInterface):
 
     def __init__(self, couch_db: Bucket, mongo_db: Database):
@@ -41,6 +38,10 @@ class CouchMongoDB(DBInterface):
         self.atom_type_hash = None
         self._prefetch()
 
+    def _build_composite_node_name(self, node_type: str, node_name: str) -> str:
+        node_type_hash = self.atom_type_hash.get(node_type, None)
+        return f'{node_type_hash}:{node_name}'
+
     def _prefetch(self) -> None:
         self.node_handles = {}
         self.node_documents = {}
@@ -49,7 +50,8 @@ class CouchMongoDB(DBInterface):
         collection = self.mongo_db.get_collection(MongoCollectionNames.NODES)
         for document in collection.find():
             self.node_documents[document[MongoFieldNames.ID_HASH]] = document
-            self.node_handles[document[MongoFieldNames.NODE_NAME]] = document[MongoFieldNames.ID_HASH]
+            self.node_handles[f'{document[MongoFieldNames.TYPE]}:{document[MongoFieldNames.NODE_NAME]}'] = \
+                document[MongoFieldNames.ID_HASH]
         collection = self.mongo_db.get_collection(MongoCollectionNames.ATOM_TYPES)
         for document in collection.find():
             self.atom_type_hash[document[MongoFieldNames.TYPE_NAME]] = document[MongoFieldNames.ID_HASH]
@@ -122,8 +124,7 @@ class CouchMongoDB(DBInterface):
     # DB interface methods
 
     def node_exists(self, node_type: str, node_name: str) -> bool:
-        #return build_mongo_node_name(node_type, node_name) in self.node_handles
-        return node_name in self.node_handles
+        return self._build_composite_node_name(node_type, node_name) in self.node_handles
 
     def link_exists(self, link_type: str, target_handles: List[str]) -> bool:
         link_handle = self._build_link_handle(link_type, target_handles)
@@ -132,8 +133,7 @@ class CouchMongoDB(DBInterface):
 
     def get_node_handle(self, node_type: str, node_name: str) -> str:
         try:
-            #return self.node_handles[build_mongo_node_name(node_type, node_name)]
-            return self.node_handles[node_name]
+            return self.node_handles[self._build_composite_node_name(node_type, node_name)]
         except KeyError:
             raise ValueError(f'Invalid node: type={node_type} name={node_name}')
 

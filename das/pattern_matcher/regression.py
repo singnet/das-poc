@@ -324,4 +324,7 @@ if __name__ == "__main__":
     match(db, Link("List", [Variable("V1"), Variable("V2")], True))
     match(db, LinkTemplate("List", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
 
+    match(db, Link("Similarity", [Node("Concept", "human"), Variable("V1")], False))
+    match(db, Link("Similarity", [Variable("V1"), Node("Concept", "human")], False))
+
 

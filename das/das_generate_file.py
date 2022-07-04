@@ -103,11 +103,20 @@ def populate_sets(hasher: Hasher, fh1, fh2, fh3, collection: Collection, bucket,
         keys_copy = keys.copy()
         for pos in mask:
           keys_copy[pos-1] = '*'
-        fh2.write("{},{},{}\n".format(hasher.apply_alg(''.join(keys_copy)), _id, ','.join(outgoing_list[1:])))
+        if doc['set_from']:
+            keys_copy = [keys_copy[0], *sorted(keys_copy[1:])]
+            targets = sorted(keys[1:])
+        else:
+            targets = keys[1:]
+        fh2.write("{},{},{}\n".format(hasher.apply_alg(''.join(keys_copy)), _id, ','.join(targets)))
 
     template = _build_template(doc['type'])
     template_key = hasher.apply_alg(flatten_list(template))
-    fh3.write("{},{},{}\n".format(template_key, _id, ','.join(outgoing_list[1:])))
+    if doc['set_from']:
+        targets = sorted(keys[1:])
+    else:
+        targets = keys[1:]
+    fh3.write("{},{},{}\n".format(template_key, _id, ','.join(targets)))
     acc_clock_block5.pause()
 
     count += 1
