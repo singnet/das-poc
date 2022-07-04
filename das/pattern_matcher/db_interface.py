@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 
 WILDCARD = '*'
+UNORDERED_LINK_TYPES = ['Similarity', 'Set']
 
 class DBInterface(ABC):
     """

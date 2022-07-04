@@ -14,20 +14,19 @@ from das.hashing import Hasher, flatten_list
 from das.couchbase_schema import CollectionNames as CouchbaseCollectionNames
 from das.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
 
-from .db_interface import DBInterface, WILDCARD
+from .db_interface import DBInterface, WILDCARD, UNORDERED_LINK_TYPES
 
-
-UNORDERED_LINK_TYPES = ['Similarity', 'Set']
 
 class CouchMongoDB(DBInterface):
 
     def __init__(self, couch_db: Bucket, mongo_db: Database):
         self.couch_db = couch_db
         self.mongo_db = mongo_db
-        self.couch_incoming_collection = couch_db.collection(CouchbaseCollectionNames.INCOMING_SET)
-        self.couch_outgoing_collection = couch_db.collection(CouchbaseCollectionNames.OUTGOING_SET)
-        self.couch_patterns_collection = couch_db.collection(CouchbaseCollectionNames.PATTERNS)
-        self.couch_templates_collection = couch_db.collection(CouchbaseCollectionNames.TEMPLATES)
+        if couch_db:
+            self.couch_incoming_collection = couch_db.collection(CouchbaseCollectionNames.INCOMING_SET)
+            self.couch_outgoing_collection = couch_db.collection(CouchbaseCollectionNames.OUTGOING_SET)
+            self.couch_patterns_collection = couch_db.collection(CouchbaseCollectionNames.PATTERNS)
+            self.couch_templates_collection = couch_db.collection(CouchbaseCollectionNames.TEMPLATES)
         self.mongo_link_collection = {
             '1': self.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_1),
             '2': self.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_2),
@@ -36,6 +35,8 @@ class CouchMongoDB(DBInterface):
         self.node_handles = None
         self.node_documents = None
         self.atom_type_hash = None
+        self.type_hash = None
+        self.atom_type_hash_reverse = None
         self._prefetch()
 
     def _build_composite_node_name(self, node_type: str, node_name: str) -> str:
@@ -47,6 +48,7 @@ class CouchMongoDB(DBInterface):
         self.node_documents = {}
         self.atom_type_hash = {}
         self.type_hash = {}
+        self.atom_type_hash_reverse = {}
         collection = self.mongo_db.get_collection(MongoCollectionNames.NODES)
         for document in collection.find():
             self.node_documents[document[MongoFieldNames.ID_HASH]] = document
@@ -56,6 +58,7 @@ class CouchMongoDB(DBInterface):
         for document in collection.find():
             self.atom_type_hash[document[MongoFieldNames.TYPE_NAME]] = document[MongoFieldNames.ID_HASH]
             self.type_hash[document[MongoFieldNames.ID_HASH]] = document[MongoFieldNames.TYPE]
+            self.atom_type_hash_reverse[document[MongoFieldNames.ID_HASH]] = document[MongoFieldNames.TYPE_NAME]
 
     def _retrieve_mongo_document(self, handle: str, arity=-1) -> dict:
         mongo_filter = {MongoFieldNames.ID_HASH: handle}
@@ -70,6 +73,7 @@ class CouchMongoDB(DBInterface):
         document = self.node_documents.get(handle, None)
         if document:
             return document
+        # The order of keys in search is important. Greater to smallest probability of proper arity
         for collection in [self.mongo_link_collection[key] for key in ['2', '1', 'N']]:
             document = collection.find_one(mongo_filter)
             if document:
