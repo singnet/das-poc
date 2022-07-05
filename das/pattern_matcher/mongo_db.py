@@ -7,7 +7,6 @@ from das.helpers import keys_as_list
 from das.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
 from .couch_mongo_db import CouchMongoDB
 
-
 class MongoDB(CouchMongoDB):
 
     def __init__(self, mongo_db: Database): 
@@ -109,11 +108,17 @@ class MongoDB(CouchMongoDB):
         if link_type in UNORDERED_LINK_TYPES:
             target_handles = sorted(target_handles)
         keys = [link_type_hash, *target_handles]
-        return [document[MongoFieldNames.ID_HASH] for document in self._retrieve_mongo_document_by_keys(keys)]
+        return [{
+            'handle': document[MongoFieldNames.ID_HASH],
+            'targets': self._get_mongo_document_keys(document)[1:]
+        } for document in self._retrieve_mongo_document_by_keys(keys)]
 
     def get_matched_type_template(self, template: List[Any]) -> List[str]:
         try:
             template = self._build_hash_template(template)
         except KeyError as exception:
             raise ValueError(f'{exception}\nInvalid type')
-        return [document[MongoFieldNames.ID_HASH] for document in self._retrieve_mongo_documents_by_type_match(template)]
+        return [{
+            'handle': document[MongoFieldNames.ID_HASH],
+            'targets': self._get_mongo_document_keys(document)[1:]
+        } for document in self._retrieve_mongo_documents_by_type_match(template)]

@@ -7,7 +7,10 @@ from typing import Dict, FrozenSet, List, Optional, Set, Union
 
 from das.pattern_matcher.db_interface import DBInterface, WILDCARD
 
-DEBUG = False
+DEBUG_AND = False
+DEBUG_OR = False
+DEBUG_NOT = False
+DEBUG_LINK = False
 
 CONFIG = {
     # Enforce different values for different variables in ordered assignments
@@ -499,20 +502,21 @@ class Link(Atom):
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
         if any(isinstance(atom, LinkTemplate) for atom in self.targets):
             return self._typed_variable_matched(db, answer)
-        #print('XXXX', 'matched()', f'entering self = {self}')
+        if DEBUG_LINK: print('matched()', f'entering self = {self}')
         if not all(atom.matched(db, answer) for atom in self.targets):
-            #for atom in self.targets:
-            #    print('XXXX', 'atom', atom, 'atom.matched(db, answer)', atom.matched(db, answer))
-            #print('XXXX', 'matched()', f'leaving 0 self = {self}')
+            if DEBUG_LINK:
+                for atom in self.targets:
+                    print('atom', atom, 'atom.matched(db, answer)', atom.matched(db, answer))
+                print('matched()', f'leaving 0 self = {self}')
             return False
-        #print('XXXX', f'self = {self}')
+        if DEBUG_LINK: print(f'self = {self}')
         target_handles = [atom.get_handle(db) for atom in self.targets]
-        #print('XXXX', f'target_handles = {target_handles}')
+        if DEBUG_LINK: print(f'target_handles = {target_handles}')
         if any(handle == WILDCARD for handle in target_handles):
-            #print('XXXX', f'self.atom_type = {self.atom_type} target_handles = {target_handles}')
+            if DEBUG_LINK: print(f'self.atom_type = {self.atom_type} target_handles = {target_handles}')
             matched = db.get_matched_links(self.atom_type, target_handles)
-            #print('XXXX', f'matched = {matched}')
-            #print('XXXX', f'len(matched) = {len(matched)}')
+            if DEBUG_LINK: print(f'matched = {matched}')
+            if DEBUG_LINK: print(f'len(matched) = {len(matched)}')
             count = 1
             total = len(matched)
             start = time.perf_counter()
@@ -520,22 +524,18 @@ class Link(Atom):
             for match in matched:
                 link = match['handle']
                 targets = match['targets']
-                #print('XXXX', f'match = {match}')
-                #print('XXXX', f'link = {link}')
-                #print('XXXX', f'targets = {targets}')
+                if DEBUG_LINK: print(f'match = {match}')
+                if DEBUG_LINK: print(f'link = {link}')
+                if DEBUG_LINK: print(f'targets = {targets}')
                 asn = self._assign_variables(db, link, targets)
                 if asn:
                     answer.assignments.add(asn)
-                #if count % 10000 == 0:
-                #    print(f'{count}/{total} {time.perf_counter() - start} seconds')
-                #    start = time.perf_counter()
-                #count += 1
-            #print('XXXX', f'len(answer.assignments) = {len(answer.assignments)}')
-            #print('XXXX', f'answer.assignments = {answer.assignments}')
-            #print('XXXX', 'matched()', f'leaving 1 self = {self}')
+            if DEBUG_LINK: print(f'len(answer.assignments) = {len(answer.assignments)}')
+            if DEBUG_LINK: print(f'answer.assignments = {answer.assignments}')
+            if DEBUG_LINK: print('matched()', f'leaving 1 self = {self}')
             return bool(answer.assignments)
         else:
-            #print('XXXX', 'matched()', f'leaving 2 self = {self}')
+            if DEBUG_LINK: print('matched()', f'leaving 2 self = {self}')
             return db.link_exists(self.atom_type, target_handles)
 
 class Variable(Atom):
@@ -649,38 +649,38 @@ class Or(LogicalExpression):
         for term in self.terms:
             term_answer = PatternMatchingAnswer()
             if isinstance(term, Not):
-                if DEBUG: print(f'negative term: {term}')
+                if DEBUG_OR: print(f'negative term: {term}')
                 negative_terms.add(term)
                 continue
             if not term.matched(db, term_answer):
-                if DEBUG: print(f'NOT MATCHED: {term}')
+                if DEBUG_OR: print(f'NOT MATCHED: {term}')
                 continue
             or_matched = True
             if not term_answer.assignments:
-                if DEBUG: print(f'term_answer empty: {term}')
+                if DEBUG_OR: print(f'term_answer empty: {term}')
                 continue
             if not or_answer.assignments:
-                if DEBUG: print(f'First term: {term}')
-                #if DEBUG: print(f'term_answer:\n{term_answer}')
+                if DEBUG_OR: print(f'First term: {term}')
+                #if DEBUG_OR: print(f'term_answer:\n{term_answer}')
                 or_answer.assignments = term_answer.assignments
                 continue
-            if DEBUG: print(f'New term: {term}')
-            #if DEBUG: print(f'term_answer:\n{term_answer}')
+            if DEBUG_OR: print(f'New term: {term}')
+            if DEBUG_OR: print(f'term_answer:\n{term_answer}')
             or_answer.assignments.update(term_answer.assignments)
-            #if DEBUG: print(f'or_answer after extending:\n{or_answer}')
+            if DEBUG_OR: print(f'or_answer after extending:\n{or_answer}')
         if negative_terms:
             joint_negative_term = And([t.term for t in negative_terms])
-            #if DEBUG: print(f'Joint negative term: {joint_negative_term}')
+            if DEBUG_NOT: print(f'Joint negative term: {joint_negative_term}')
             term_answer = PatternMatchingAnswer()
             joint_negative_term.matched(db, term_answer)
-            #print('XXXX', f'term_answer.assignments = {term_answer.assignments}')
-            #print('XXXX', f'or_answer.assignments = {or_answer.assignments}')
+            if DEBUG_NOT: print('XXXX', f'term_answer.assignments = {term_answer.assignments}')
+            if DEBUG_NOT: print('XXXX', f'or_answer.assignments = {or_answer.assignments}')
             answer.assignments = term_answer.assignments - or_answer.assignments
-            #print('XXXX', f'answer.assignments = {answer.assignments}')
+            if DEBUG_NOT: print('XXXX', f'answer.assignments = {answer.assignments}')
             answer.negation = True
         else:
             answer.assignments = or_answer.assignments
-        #if DEBUG: print(f'OR result = {answer}')
+        if DEBUG_OR: print(f'OR result = {answer}')
         return or_matched
 
 class And(LogicalExpression):
@@ -708,38 +708,37 @@ class And(LogicalExpression):
         for term in self.terms:
             term_answer = PatternMatchingAnswer()
             if not term.matched(db, term_answer):
-                if DEBUG: print(f'NOT MATCHED: {term}')
+                if DEBUG_AND: print(f'NOT MATCHED: {term}')
                 return False
             if not term_answer.assignments:
-                if DEBUG: print(f'term_answer empty: {term}')
+                if DEBUG_AND: print(f'term_answer empty: {term}')
                 continue
             if term_answer.negation:
-                if DEBUG: print(f'Negation: {term}')
-                #if DEBUG: print(f'term_answer:\n{term_answer}')
+                if DEBUG_AND: print(f'Negation: {term}')
+                #if DEBUG_AND: print(f'term_answer:\n{term_answer}')
                 forbidden_assignments.update(term_answer.assignments)
                 continue
             if not and_answer.assignments:
-                if DEBUG: print(f'First term: {term}')
-                if DEBUG: print(f'term_answer:\n{term_answer}')
+                if DEBUG_AND: print(f'First term: {term}')
+                if DEBUG_AND: print(f'term_answer:\n{term_answer}')
                 and_answer.assignments = term_answer.assignments
                 continue
-            if DEBUG: print(f'New term: {term}')
-            if DEBUG: print(f'term_answer:\n{term_answer}')
+            if DEBUG_AND: print(f'New term: {term}')
+            if DEBUG_AND: print(f'term_answer:\n{term_answer}')
             joint_assignments = []
             for and_assignment in and_answer.assignments:
                 for term_assignment in term_answer.assignments:
                     joint_assignment = and_assignment.join(term_assignment)
-                    #print(f'XXXX ea = {and_assignment}\nta = {term_assignment}\nja = {joint_assignment}\n')
                     if joint_assignment is not None:
                         joint_assignments.append(joint_assignment)
             and_answer.assignments = joint_assignments
-            if DEBUG: print(f'and_answer after join:\n{and_answer}')
-        #print(f'FORBIDDEN = {forbidden_assignments}')
+            if DEBUG_AND: print(f'and_answer after join:\n{and_answer}')
+        if DEBUG_NOT: print(f'FORBIDDEN = {forbidden_assignments}')
         for assignment in and_answer.assignments:
-            #print(f'XXXX CHECK: {assignment}')
+            if DEBUG_NOT: print(f'CHECK: {assignment}')
             if all(assignment.check_negation(tabu) for tabu in forbidden_assignments):
                 answer.assignments.add(self.post_process(assignment))
             else:
-                if DEBUG: print(f'Excluding {assignment}')
-        if DEBUG: print(f'AND result = {answer}')
+                if DEBUG_AND: print(f'Excluding {assignment}')
+        if DEBUG_AND: print(f'AND result = {answer}')
         return bool(answer.assignments)
