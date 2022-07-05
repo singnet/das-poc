@@ -307,7 +307,7 @@ benchmark = DAS_Benchmark(
     DB_Architecture.COUCHBASE_AND_MONGODB,
     1000,
     2,
-    TestLayout.COMPLEX_AND_QUERY
+    TestLayout.SIMPLE_OR_QUERY
 )
 benchmark.run(print_query_results=False, progress_bar=True)
 print(benchmark.results)
@@ -316,7 +316,7 @@ benchmark = DAS_Benchmark(
     DB_Architecture.COUCHBASE_AND_MONGODB,
     1000,
     2,
-    TestLayout.SIMPLE_OR_QUERY
+    TestLayout.COMPLEX_AND_QUERY
 )
 benchmark.run(print_query_results=False, progress_bar=True)
 print(benchmark.results)

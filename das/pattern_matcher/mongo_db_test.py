@@ -2,7 +2,6 @@ import pytest
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 
-from das.helpers import get_mongodb
 from das.pattern_matcher.mongo_db import MongoDB
 from.couch_mongo_db_test import mongo_db
 from.couch_mongo_db_test import test_get_link_targets as couch_mongo_get_link_targets
