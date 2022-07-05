@@ -125,6 +125,20 @@ class CouchMongoDB(DBInterface):
                 answer.append(v)
             return answer
 
+    def _get_mongo_document_keys(self, document: Dict) -> List[str]:
+        answer = document.get(MongoFieldNames.KEYS, None)
+        if answer is not None:
+            return answer
+        answer = []
+        index = 1
+        while True:
+            key = document.get(f'{MongoFieldNames.KEY_PREFIX}{index}', None)
+            if key is None:
+                return answer
+            else:
+                answer.append(key)
+            index += 1
+
     # DB interface methods
 
     def node_exists(self, node_type: str, node_name: str) -> bool:

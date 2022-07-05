@@ -10,6 +10,8 @@ from couchbase.bucket import Bucket
 from couchbase.cluster import Cluster
 from das.helpers import get_mongodb
 from das.pattern_matcher.db_interface import DBInterface
+from das.pattern_matcher.couch_db import CouchDB
+from das.pattern_matcher.mongo_db import MongoDB
 from das.pattern_matcher.couch_mongo_db import CouchMongoDB
 from das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not, And, Or, LinkTemplate, TypedVariable
 
@@ -17,6 +19,8 @@ class DB_Architecture(int, Enum):
     """
     TODO: documentation
     """
+    COUCHBASE = auto()
+    MONGODB = auto()
     COUCHBASE_AND_MONGODB = auto()
 
 class QueryType(int, Enum):
@@ -31,9 +35,9 @@ class TestLayout(int, Enum):
     """
     TODO: documentation
     """
-    SIMPLE_AND_QUERY = auto()
-    SIMPLE_OR_QUERY = auto()
-    COMPLEX_AND_QUERY = auto()
+    QUERY_1 = auto()
+    QUERY_2 = auto()
+    QUERY_3 = auto()
 
 def _single_random_selection(v):
     return v[np.random.randint(len(v))]
@@ -144,7 +148,7 @@ def build_query(query_type: QueryType, gene_list: List[str]):
 
 class BenchmarkResults:
 
-    def __init__(self):
+    def __init__(self, architecture: str, test_layout: str):
         self.wall_time_per_run = []
         self.total_wall_time = None
         self.matched_queries = 0
@@ -152,12 +156,16 @@ class BenchmarkResults:
         self._stop_time = None
         self._start_round_time = None
         self._stop_round_time = None
+        self.architecture = architecture
+        self.test_layout = test_layout
 
     def __repr__(self):
         wall_time = np.array(self.wall_time_per_run)
         mean = np.mean(wall_time)
         stdev = np.std(wall_time)
         txt = []
+        txt.append(f'DB backend architecture: {self.architecture}')
+        txt.append(f'Test layout: {self.test_layout}')
         txt.append(f'{len(wall_time)} runs ({self.matched_queries} matched)')
         txt.append(f'Total time: {self.total_wall_time:.3f} seconds')
         txt.append(f'Average time per query: {mean:.3f} seconds (stdev: {stdev:.3f})')
@@ -221,10 +229,19 @@ class DAS_Benchmark:
         )
         if architecture == DB_Architecture.COUCHBASE_AND_MONGODB:
             self.db = CouchMongoDB(cluster.bucket("das"), get_mongodb(mongodb_specs))
+        elif architecture == DB_Architecture.COUCHBASE:
+            self.db = CouchDB(cluster.bucket("das"), get_mongodb(mongodb_specs))
+        elif architecture == DB_Architecture.MONGODB:
+            self.db = MongoDB(get_mongodb(mongodb_specs))
         else:
             raise ValueError(f"Invalid DB architecture: {architecture.name}")
+        self.query = {
+            TestLayout.QUERY_1: '_query_1',
+            TestLayout.QUERY_2: '_query_2',
+            TestLayout.QUERY_3: '_query_3',
+        }
         self._populate_all_genes()
-        self.results = BenchmarkResults()
+        self.results = BenchmarkResults(architecture.name, test_layout.name)
 
     def _populate_all_genes(self):
         self.all_genes = self.db.get_all_nodes('Gene', names=True)
@@ -255,13 +272,13 @@ class DAS_Benchmark:
                 print(query_answer)
                 print(self._add_node_names(query_answer))
 
-    def _simple_and_query(self, print_query_results):
+    def _query_1(self, print_query_results):
         self._plain_query(QueryType.SAME_BIOLOGICAL_PROCESS, print_query_results)
 
-    def _simple_or_query(self, print_query_results):
+    def _query_2(self, print_query_results):
         self._plain_query(QueryType.SAME_OR_INHERITED_BIOLOGICAL_PROCESS, print_query_results)
 
-    def _complex_and_query(self, print_query_results):
+    def _query_3(self, print_query_results):
         self._plain_query(QueryType.REACTOME_LINKED_TO_UNIPROT, print_query_results)
 
     def _print_progress_bar(self, iteration, total, length=50):
@@ -281,12 +298,12 @@ class DAS_Benchmark:
         count = 1
         self.results.start()
         for i in range(self.rounds):
-            if self.test_layout == TestLayout.SIMPLE_AND_QUERY:
-                self._simple_and_query(print_query_results)
-            elif self.test_layout == TestLayout.SIMPLE_OR_QUERY:
-                self._simple_or_query(print_query_results)
-            elif self.test_layout == TestLayout.COMPLEX_AND_QUERY:
-                self._complex_and_query(print_query_results)
+            if self.test_layout == TestLayout.QUERY_1:
+                self._query_1(print_query_results)
+            elif self.test_layout == TestLayout.QUERY_2:
+                self._query_2(print_query_results)
+            elif self.test_layout == TestLayout.QUERY_3:
+                self._query_3(print_query_results)
             else:
                 raise ValueError(f"Invalid test layout: {self.test_layout.name}")
             if progress_bar:
@@ -294,32 +311,39 @@ class DAS_Benchmark:
             count += 1
         self.results.stop()
 
-benchmark = DAS_Benchmark(
-    DB_Architecture.COUCHBASE_AND_MONGODB,
-    1000,
-    2,
-    TestLayout.SIMPLE_AND_QUERY
-)
+# Query 1
+
+benchmark = DAS_Benchmark(DB_Architecture.COUCHBASE, 10000, 2, TestLayout.QUERY_1)
 benchmark.run(print_query_results=False, progress_bar=True)
 print(benchmark.results)
 
-benchmark = DAS_Benchmark(
-    DB_Architecture.COUCHBASE_AND_MONGODB,
-    1000,
-    2,
-    TestLayout.SIMPLE_OR_QUERY
-)
+#benchmark = DAS_Benchmark(DB_Architecture.MONGODB, 10, 2, TestLayout.QUERY_1)
+#benchmark.run(print_query_results=False, progress_bar=True)
+#print(benchmark.results)
+
+benchmark = DAS_Benchmark(DB_Architecture.COUCHBASE_AND_MONGODB, 10000, 2, TestLayout.QUERY_1)
 benchmark.run(print_query_results=False, progress_bar=True)
 print(benchmark.results)
 
-benchmark = DAS_Benchmark(
-    DB_Architecture.COUCHBASE_AND_MONGODB,
-    1000,
-    2,
-    TestLayout.COMPLEX_AND_QUERY
-)
+# Query 2
+
+benchmark = DAS_Benchmark(DB_Architecture.COUCHBASE, 1000, 2, TestLayout.QUERY_2)
 benchmark.run(print_query_results=False, progress_bar=True)
 print(benchmark.results)
+
+#benchmark = DAS_Benchmark(DB_Architecture.MONGODB, 10, 2, TestLayout.QUERY_2)
+#benchmark.run(print_query_results=False, progress_bar=True)
+#print(benchmark.results)
+
+benchmark = DAS_Benchmark(DB_Architecture.COUCHBASE_AND_MONGODB, 1000, 2, TestLayout.QUERY_2)
+benchmark.run(print_query_results=False, progress_bar=True)
+print(benchmark.results)
+
+# Query 3
+
+#benchmark = DAS_Benchmark(DB_Architecture.COUCHBASE_AND_MONGODB, 10, 2, TestLayout.QUERY_3)
+#benchmark.run(print_query_results=False, progress_bar=True)
+#print(benchmark.results)
 
 
 
