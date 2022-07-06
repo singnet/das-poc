@@ -16,6 +16,7 @@ INCOMING_COLL_NAME = 'IncomingSet'
 OUTGOING_COLL_NAME = 'OutgoingSet'
 PATTERNS_COLL_NAME = 'Patterns'
 TEMPLATES_COLL_NAME = 'Templates'
+NAMED_ENTITIES_COLL_NAME = 'Names'
 
 # There is a Couchbase limitation for long values (max: 20Mb)
 # So we set the it to ~15Mb, if this max size is reached
@@ -105,9 +106,11 @@ def main(couchbase_specs, input_filename: str) -> None:
   atoms_file_name = input_filename + '.atoms'
   patterns_file_name = input_filename + '.patterns'
   templates_file_name = input_filename + '.templates'
+  named_entities_file_name = input_filename + '.names'
   atoms_collection = bucket.collection(INCOMING_COLL_NAME)
   patterns_collection = bucket.collection(PATTERNS_COLL_NAME)
   templates_collection = bucket.collection(TEMPLATES_COLL_NAME)
+  named_entities_collection = bucket.collection(NAMED_ENTITIES_COLL_NAME)
 
   # Incoming/outgoing
   with open(atoms_file_name, 'r') as f:
@@ -169,6 +172,26 @@ def main(couchbase_specs, input_filename: str) -> None:
       logger.info(f'Templates uploaded: [{done:n}/{total_entries:n}]')
   logger.info(f'Templates uploaded: [{done:n}/{total_entries:n}]')
 
+  # Named entities
+  with open(named_entities_file_name, 'r') as f:
+    total_entries = len(f.readlines())
+  i = 0
+  done = 0
+  for k, v, c in key_value_generator(named_entities_file_name):
+    if c == 0:
+      named_entities_collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
+    else:
+      if c == 1:
+        first_block = named_entities_collection.get(k)
+        named_entities_collection.upsert(f"{k}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
+      named_entities_collection.upsert(k, c + 1)
+      named_entities_collection.upsert(f"{k}_{c}", v, timeout=datetime.timedelta(seconds=100))
+    i += 1
+    done += len(v)
+    if i % 100000 == 0:
+      logger.info(f'Named entities uploaded: [{done:n}/{total_entries:n}]')
+  logger.info(f'Named entities uploaded: [{done:n}/{total_entries:n}]')
+
 def run():
   parser = argparse.ArgumentParser()
 
@@ -183,7 +206,7 @@ def run():
   couchbase_specs = {
     'hostname': args.couchbase_hostname or os.environ.get('DAS_COUCHBASE_HOSTNAME', 'localhost'),
     'username': args.couchbase_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
-    'password': args.couchbase_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
+    'password': args.couchbase_password or os.environ.get('DAS_DATABASE_PASSWORD', 'dassecret'),
   }
 
   main(couchbase_specs, args.file_path or '/tmp/all_pairs.txt')

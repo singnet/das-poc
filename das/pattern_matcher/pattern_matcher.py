@@ -673,10 +673,10 @@ class Or(LogicalExpression):
             if DEBUG_NOT: print(f'Joint negative term: {joint_negative_term}')
             term_answer = PatternMatchingAnswer()
             joint_negative_term.matched(db, term_answer)
-            if DEBUG_NOT: print('XXXX', f'term_answer.assignments = {term_answer.assignments}')
-            if DEBUG_NOT: print('XXXX', f'or_answer.assignments = {or_answer.assignments}')
+            if DEBUG_NOT: print(f'term_answer.assignments = {term_answer.assignments}')
+            if DEBUG_NOT: print(f'or_answer.assignments = {or_answer.assignments}')
             answer.assignments = term_answer.assignments - or_answer.assignments
-            if DEBUG_NOT: print('XXXX', f'answer.assignments = {answer.assignments}')
+            if DEBUG_NOT: print(f'answer.assignments = {answer.assignments}')
             answer.negation = True
         else:
             answer.assignments = or_answer.assignments

@@ -5,4 +5,5 @@ class CollectionNames(str, Enum):
     OUTGOING_SET = 'OutgoingSet'
     PATTERNS = 'Patterns'
     TEMPLATES = 'Templates'
+    NAMED_ENTITIES = 'Names'
 

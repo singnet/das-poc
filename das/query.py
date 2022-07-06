@@ -71,7 +71,7 @@ def run():
     'hostname': args.hostname or os.environ.get('DAS_MONGODB_HOSTNAME', 'localhost'),
     'port': args.port or os.environ.get('DAS_MONGODB_PORT', 27017),
     'username': args.username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
-    'password': args.password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
+    'password': args.password or os.environ.get('DAS_DATABASE_PASSWORD', 'dassecret'),
     'database': args.database or os.environ.get('DAS_DATABASE_NAME', 'das'),
   }
 
