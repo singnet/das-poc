@@ -2,9 +2,7 @@ import os
 from signal import raise_signal
 from typing import List, Dict, Optional, Union, Any
 
-from couchbase.auth import PasswordAuthenticator
 from couchbase.bucket import Bucket
-from couchbase.cluster import Cluster
 from couchbase.collection import CBCollection
 from couchbase.exceptions import DocumentNotFoundException
 from pymongo.collection import Collection
@@ -32,6 +30,7 @@ class CouchMongoDB(DBInterface):
             '2': self.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_2),
             'N': self.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_N),
         }
+        self.mongo_nodes_collection = self.mongo_db.get_collection(MongoCollectionNames.NODES)
         self.node_handles = None
         self.node_documents = None
         self.atom_type_hash = None
@@ -49,7 +48,7 @@ class CouchMongoDB(DBInterface):
         self.atom_type_hash = {}
         self.type_hash = {}
         self.atom_type_hash_reverse = {}
-        collection = self.mongo_db.get_collection(MongoCollectionNames.NODES)
+        collection = self.mongo_nodes_collection
         for document in collection.find():
             self.node_documents[document[MongoFieldNames.ID_HASH]] = document
             self.node_handles[f'{document[MongoFieldNames.TYPE]}:{document[MongoFieldNames.NODE_NAME]}'] = \
@@ -217,3 +216,10 @@ class CouchMongoDB(DBInterface):
         if not document:
             raise ValueError(f'Invalid node handle: {node_handle}')
         return document[MongoFieldNames.NODE_NAME]
+
+    def get_matched_node_name(self, substring: str) -> str: 
+        mongo_filter = {
+            MongoFieldNames.NODE_NAME: {'$regex': substring}
+        }
+        return [document[MongoFieldNames.ID_HASH] for document in self.mongo_nodes_collection.find(mongo_filter)]
+

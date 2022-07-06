@@ -11,6 +11,8 @@ setup() {
     docker-compose exec couchbase couchbase-cli \
       cluster-init \
       --cluster-name DAS_Cluster \
+      --services "data","index","query" \
+      --cluster-index-ramsize 2048 \
       --cluster-username "${DAS_DATABASE_USERNAME}" \
       --cluster-password "${DAS_DATABASE_PASSWORD}"
 

@@ -213,13 +213,13 @@ class DAS_Benchmark:
             "hostname": "mongo",
             "port":  27017,
             "username": "dbadmin",
-            "password": "das#secret",
+            "password": "dassecret",
             "database": "BIO",
         }
         couchbase_specs = {
             "hostname": "couchbase",
             "username": "dbadmin",
-            "password": "das#secret",
+            "password": "dassecret",
         }
         cluster = Cluster(
             f'couchbase://{couchbase_specs["hostname"]}',

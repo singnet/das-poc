@@ -20,6 +20,7 @@ INCOMING_COLL_NAME = "IncomingSet"
 OUTGOING_COLL_NAME = "OutgoingSet"
 PATTERNS_COLL_NAME = "Patterns"
 TEMPLATES_COLL_NAME = "Templates"
+NAMED_ENTITIES_COLL_NAME = "Names"
 
 clock = Clock()
 incoming_clock = Clock()
@@ -52,7 +53,7 @@ def _build_template(template: Union[str, List[Any]]) -> List[Any]:
         answer.append(v)
     return answer
 
-def populate_sets(hasher: Hasher, fh1, fh2, fh3, collection: Collection, bucket, composite_keys_masks: dict[str, list[set[int]]]):
+def populate_sets(hasher: Hasher, fh1, fh2, fh3, fh4, collection: Collection, bucket, composite_keys_masks: dict[str, list[set[int]]]):
 
   outgoing_set = bucket.collection(OUTGOING_COLL_NAME)
 
@@ -63,6 +64,9 @@ def populate_sets(hasher: Hasher, fh1, fh2, fh3, collection: Collection, bucket,
   batch_clock.reset()
 
   for doc in cursor:
+    if "name" in doc:
+        fh4.write("{},{}\n".format(doc['_id'], doc['name']))
+        continue
     acc_clock_full.start()
     acc_clock_block1.start()
     _id = doc["_id"]
@@ -74,7 +78,11 @@ def populate_sets(hasher: Hasher, fh1, fh2, fh3, collection: Collection, bucket,
 
     acc_clock_block2.start()
     outgoing_clock.reset()
-    outgoing_list = list(set(keys))
+    n = doc['set_from']
+    if n:
+        outgoing_list = [*keys[0:n-1], *list(set(keys[n-1:]))]
+    else:
+        outgoing_list = keys
     outgoing_set.upsert(_id, outgoing_list)
     outgoing_time_statistics.add(outgoing_clock.elapsed_time_ms())
     outgoing_size_statistics.add(len(outgoing_list))
@@ -239,7 +247,7 @@ def main(mongodb_specs, couchbase_specs, file_path, index_path):
 
   create_collections(
     bucket=bucket,
-    collections_names=[INCOMING_COLL_NAME, OUTGOING_COLL_NAME, PATTERNS_COLL_NAME, TEMPLATES_COLL_NAME])
+    collections_names=[INCOMING_COLL_NAME, OUTGOING_COLL_NAME, PATTERNS_COLL_NAME, TEMPLATES_COLL_NAME, NAMED_ENTITIES_COLL_NAME])
 
   db = get_mongodb(mongodb_specs)
   hasher = Hasher()
@@ -252,28 +260,34 @@ def main(mongodb_specs, couchbase_specs, file_path, index_path):
   atoms_file_path = file_path + ".atoms"
   patterns_file_path = file_path + ".patterns"
   templates_file_path = file_path + ".templates"
+  named_entities_file_path = file_path + ".names"
 
   # TODO: Cover all possible links_N collections.
-  with open(atoms_file_path, "w") as fh1, open(patterns_file_path, "w") as fh2, open(templates_file_path, "w") as fh3:
+  with open(atoms_file_path, "w") as fh1, open(patterns_file_path, "w") as fh2, open(templates_file_path, "w") as fh3, open(named_entities_file_path, "w") as fh4:
     logger.info("Indexing links_1")
-    populate_sets(hasher, fh1, fh2, fh3, db["links_1"], bucket, node_type_to_keys)
+    populate_sets(hasher, fh1, fh2, fh3, fh4, db["links_1"], bucket, node_type_to_keys)
     logger.info("Indexing links_2")
-    populate_sets(hasher, fh1, fh2, fh3, db["links_2"], bucket, node_type_to_keys)
+    populate_sets(hasher, fh1, fh2, fh3, fh4, db["links_2"], bucket, node_type_to_keys)
     logger.info("Indexing links_3")
-    populate_sets(hasher, fh1, fh2, fh3, db["links_3"], bucket, node_type_to_keys)
+    populate_sets(hasher, fh1, fh2, fh3, fh4, db["links_3"], bucket, node_type_to_keys)
     logger.info("Indexing links")
-    populate_sets(hasher, fh1, fh2, fh3, db["links"], bucket, [])
+    populate_sets(hasher, fh1, fh2, fh3, fh4, db["links"], bucket, [])
+    logger.info("Indexing nodes")
+    populate_sets(hasher, fh1, fh2, fh3, fh4, db["nodes"], bucket, [])
 
   # TODO: Use python. (?)
-  logger.info("Sorting index files (1/3)")
+  logger.info("Sorting index files (1/4)")
   os.system(f"sort -t , -k 1,1 {atoms_file_path} > {atoms_file_path}.sorted")
-  logger.info("Sorting index files (2/3)")
+  logger.info("Sorting index files (2/4)")
   os.system(f"sort -t , -k 1,1 {patterns_file_path} > {patterns_file_path}.sorted")
-  logger.info("Sorting index files (3/3)")
+  logger.info("Sorting index files (3/4)")
   os.system(f"sort -t , -k 1,1 {templates_file_path} > {templates_file_path}.sorted")
+  logger.info("Sorting index files (4/4)")
+  os.system(f"sort -t , -k 1,1 {named_entities_file_path} > {named_entities_file_path}.sorted")
   os.rename(f"{atoms_file_path}.sorted", atoms_file_path)
   os.rename(f"{patterns_file_path}.sorted", patterns_file_path)
   os.rename(f"{templates_file_path}.sorted", templates_file_path)
+  os.rename(f"{named_entities_file_path}.sorted", named_entities_file_path)
 
 
 def run():
@@ -306,14 +320,14 @@ def run():
     "hostname": args.mongo_hostname or os.environ.get("DAS_MONGODB_HOSTNAME", "localhost"),
     "port": args.mongo_port or os.environ.get("DAS_MONGODB_PORT", 27017),
     "username": args.mongo_username or os.environ.get("DAS_DATABASE_USERNAME", "dbadmin"),
-    "password": args.mongo_password or os.environ.get("DAS_DATABASE_PASSWORD", "das#secret"),
+    "password": args.mongo_password or os.environ.get("DAS_DATABASE_PASSWORD", "dassecret"),
     "database": args.mongo_database or os.environ.get("DAS_DATABASE_NAME", "das"),
   }
 
   couchbase_specs = {
     "hostname": args.couchbase_hostname or os.environ.get("DAS_COUCHBASE_HOSTNAME", "localhost"),
     "username": args.couchbase_username or os.environ.get("DAS_DATABASE_USERNAME", "dbadmin"),
-    "password": args.couchbase_password or os.environ.get("DAS_DATABASE_PASSWORD", "das#secret"),
+    "password": args.couchbase_password or os.environ.get("DAS_DATABASE_PASSWORD", "dassecret"),
   }
 
   main(mongodb_specs, couchbase_specs, args.file_path or "/tmp/all_pairs.txt", args.index_config)

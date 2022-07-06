@@ -16,7 +16,7 @@ export DAS_COUCHBASE_HOSTNAME=couchbase
 export DAS_COUCHBASE_BUCKET_RAMSIZE=$((8*1024))
 # Change the following values when running on a public instance (used by MongoDB and Couchbase)
 export DAS_DATABASE_USERNAME=dbadmin
-export DAS_DATABASE_PASSWORD=das#secret
+export DAS_DATABASE_PASSWORD=dassecret
 
 # Build and run containers
 docker-compose up -d

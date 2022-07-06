@@ -207,7 +207,7 @@ def run():
     'hostname': args.mongo_hostname or os.environ.get('DAS_MONGODB_HOSTNAME', 'localhost'),
     'port': args.mongo_port or os.environ.get('DAS_MONGODB_PORT', 27017),
     'username': args.mongo_username or os.environ.get('DAS_DATABASE_USERNAME', 'dbadmin'),
-    'password': args.mongo_password or os.environ.get('DAS_DATABASE_PASSWORD', 'das#secret'),
+    'password': args.mongo_password or os.environ.get('DAS_DATABASE_PASSWORD', 'dassecret'),
     'database': args.mongo_database or os.environ.get('DAS_DATABASE_NAME', 'das'),
   }
 

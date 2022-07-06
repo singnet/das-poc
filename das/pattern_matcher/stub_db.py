@@ -168,3 +168,12 @@ class StubDB(DBInterface):
     def get_node_name(self, node_handle: str) -> str:
         _, name = _split_node_handle(node)
         return name
+
+    def get_matched_node_name(self, substring: str) -> str:
+        answer = []
+        for node in self.all_nodes:
+            _, name = _split_node_handle(node)
+            if substring in name:
+                answer.append(node)
+        return answer
+
