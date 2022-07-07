@@ -130,7 +130,7 @@ def populate_sets(hasher: Hasher, fh1, fh2, fh3, fh4, collection: Collection, bu
     count += 1
     if count % 100000 == 0:
       logger.debug("\n")
-      logger.info("Documents processed: [{:n}/{:n}]".format(count, total))
+      logger.info("Documents processed: [{:,}/{:,}]".format(count, total))
       logger.debug("Batch time (sec):         {}".format(batch_clock.elapsed_time_seconds()))
       logger.debug("Block full (sec):         {}".format(acc_clock_full.acc_seconds()))
       logger.debug("Block1 (sec):             {}".format(acc_clock_block1.acc_seconds()))
@@ -166,7 +166,7 @@ def populate_sets(hasher: Hasher, fh1, fh2, fh3, fh4, collection: Collection, bu
     acc_clock_full.pause()
 
   cursor.close()
-  logger.info("Documents processed: [{:n}/{:n}]".format(count, total))
+  logger.info("Documents processed: [{:,}/{:,}]".format(count, total))
 
 
 def create_collections(bucket, collections_names=None):

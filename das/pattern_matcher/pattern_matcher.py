@@ -7,10 +7,11 @@ from typing import Dict, FrozenSet, List, Optional, Set, Union
 
 from das.pattern_matcher.db_interface import DBInterface, WILDCARD
 
-DEBUG_AND = False
+DEBUG_AND = True
 DEBUG_OR = False
 DEBUG_NOT = False
-DEBUG_LINK = False
+DEBUG_LINK = True
+DEBUG_LINK_TEMPLATE = True
 
 CONFIG = {
     # Enforce different values for different variables in ordered assignments
@@ -500,6 +501,7 @@ class Link(Atom):
         return all(target.matched(db, answer) for target in self.targets)
 
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
+        if DEBUG_LINK: print('link match', self)
         if any(isinstance(atom, LinkTemplate) for atom in self.targets):
             return self._typed_variable_matched(db, answer)
         if DEBUG_LINK: print('matched()', f'entering self = {self}')
@@ -509,7 +511,6 @@ class Link(Atom):
                     print('atom', atom, 'atom.matched(db, answer)', atom.matched(db, answer))
                 print('matched()', f'leaving 0 self = {self}')
             return False
-        if DEBUG_LINK: print(f'self = {self}')
         target_handles = [atom.get_handle(db) for atom in self.targets]
         if DEBUG_LINK: print(f'target_handles = {target_handles}')
         if any(handle == WILDCARD for handle in target_handles):
@@ -602,13 +603,16 @@ class LinkTemplate(LogicalExpression):
         return answer if answer.freeze() else None
 
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
+        if DEBUG_LINK_TEMPLATE: print('link template match', self)
         matched = db.get_matched_type_template([self.link_type, *[v.type for v in self.targets]])
+        if DEBUG_LINK_TEMPLATE: print('len(matched)', len(matched))
         answer.assignments = set()
         for match in matched:
             link = match['handle']
             targets = match['targets']
             asn = self._assign_variables(db, link, targets)
             if asn:
+                if DEBUG_LINK_TEMPLATE: print('asn', asn)
                 answer.assignments.add(asn)
         return bool(answer.assignments)
 
@@ -624,6 +628,7 @@ class Not(LogicalExpression):
         return f'NOT({self.term})'
 
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
+        if DEBUG_NOT: print(f'NOT', self)
         self.term.matched(db, answer)
         answer.negation = not answer.negation
         return True
@@ -640,6 +645,7 @@ class Or(LogicalExpression):
         return f'OR({self.terms})'
 
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
+        if DEBUG_OR: print(f'OR', self)
         if not self.terms:
             return False
         assert not answer.assignments
@@ -700,6 +706,7 @@ class And(LogicalExpression):
         return assignment
 
     def matched(self, db: DBInterface, answer: PatternMatchingAnswer) -> bool:
+        if DEBUG_AND: print(f'AND', self)
         if not self.terms:
             return False
         assert not answer.assignments

@@ -27,7 +27,7 @@ MAX_BLOCK_SIZE = 500000
 def key_value_generator(
   input_filename: str,
   *,
-  block_size: int = MAX_BLOCK_SIZE) -> Iterator[Tuple[str, List[str], int]]:
+  block_size: int = MAX_BLOCK_SIZE, merge_rest: bool = False) -> Iterator[Tuple[str, List[str], int]]:
   last_key = ''
   last_list = []
   counter = 0
@@ -36,7 +36,12 @@ def key_value_generator(
       line = line.strip()
       if line == '':
         continue
-      key, value = line.split(',')
+      if merge_rest:
+        v = line.split(',')
+        key = v[0]
+        value = ','.join(v[1:])
+      else:
+        key, value = line.split(',')
       if last_key == key:
         last_list.append(value)
         if len(last_list) >= block_size:
@@ -129,8 +134,8 @@ def main(couchbase_specs, input_filename: str) -> None:
     i += 1
     done += len(v)
     if i % 100000 == 0:
-      logger.info(f'Entries uploaded: [{done:n}/{total_entries:n}]')
-  logger.info(f'Entries uploaded: [{done:n}/{total_entries:n}]')
+      logger.info(f'Entries uploaded: [{done:,}/{total_entries:,}]')
+  logger.info(f'Entries uploaded: [{done:,}/{total_entries:,}]')
 
   # Patterns
   with open(patterns_file_name, 'r') as f:
@@ -149,8 +154,8 @@ def main(couchbase_specs, input_filename: str) -> None:
     i += 1
     done += len(v)
     if i % 100000 == 0:
-      logger.info(f'Patterns uploaded: [{done:n}/{total_entries:n}]')
-  logger.info(f'Patterns uploaded: [{done:n}/{total_entries:n}]')
+      logger.info(f'Patterns uploaded: [{done:,}/{total_entries:,}]')
+  logger.info(f'Patterns uploaded: [{done:,}/{total_entries:,}]')
 
   # Templates
   with open(templates_file_name, 'r') as f:
@@ -169,15 +174,15 @@ def main(couchbase_specs, input_filename: str) -> None:
     i += 1
     done += len(v)
     if i % 100000 == 0:
-      logger.info(f'Templates uploaded: [{done:n}/{total_entries:n}]')
-  logger.info(f'Templates uploaded: [{done:n}/{total_entries:n}]')
+      logger.info(f'Templates uploaded: [{done:,}/{total_entries:,}]')
+  logger.info(f'Templates uploaded: [{done:,}/{total_entries:,}]')
 
   # Named entities
   with open(named_entities_file_name, 'r') as f:
     total_entries = len(f.readlines())
   i = 0
   done = 0
-  for k, v, c in key_value_generator(named_entities_file_name):
+  for k, v, c in key_value_generator(named_entities_file_name, merge_rest=True):
     if c == 0:
       named_entities_collection.upsert(k, v, timeout=datetime.timedelta(seconds=100))
     else:
@@ -189,8 +194,8 @@ def main(couchbase_specs, input_filename: str) -> None:
     i += 1
     done += len(v)
     if i % 100000 == 0:
-      logger.info(f'Named entities uploaded: [{done:n}/{total_entries:n}]')
-  logger.info(f'Named entities uploaded: [{done:n}/{total_entries:n}]')
+      logger.info(f'Named entities uploaded: [{done:,}/{total_entries:,}]')
+  logger.info(f'Named entities uploaded: [{done:,}/{total_entries:,}]')
 
 def run():
   parser = argparse.ArgumentParser()
