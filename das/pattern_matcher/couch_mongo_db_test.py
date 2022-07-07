@@ -274,9 +274,9 @@ def test_get_node_name(db: DBInterface):
         assert db_name == node_name
 
 def test_get_matched_node_name(db: DBInterface):
-    print(db.get_matched_node_name('ma'))
-    assert sorted(db.get_matched_node_name('ma')) == sorted([
+    assert sorted(db.get_matched_node_name('Concept', 'ma')) == sorted([
         db.get_node_handle('Concept', 'human'),
         db.get_node_handle('Concept', 'mammal'),
         db.get_node_handle('Concept', 'animal'),])
-    assert sorted(db.get_matched_node_name('blah')) == []
+    assert sorted(db.get_matched_node_name('blah', 'Concept')) == []
+    assert sorted(db.get_matched_node_name('Concept', 'blah')) == []

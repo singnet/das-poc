@@ -217,9 +217,10 @@ class CouchMongoDB(DBInterface):
             raise ValueError(f'Invalid node handle: {node_handle}')
         return document[MongoFieldNames.NODE_NAME]
 
-    def get_matched_node_name(self, substring: str) -> str: 
+    def get_matched_node_name(self, node_type: str, substring: str) -> str: 
+        node_type_hash = self.atom_type_hash.get(node_type, None)
         mongo_filter = {
+            MongoFieldNames.TYPE: node_type_hash,
             MongoFieldNames.NODE_NAME: {'$regex': substring}
         }
         return [document[MongoFieldNames.ID_HASH] for document in self.mongo_nodes_collection.find(mongo_filter)]
-
