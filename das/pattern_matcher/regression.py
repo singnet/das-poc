@@ -30,7 +30,7 @@ if __name__ == "__main__":
         "port":  27017,
         "username": "dbadmin",
         "password": "dassecret",
-        "database": "TOY",
+        "database": "BIO",
     }
     couchbase_specs = {
         "hostname": "couchbase",
@@ -44,9 +44,10 @@ if __name__ == "__main__":
         ),
     )
 
-    db: DBInterface = StubDB()
-    #db: DBInterface = CouchMongoDB(cluster.bucket("das"), get_mongodb(mongodb_specs))
+    #db: DBInterface = StubDB()
+    db: DBInterface = CouchMongoDB(cluster.bucket("das"), get_mongodb(mongodb_specs))
 
+    """
     n1 = Node("Concept", "human")
     n2 = Node("Concept", "mammal")
     match(db, n1)
@@ -312,19 +313,19 @@ if __name__ == "__main__":
     print(db.get_all_nodes('Concept'))
     print(db.get_all_nodes('blah'))
 
-    match(db, LinkTemplate("Inheritance", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
-    match(db, LinkTemplate("Similarity", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
+    """
+
+    ##match(db, LinkTemplate("Inheritance", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
+    ###match(db, LinkTemplate("Similarity", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], False))
+
+    #match(db, Link("Inheritance", [Variable("V1"), Variable("V2")], True))
+    #match(db, Link("List", [Variable("V1"), Variable("V2")], True))
+    #match(db, LinkTemplate("List", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
+
+    #match(db, Link("Similarity", [Node("Concept", "human"), Variable("V1")], False))
+    #match(db, Link("Similarity", [Variable("V1"), Node("Concept", "human")], False))
 
     print(
         "\n\n\n\n================================================================================\n"
     )
-
-    match(db, Link("Inheritance", [Variable("V1"), Variable("V2")], True))
-    match(db, LinkTemplate("Inheritance", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
-    match(db, Link("List", [Variable("V1"), Variable("V2")], True))
-    match(db, LinkTemplate("List", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
-
-    match(db, Link("Similarity", [Node("Concept", "human"), Variable("V1")], False))
-    match(db, Link("Similarity", [Variable("V1"), Node("Concept", "human")], False))
-
 

@@ -82,10 +82,7 @@ def _context_link(va, vb, vc):
     return \
     Link('Context', [
         _member_template_link(va, vb),
-        Link('Evaluation', [
-            Node('Predicate', 'has_location'),
-            _list_template_link(va, vc)
-        ], True)
+        _evaluation_link('has_location', va, vc)
     ], True)
 
 def _evaluation_link(p, va, vb):
@@ -258,9 +255,7 @@ class DAS_Benchmark:
                 pass
         return txt
 
-    def _plain_query(self, query_type, print_query_results):
-        gene_list = _random_selection(self.all_genes, self.gene_count)
-        query = build_query(query_type, gene_list)
+    def _run_query(self, query, print_query_results):
         query_answer = PatternMatchingAnswer()
         self.results.start_round()
         matched = query.matched(self.db, query_answer)
@@ -270,7 +265,12 @@ class DAS_Benchmark:
             if print_query_results:
                 print(query)
                 print(query_answer)
-                print(self._add_node_names(query_answer))
+                #print(self._add_node_names(query_answer))
+
+    def _plain_query(self, query_type, print_query_results):
+        gene_list = _random_selection(self.all_genes, self.gene_count)
+        query = build_query(query_type, gene_list)
+        self._run_query(query, print_query_results)
 
     def _query_1(self, print_query_results):
         self._plain_query(QueryType.SAME_BIOLOGICAL_PROCESS, print_query_results)
@@ -279,7 +279,41 @@ class DAS_Benchmark:
         self._plain_query(QueryType.SAME_OR_INHERITED_BIOLOGICAL_PROCESS, print_query_results)
 
     def _query_3(self, print_query_results):
-        self._plain_query(QueryType.REACTOME_LINKED_TO_UNIPROT, print_query_results)
+        name_substring = 'CoA'
+        gene_list = _random_selection(self.all_genes, self.gene_count)
+        gene_nodes = [Node('Gene', name) for name in gene_list]
+        v1 = Variable('v1')
+        member_links = [Link('Member', [gene_node, v1], True) for gene_node in gene_nodes]
+        self.results.start_round()
+        concept_nodes = self.db.get_matched_node_name('Concept', 'CoA')
+        reactome_nodes = []
+        for concept_node in concept_nodes:
+            pattern = Link('List', [
+                v1,
+                Node('Concept', self.db.get_node_name(concept_node))
+            ], True)
+            query_answer = PatternMatchingAnswer()
+            if not pattern.matched(self.db, query_answer):
+                continue
+            for assignment in query_answer.assignments:
+                reactome_nodes.append(Node('Reactome', assignment.mapping['v1']))
+        uniprot_nodes = []
+        for reactome_node in reactome_nodes:
+            pattern = Link('Member', [
+                v1,
+                reactome_node
+            ], True)
+            query_answer = PatternMatchingAnswer()
+            if not pattern.matched(self.db, query_answer):
+                continue
+            for assignment in query_answer.assignments:
+                uniprot_nodes.append(Node('Uniprot', assignment.mapping['v1']))
+        for uniprot_node in uniprot_nodes:
+            pattern = And([*member_links, Link('Member', [uniprot_node, v1], True)])
+            query_answer = PatternMatchingAnswer()
+            if pattern.matched(self.db, query_answer):
+                self.results.matched_queries += 1
+        self.results.stop_round()
 
     def _print_progress_bar(self, iteration, total, length=50):
         filled_length = int(length * iteration // total)
@@ -311,41 +345,18 @@ class DAS_Benchmark:
             count += 1
         self.results.stop()
 
-# Query 1
+iterations = {}
+iterations[TestLayout.QUERY_1] = 100
+iterations[TestLayout.QUERY_2] = 100
+iterations[TestLayout.QUERY_3] = 10
+PROGRESS_BAR = True
 
-benchmark = DAS_Benchmark(DB_Architecture.COUCHBASE, 10000, 2, TestLayout.QUERY_1)
-benchmark.run(print_query_results=False, progress_bar=True)
-print(benchmark.results)
-
-#benchmark = DAS_Benchmark(DB_Architecture.MONGODB, 10, 2, TestLayout.QUERY_1)
-#benchmark.run(print_query_results=False, progress_bar=True)
-#print(benchmark.results)
-
-benchmark = DAS_Benchmark(DB_Architecture.COUCHBASE_AND_MONGODB, 10000, 2, TestLayout.QUERY_1)
-benchmark.run(print_query_results=False, progress_bar=True)
-print(benchmark.results)
-
-# Query 2
-
-benchmark = DAS_Benchmark(DB_Architecture.COUCHBASE, 1000, 2, TestLayout.QUERY_2)
-benchmark.run(print_query_results=False, progress_bar=True)
-print(benchmark.results)
-
-#benchmark = DAS_Benchmark(DB_Architecture.MONGODB, 10, 2, TestLayout.QUERY_2)
-#benchmark.run(print_query_results=False, progress_bar=True)
-#print(benchmark.results)
-
-benchmark = DAS_Benchmark(DB_Architecture.COUCHBASE_AND_MONGODB, 1000, 2, TestLayout.QUERY_2)
-benchmark.run(print_query_results=False, progress_bar=True)
-print(benchmark.results)
-
-# Query 3
-
-#benchmark = DAS_Benchmark(DB_Architecture.COUCHBASE_AND_MONGODB, 10, 2, TestLayout.QUERY_3)
-#benchmark.run(print_query_results=False, progress_bar=True)
-#print(benchmark.results)
-
-
-
-
-
+for test_layout in [TestLayout.QUERY_1, TestLayout.QUERY_2, TestLayout.QUERY_3]:
+#for test_layout in [TestLayout.QUERY_3]:
+    #for architecture in [DB_Architecture.COUCHBASE, DB_Architecture.MONGODB, DB_Architecture.COUCHBASE_AND_MONGODB]:
+    for architecture in [DB_Architecture.MONGODB]:
+        print('--------------------------------------------------------------------------------------------------------------')
+        n = 5 if architecture == DB_Architecture.MONGODB else iterations[test_layout]
+        benchmark = DAS_Benchmark(architecture, n, 2, test_layout)
+        benchmark.run(print_query_results=False, progress_bar=PROGRESS_BAR)
+        print(benchmark.results)

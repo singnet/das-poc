@@ -52,6 +52,6 @@ class DBInterface(ABC):
         pass
 
     @abstractmethod
-    def get_matched_node_name(self, substring: str) -> str:
+    def get_matched_node_name(self, node_type: str, substring: str) -> str:
         pass
     

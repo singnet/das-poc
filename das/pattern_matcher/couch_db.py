@@ -7,6 +7,7 @@ from typing import List, Any
 
 from .db_interface import WILDCARD, UNORDERED_LINK_TYPES
 from das.couchbase_schema import CollectionNames as CouchbaseCollectionNames
+from das.mongo_schema import FieldNames as MongoFieldNames
 from .couch_mongo_db import CouchMongoDB
 from das.hashing import Hasher
 
@@ -37,8 +38,9 @@ class CouchDB(CouchMongoDB):
             raise ValueError(f'Invalid link type hash: {keys[0]}')
         return link_type not in UNORDERED_LINK_TYPES
 
-    def get_matched_node_name(self, substring: str) -> str:
+    def get_matched_node_name(self, node_type: str, substring: str) -> str:
         ###### TODO Fix this
+        node_type_hash = self.atom_type_hash.get(node_type, None)
         couchbase_specs = {
             "hostname": "couchbase",
             "username": "dbadmin",
@@ -57,5 +59,7 @@ class CouchDB(CouchMongoDB):
             name = row['Names'][0]
             handle = row['id']
             if substring in name:
-                answer.append(handle)
+                document = self.node_documents[handle]
+                if document[MongoFieldNames.TYPE] == node_type_hash:
+                    answer.append(handle)
         return answer
