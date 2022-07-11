@@ -106,8 +106,8 @@ def populate_sets(hasher: Hasher, fh1, fh2, fh3, fh4, collection: Collection, bu
     acc_clock_block4.pause()
 
     acc_clock_block5.start()
-    if keys[0] in composite_keys_masks:
-      for mask in composite_keys_masks[keys[0]]:
+    if tuple([keys[0], len(keys)]) in composite_keys_masks:
+      for mask in composite_keys_masks[tuple([keys[0], len(keys)])]:
         keys_copy = keys.copy()
         for pos in mask:
           keys_copy[pos-1] = '*'
@@ -212,7 +212,7 @@ def process_index_pattern_file(filename: str) -> dict[str, list[set[int]]]:
       dimension = int(tokens[1])
       keys = [int(t) for t in tokens[2:]]
       result = []
-      d[label] = result
+      d[tuple([label, dimension])] = result
 
       for m in generate_non_trivial_binary_masks(dimension):
         s = set()
@@ -232,9 +232,10 @@ def group_index_pattern_by_hash(index_pattern: dict[str, list[set[int]]], node_t
     node_type_to_hash[name] = _id
 
   d = {}
-  for label, l in index_pattern.items():
+  for key, l in index_pattern.items():
+    label, dimension = key
     assert label in node_type_to_hash, f'label = {label} node_type_to_hash, = {node_type_to_hash,}'
-    d[node_type_to_hash[label]] = l
+    d[tuple([node_type_to_hash[label], dimension])] = l
 
   return d
 

@@ -7,11 +7,11 @@ from typing import Dict, FrozenSet, List, Optional, Set, Union
 
 from das.pattern_matcher.db_interface import DBInterface, WILDCARD
 
-DEBUG_AND = True
+DEBUG_AND = False
 DEBUG_OR = False
 DEBUG_NOT = False
-DEBUG_LINK = True
-DEBUG_LINK_TEMPLATE = True
+DEBUG_LINK = False
+DEBUG_LINK_TEMPLATE = False
 
 CONFIG = {
     # Enforce different values for different variables in ordered assignments
@@ -462,7 +462,6 @@ class Link(Atom):
                 return None
             self.handle = db.get_link_handle(self.atom_type, target_handles)
         return self.handle
-        
 
     def _assign_variables(self, db: DBInterface, link: str, link_targets: List[str]) -> Optional[Assignment]:
         #link_targets = db.get_link_targets(link)

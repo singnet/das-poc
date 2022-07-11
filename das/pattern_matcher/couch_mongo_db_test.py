@@ -211,6 +211,10 @@ def test_get_all_nodes(db: DBInterface):
         nodes_in_db = db.get_all_nodes('blah')
     
 def test_get_matched_links(db: DBInterface):
+    # TODO: once we have API to add nodes/links, add a
+    #       testcase like Eval(PN, List(X, Y)) where the
+    #       pattern is one level below the logic expression
+    #       used to call matched()
     mammal = db.get_node_handle('Concept', 'mammal')
     animal = db.get_node_handle('Concept', 'animal')
     human = db.get_node_handle('Concept', 'human')
