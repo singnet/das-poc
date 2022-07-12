@@ -106,6 +106,7 @@ class Translator:
     "MemberLink",
     "SetLink",
     "SimilarityLink",
+    "LazyExecutionOutputLink",
   )
 
   _ALLOWED_NODES = (
@@ -126,6 +127,9 @@ class Translator:
     "EnstNode",
     "UniprotNode",
     "RefseqNode",
+    "PharmGkbNode",
+    "SchemaNode",
+    "PatientNode",
   )
 
   IGNORED_SYMBOLS = ("stv",)
@@ -189,7 +193,8 @@ class Translator:
       mtype = self.symbol_name2metta(first)
       if self.is_node(first):
         if len(rest) > 1:
-          raise ValueError(f"Node rest len is greater than 1: {rest}")
+          rest = rest[0:1]
+          #raise ValueError(f"Node rest len is greater than 1: {rest}")
 
         symbol = self.replace_nodesymbol(mtype, rest[0])
 

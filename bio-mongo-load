@@ -1,0 +1,24 @@
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/biogrid_gene_gene_4.1.190_2020-10-19.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/ChEBI2Reactome_PE_Pathway.txt_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/codingRNA_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/COVID-19-biogrid_LATEST.tab3.zip_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/entrez_to_protein_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/GO_2020-10-21.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/NCBI2Reactome_PE_Pathway.txt_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/noncodingRNA_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/PA_gene2celltype_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/reactome_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/smpdb_chebi_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/smpdb_protein_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/uniprot2GO_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/UniProt2Reactome_PE_Pathway.txt_2020-10-20.metta
+docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/uniprot2taxonomy.metta
+
+#docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/GO_annotation_2020-10-20.metta
+#docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/concept-inhr-member.metta
+#docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/patient_gene_under_expr.metta
+#docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/Go-Plus-GO_with_definition_2020-10-20.metta
+#docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/GTEx_median_tissue_expression.metta
+#docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/string_ggi_2020-10-20.metta
+#docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/string_ppi_2020-10-20.metta
+#docker-compose exec app python das/das_upload_to_mongo.py -d BIO ./data/annotation_service/patient_gene_over_expr.metta
