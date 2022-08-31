@@ -131,4 +131,6 @@ dmypy.json
 # IDEs
 .idea/
 .vscode/
+
 **/*.metta
+nogit/*
