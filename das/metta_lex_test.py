@@ -21,7 +21,7 @@ lex_test_data = """
 
 def test_lexer():
     wrap = MettaLex()
-    wrap.build()
+    #wrap.build()
     expected_tokens = [
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
@@ -76,5 +76,6 @@ def test_lexer():
     wrap.lexer.input(lex_test_data)
     for expected_token in expected_tokens:
         token = wrap.lexer.token()
+        print(token)
         assert token.type == expected_token
     assert not wrap.lexer.token()

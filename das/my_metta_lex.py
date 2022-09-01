@@ -1,7 +1,8 @@
 import ply.lex as lex
+from das.exceptions import MettaLexerError
  
 class MettaLex:
-    def __init__(self):
+    def __init__(self, **kwargs):
 
         self.reserved = {
             'Type' : 'BASIC_TYPE',
@@ -24,6 +25,11 @@ class MettaLex:
         self.t_SET_OPENNING = r'\{'
         self.t_SET_CLOSING = r'\}'
 
+        self.lexer = lex.lex(module=self, **kwargs)
+        self.lexer.eof_reported_flag = False
+        self.action_broker = None
+        self.eof_handler = self.default_eof_handler
+
     def t_ATOM_NAME(self, t):
         r'\"[^\"]+\"'
         t.value = t.value[1:-1]
@@ -41,19 +47,20 @@ class MettaLex:
         t.lexer.lineno += len(t.value)
 
     def t_eof(self, t):
-        if self.lexer.eof_flag:
+        return self.eof_handler(t)
+
+    def default_eof_handler(self, t):
+        if self.lexer.eof_reported_flag:
             return None
-        self.lexer.eof_flag = True
-        self.lexer.input("")
-        t.type = 'EOF'
-        return t
+        else:
+            self.lexer.input("")
+            t.type = 'EOF'
+            self.lexer.eof_reported_flag = True
+            return t
      
     def t_error(self, t):
-        print(f"Illegal character at line {t.lexer.lineno}: '{t.value[0]}'")
+        source = f"File: {self.lexer.filename if self.lexer.filename else '<input string>'}"
         n = 80 if len(t.value) > 30 else len(t.value) - 1
-        print(f"Near: '{t.value[0:n]}...'")
-        exit()
-     
-    def build(self,**kwargs):
-        self.lexer = lex.lex(module=self, **kwargs)
-        self.lexer.eof_flag = False
+        error_message = f"{source} - Illegal character at line {t.lexer.lineno}: '{t.value[0]}' " +\
+                        f"Near: '{t.value[0:n]}...'"
+        raise MettaLexerError(error_message)
