@@ -15,7 +15,11 @@ lex_test_data = """
         (
             Evaluation
             "Predicate:has_name"
-            {"Reactome:R-HSA-164843" "Concept:2-LTR circle formation"}
+            (
+                Set
+                "Reactome:R-HSA-164843"
+                "Concept:2-LTR circle formation"
+            )
         )
     )"""
 
@@ -64,10 +68,11 @@ def test_lexer():
         "EXPRESSION_OPENNING", 
         "EXPRESSION_NAME", 
         "ATOM_NAME", 
-        "SET_OPENNING", 
+        "EXPRESSION_OPENNING", 
+        "EXPRESSION_NAME",
         "ATOM_NAME", 
         "ATOM_NAME", 
-        "SET_CLOSING", 
+        "EXPRESSION_CLOSING", 
         "EXPRESSION_CLOSING", 
         "EXPRESSION_CLOSING", 
         "EOF"

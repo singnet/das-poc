@@ -18,7 +18,6 @@ LIST_OF_EXPRESSIONS -> EXPRESSION
                      | LIST_OF_EXPRESSIONS EXPRESSION
 
 EXPRESSION -> EXPRESSION_OPENNING LIST_OF_EXPRESSIONS EXPRESSION_CLOSING
-            | SET_OPENNING LIST_OF_EXPRESSIONS SET_CLOSING
             | EXPRESSION_OPENNING TYPE_DEFINITION_MARK EXPRESSION_NAME TYPE_DESIGNATOR EXPRESSION_CLOSING
             | EXPRESSION_NAME
             | ATOM_NAME
@@ -103,12 +102,6 @@ class MettaYacc:
     def p_EXPRESSION_sequence(self, p):
         """EXPRESSION : EXPRESSION_OPENNING LIST_OF_EXPRESSIONS EXPRESSION_CLOSING"""
         p[0] = f'<List {p[2]}>'
-        if self.check_mode or not self.action_broker:
-            return
-
-    def p_EXPRESSION_set(self, p):
-        """EXPRESSION : SET_OPENNING LIST_OF_EXPRESSIONS SET_CLOSING"""
-        p[0] = f'<Set {p[2]}>'
         if self.check_mode or not self.action_broker:
             return
 

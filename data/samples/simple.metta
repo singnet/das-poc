@@ -11,6 +11,10 @@
 	(
 	    Evaluation 
 	    "Predicate:has_name" 
-	    {"Reactome:R-HSA-164843" "Concept:2-LTR circle formation"}
+	    (
+            Set
+            "Reactome:R-HSA-164843"
+            "Concept:2-LTR circle formation"
+        )
 	)
 )
