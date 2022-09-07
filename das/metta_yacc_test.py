@@ -50,47 +50,47 @@ def test_action_broker():
     assert action_broker.count_expression == 1
     assert action_broker.count_type == 8
 
-def test_atom_hash():
+def test_terminal_hash():
 
     yacc_wrap = MettaYacc()
     named_type1 = 'blah1'
-    atom_name1 = 'bleh1'
+    terminal_name1 = 'bleh1'
     named_type2 = 'blah2'
-    atom_name2 = 'bleh2'
+    terminal_name2 = 'bleh2'
 
-    assert(len(yacc_wrap.atom_hash) == 0)
+    assert(len(yacc_wrap.terminal_hash) == 0)
 
-    h = yacc_wrap._get_atom_hash(named_type1, atom_name1)
-    assert(len(yacc_wrap.atom_hash) == 1)
-    assert h == yacc_wrap._get_atom_hash(named_type1, atom_name1)
-    assert(len(yacc_wrap.atom_hash) == 1)
+    h = yacc_wrap._get_terminal_hash(named_type1, terminal_name1)
+    assert(len(yacc_wrap.terminal_hash) == 1)
+    assert h == yacc_wrap._get_terminal_hash(named_type1, terminal_name1)
+    assert(len(yacc_wrap.terminal_hash) == 1)
 
-    h = yacc_wrap._get_atom_hash(named_type2, atom_name2)
-    assert(len(yacc_wrap.atom_hash) == 2)
-    assert h == yacc_wrap._get_atom_hash(named_type2, atom_name2)
-    assert yacc_wrap._get_atom_hash(named_type1, atom_name1) \
-        != yacc_wrap._get_atom_hash(named_type2, atom_name2)
-    assert(len(yacc_wrap.atom_hash) == 2)
+    h = yacc_wrap._get_terminal_hash(named_type2, terminal_name2)
+    assert(len(yacc_wrap.terminal_hash) == 2)
+    assert h == yacc_wrap._get_terminal_hash(named_type2, terminal_name2)
+    assert yacc_wrap._get_terminal_hash(named_type1, terminal_name1) \
+        != yacc_wrap._get_terminal_hash(named_type2, terminal_name2)
+    assert(len(yacc_wrap.terminal_hash) == 2)
 
-    h = yacc_wrap._get_atom_hash(named_type1, atom_name2)
-    assert(len(yacc_wrap.atom_hash) == 3)
-    assert h == yacc_wrap._get_atom_hash(named_type1, atom_name2)
-    assert yacc_wrap._get_atom_hash(named_type1, atom_name1) \
-        != yacc_wrap._get_atom_hash(named_type1, atom_name2)
-    assert yacc_wrap._get_atom_hash(named_type2, atom_name2) \
-        != yacc_wrap._get_atom_hash(named_type1, atom_name2)
-    assert(len(yacc_wrap.atom_hash) == 3)
+    h = yacc_wrap._get_terminal_hash(named_type1, terminal_name2)
+    assert(len(yacc_wrap.terminal_hash) == 3)
+    assert h == yacc_wrap._get_terminal_hash(named_type1, terminal_name2)
+    assert yacc_wrap._get_terminal_hash(named_type1, terminal_name1) \
+        != yacc_wrap._get_terminal_hash(named_type1, terminal_name2)
+    assert yacc_wrap._get_terminal_hash(named_type2, terminal_name2) \
+        != yacc_wrap._get_terminal_hash(named_type1, terminal_name2)
+    assert(len(yacc_wrap.terminal_hash) == 3)
 
-    h = yacc_wrap._get_atom_hash(named_type2, atom_name1)
-    assert(len(yacc_wrap.atom_hash) == 4)
-    assert h == yacc_wrap._get_atom_hash(named_type2, atom_name1)
-    assert yacc_wrap._get_atom_hash(named_type1, atom_name1) \
-        != yacc_wrap._get_atom_hash(named_type2, atom_name1)
-    assert yacc_wrap._get_atom_hash(named_type2, atom_name2) \
-        != yacc_wrap._get_atom_hash(named_type2, atom_name1)
-    assert yacc_wrap._get_atom_hash(named_type1, atom_name2) \
-        != yacc_wrap._get_atom_hash(named_type2, atom_name1)
-    assert(len(yacc_wrap.atom_hash) == 4)
+    h = yacc_wrap._get_terminal_hash(named_type2, terminal_name1)
+    assert(len(yacc_wrap.terminal_hash) == 4)
+    assert h == yacc_wrap._get_terminal_hash(named_type2, terminal_name1)
+    assert yacc_wrap._get_terminal_hash(named_type1, terminal_name1) \
+        != yacc_wrap._get_terminal_hash(named_type2, terminal_name1)
+    assert yacc_wrap._get_terminal_hash(named_type2, terminal_name2) \
+        != yacc_wrap._get_terminal_hash(named_type2, terminal_name1)
+    assert yacc_wrap._get_terminal_hash(named_type1, terminal_name2) \
+        != yacc_wrap._get_terminal_hash(named_type2, terminal_name1)
+    assert(len(yacc_wrap.terminal_hash) == 4)
     
 def test_named_type_hash():
 
@@ -153,7 +153,7 @@ def test_nested_expression():
 
     assert not composite1.toplevel
     assert composite1.ordered
-    assert composite1.atom_name is None
+    assert composite1.terminal_name is None
     assert composite1.named_type == 'Similarity'
     assert composite1.named_type_hash == 'Similarity Hash'
     assert composite1.composite_type == ['Typedef Similarity Type', 'Concept', 'Concept']
@@ -168,7 +168,7 @@ def test_nested_expression():
     composite3 = yacc_wrap._nested_expression([expression1, composite1, composite2])
     assert not composite3.toplevel
     assert composite3.ordered
-    assert composite3.atom_name is None
+    assert composite3.terminal_name is None
     assert composite3.named_type == 'Similarity'
     assert composite3.named_type_hash == 'Similarity Hash'
     assert composite3.composite_type == [
@@ -192,7 +192,7 @@ def test_typedef():
     assert len(yacc_wrap.pending_named_types) == 1
     assert not expression1.toplevel
     assert expression1.ordered
-    assert expression1.atom_name is None
+    assert expression1.terminal_name is None
     assert expression1.named_type is None
     assert expression1.named_type_hash is None
     assert expression1.composite_type is None
@@ -216,7 +216,7 @@ def test_typedef():
     assert yacc_wrap.parent_type[h2] == h1
     assert not expression2.toplevel
     assert expression2.ordered
-    assert expression2.atom_name is None
+    assert expression2.terminal_name is None
     assert expression2.named_type == ':'
     assert expression2.named_type_hash is not None
     assert expression2.composite_type == [h3, h1, h1]
@@ -233,7 +233,7 @@ def test_typedef():
     assert yacc_wrap.parent_type[h4] == h1
     assert not expression3.toplevel
     assert expression3.ordered
-    assert expression3.atom_name is None
+    assert expression3.terminal_name is None
     assert expression3.named_type == ':'
     assert expression3.named_type_hash is not None
     assert expression3.composite_type == [h3, h1, h1]
@@ -261,7 +261,7 @@ def test_typedef():
     assert yacc_wrap.parent_type[h5] == h4
     assert not expression5.toplevel
     assert expression5.ordered
-    assert expression5.atom_name is None
+    assert expression5.terminal_name is None
     assert expression5.named_type == ':'
     assert expression5.named_type_hash is not None
     assert expression5.composite_type == [h3, h4, h1]
@@ -367,7 +367,7 @@ def test_pending_types():
     assert action_broker.count_expression == 1
     assert action_broker.count_type == 9
 
-def test_pending_atom_names():
+def test_pending_terminal_names():
 
     missing_type = """
         (: Evaluation Type)

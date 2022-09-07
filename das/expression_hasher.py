@@ -14,9 +14,9 @@ class ExpressionHasher:
         return ExpressionHasher._compute_hash(name)
 
     @staticmethod
-    def atom_hash(named_type: str, atom_name: str) -> str:
+    def terminal_hash(named_type: str, terminal_name: str) -> str:
         return ExpressionHasher._compute_hash(
-            ExpressionHasher.compound_separator.join([named_type, atom_name]))
+            ExpressionHasher.compound_separator.join([named_type, terminal_name]))
 
     @staticmethod
     def expression_hash(named_type_hash: str, elements: List[str]) -> str:
@@ -46,8 +46,8 @@ class StringExpressionHasher:
         return f"<Type: {name}>"
 
     @staticmethod
-    def atom_hash(named_type: str, atom_name: str) -> str:
-        return f"<{named_type}: {atom_name}>"
+    def terminal_hash(named_type: str, terminal_name: str) -> str:
+        return f"<{named_type}: {terminal_name}>"
 
     @staticmethod
     def expression_hash(named_type_hash: str, elements: List[str]) -> str:
