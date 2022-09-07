@@ -11,10 +11,9 @@ class MettaLex:
         self.tokens = [
             'EXPRESSION_OPENNING',
             'EXPRESSION_CLOSING',
-            'SET_OPENNING',
-            'SET_CLOSING',
             'TYPE_DEFINITION_MARK',
             'ATOM_NAME',
+            # AQUI TODO: change atom -> terminal
             'EXPRESSION_NAME',
             'EOF',
         ] + list(self.reserved.values())
@@ -22,13 +21,12 @@ class MettaLex:
         self.t_TYPE_DEFINITION_MARK = r'\:'
         self.t_EXPRESSION_OPENNING = r'\('
         self.t_EXPRESSION_CLOSING = r'\)'
-        self.t_SET_OPENNING = r'\{'
-        self.t_SET_CLOSING = r'\}'
 
         self.lexer = lex.lex(module=self, **kwargs)
         self.lexer.eof_reported_flag = False
         self.action_broker = None
         self.eof_handler = self.default_eof_handler
+        self.lexer.filename = ""
 
     def t_ATOM_NAME(self, t):
         r'\"[^\"]+\"'

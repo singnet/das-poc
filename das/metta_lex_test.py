@@ -6,6 +6,7 @@ lex_test_data = """
     (: Predicate Type)
     (: Reactome Type)
     (: Concept Type)
+    (: Set Type)
     (: "Predicate:has_name" Predicate)
     (: "Reactome:R-HSA-164843" Reactome)
     (: "Concept:2-LTR circle formation" Concept)
@@ -15,7 +16,11 @@ lex_test_data = """
         (
             Evaluation
             "Predicate:has_name"
-            {"Reactome:R-HSA-164843" "Concept:2-LTR circle formation"}
+            (
+                Set
+                "Reactome:R-HSA-164843"
+                "Concept:2-LTR circle formation"
+            )
         )
     )"""
 
@@ -28,46 +33,60 @@ def test_lexer():
         "EXPRESSION_NAME", 
         "BASIC_TYPE", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "EXPRESSION_NAME", 
         "BASIC_TYPE", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "EXPRESSION_NAME", 
         "BASIC_TYPE", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "EXPRESSION_NAME", 
         "BASIC_TYPE", 
         "EXPRESSION_CLOSING", 
+
+        "EXPRESSION_OPENNING", 
+        "TYPE_DEFINITION_MARK", 
+        "EXPRESSION_NAME", 
+        "BASIC_TYPE", 
+        "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "ATOM_NAME", 
         "EXPRESSION_NAME", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "ATOM_NAME", 
         "EXPRESSION_NAME", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "ATOM_NAME", 
         "EXPRESSION_NAME", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "EXPRESSION_NAME", 
         "ATOM_NAME", 
         "EXPRESSION_OPENNING", 
         "EXPRESSION_NAME", 
         "ATOM_NAME", 
-        "SET_OPENNING", 
+        "EXPRESSION_OPENNING", 
+        "EXPRESSION_NAME",
         "ATOM_NAME", 
         "ATOM_NAME", 
-        "SET_CLOSING", 
+        "EXPRESSION_CLOSING", 
         "EXPRESSION_CLOSING", 
         "EXPRESSION_CLOSING", 
         "EOF"
