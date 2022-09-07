@@ -27,11 +27,12 @@ from dataclasses import dataclass
 from typing import List, Any, Optional
 import ply.yacc as yacc
 from das.my_metta_lex import MettaLex
-from das.exceptions import MettaSyntaxError
+from das.exceptions import MettaSyntaxError, UndefinedSymbolError
 from das.expression_hasher import ExpressionHasher
 
 @dataclass
 class Expression:
+    #AQUI : TODO: Implement non-ordered
     toplevel: bool = False
     ordered: bool = True
     atom_name: Optional[str] = None
@@ -49,6 +50,14 @@ class MettaYacc:
     def p_START(self, p):
         """START : LIST_OF_TOP_LEVEL_EXPRESSIONS EOF
                  | EOF"""
+        self._revisit_pending_symbols()
+        missing_symbols = []
+        missing_symbols.extend([name for (name, expression) in self.pending_atom_names])
+        missing_symbols.extend([name for (name, expression) in self.pending_expression_names])
+        missing_symbols.extend([type_designator for ((name, type_designator), expression) in self.pending_named_types])
+        if missing_symbols:
+            raise UndefinedSymbolError(list(set(missing_symbols)))
+        assert not self.pending_expressions
         p[0] = 'SUCCESS'
         if self.check_mode or not self.action_broker:
             return
@@ -88,9 +97,9 @@ class MettaYacc:
         assert self.typedef_mark == p[2]
         name = p[3]
         type_designator = p[4]
-        new_expression = self._typedef(name, type_designator)
-        new_expression.toplevel = True
-        p[0] = new_expression
+        expression = self._typedef(name, type_designator)
+        expression.toplevel = True
+        p[0] = expression
 
     def p_TYPE_DESIGNATOR_expression(self, p):
         """TYPE_DESIGNATOR : EXPRESSION_NAME"""
@@ -112,9 +121,9 @@ class MettaYacc:
         if self.check_mode or not self.action_broker:
             return
         sub_expressions = p[2]
-        new_expression = self._nested_expression(sub_expressions)
-        new_expression.toplevel = True
-        p[0] = new_expression
+        expression = self._nested_expression(sub_expressions)
+        expression.toplevel = True
+        p[0] = expression
         
 
     def p_LIST_OF_EXPRESSIONS_base(self, p):
@@ -134,8 +143,8 @@ class MettaYacc:
         if self.check_mode or not self.action_broker:
             return
         sub_expressions = p[2]
-        new_expression = self._nested_expression(sub_expressions)
-        p[0] = new_expression
+        expression = self._nested_expression(sub_expressions)
+        p[0] = expression
 
     def p_EXPRESSION_type(self, p):
         """EXPRESSION : EXPRESSION_OPENNING TYPE_DEFINITION_MARK EXPRESSION_NAME TYPE_DESIGNATOR EXPRESSION_CLOSING
@@ -145,8 +154,8 @@ class MettaYacc:
         assert self.typedef_mark == p[2]
         name = p[3]
         type_designator = p[4]
-        new_expression = self._typedef(name, type_designator)
-        p[0] = new_expression
+        expression = self._typedef(name, type_designator)
+        p[0] = expression
         
 
     def p_EXPRESSION_symbol(self, p):
@@ -154,36 +163,16 @@ class MettaYacc:
         if self.check_mode or not self.action_broker:
             return
         expression_name = p[1]
-        named_type = self.named_types.get(expression_name, None)
-        new_expression = Expression()
-        if named_type:
-            named_type_hash = self._get_named_type_hash(named_type)
-            new_expression.named_type = named_type
-            new_expression.named_type_hash = named_type_hash
-            new_expression.composite_type = [named_type_hash]
-            new_expression.composite_type_hash = named_type_hash
-            new_expression.hash_code = self.symbol_hash[expression_name]
-        else:
-            self.pending_expression_names.append(expression_name)
-        p[0] = new_expression
+        expression = self._new_symbol(expression_name)
+        p[0] = expression
 
     def p_EXPRESSION_atom(self, p):
         """EXPRESSION : ATOM_NAME"""
         if self.check_mode or not self.action_broker:
             return
         atom_name = p[1]
-        named_type = self.named_types.get(atom_name, None)
-        new_expression = Expression(atom_name=atom_name)
-        if named_type:
-            named_type_hash = self._get_named_type_hash(named_type)
-            new_expression.named_type = named_type
-            new_expression.named_type_hash = named_type_hash
-            new_expression.composite_type = [named_type_hash]
-            new_expression.composite_type_hash = named_type_hash
-            new_expression.hash_code = self._get_atom_hash(named_type, atom_name)
-        else:
-            self.pending_atom_names.append(atom_name)
-        p[0] = new_expression
+        expression = self._new_atom(atom_name)
+        p[0] = expression
 
     def p_error(self, p):
         error = f"Syntax error in line {self.lexer.lineno} " + \
@@ -204,6 +193,7 @@ class MettaYacc:
         self.pending_atom_names = []
         self.pending_expression_names = []
         self.pending_named_types = []
+        self.pending_expressions = []
         self.named_types = {}
         self.named_type_hash = {}
         self.symbol_hash = {}
@@ -225,42 +215,121 @@ class MettaYacc:
             self.named_type_hash[named_type] = named_type_hash
         return named_type_hash
 
-    def _nested_expression(self, sub_expressions):
-        new_expression = Expression()
+    def _nested_expression(self, sub_expressions, expression=None):
+        if expression is None:
+            expression = Expression()
+        if any(sub_expression.hash_code is None for sub_expression in sub_expressions):
+            self.pending_expressions.append((sub_expressions, expression))
+            return expression
         if sub_expressions[0].named_type is not None:
-            new_expression.named_type = sub_expressions[0].named_type
-            new_expression.named_type_hash = sub_expressions[0].named_type_hash
-            new_expression.composite_type = [sub_expression.composite_type for sub_expression in sub_expressions]
+            expression.named_type = sub_expressions[0].named_type
+            expression.named_type_hash = sub_expressions[0].named_type_hash
+            expression.composite_type = [
+                sub_expression.composite_type \
+                    if len(sub_expression.composite_type) > 1 \
+                    else sub_expression.composite_type[0] \
+                for sub_expression in sub_expressions]
             hashes = [sub_expression.composite_type_hash for sub_expression in sub_expressions]
-            new_expression.composite_type_hash = self.hasher.composite_hash(hashes)
-            new_expression.elements = [sub_expression.hash_code for sub_expression in sub_expressions]
-            new_expression.hash_code = self.hasher.expression_hash(new_expression.named_type_hash, new_expression.elements)
+            expression.composite_type_hash = self.hasher.composite_hash(hashes)
+            expression.elements = [sub_expression.hash_code for sub_expression in sub_expressions[1:]]
+            expression.hash_code = self.hasher.expression_hash(expression.named_type_hash, expression.elements)
         else:
             error = f"Syntax error in line {self.lexer.lineno} " + \
                     f"Non-typed expressions are not supported yet"
             raise MettaSyntaxError(error)
-        return new_expression
+        return expression
 
-    def _typedef(self, name, type_designator):
+    def _typedef(self, name, type_designator, expression=None):
         assert name is not None
         assert type_designator is not None
-        new_expression = Expression()
+        if expression is None:
+            expression = Expression()
         type_designator_hash = self.named_type_hash.get(type_designator, None)
         if type_designator_hash is not None:
             named_type_hash = self._get_named_type_hash(name)
             typedef_mark_hash = self._get_named_type_hash(self.typedef_mark)
             self.parent_type[named_type_hash] = type_designator_hash
             self.named_types[name] = type_designator
-            new_expression.named_type = self.typedef_mark
-            new_expression.named_type_hash = typedef_mark_hash
-            new_expression.composite_type = [typedef_mark_hash, type_designator_hash, self.parent_type[type_designator_hash]]
-            new_expression.composite_type_hash = self.hasher.composite_hash(new_expression.composite_type)
-            new_expression.elements = [named_type_hash, type_designator_hash]
-            new_expression.hash_code = self.hasher.expression_hash(new_expression.named_type_hash, new_expression.elements)
-            self.symbol_hash[name] = new_expression.hash_code
+            expression.named_type = self.typedef_mark
+            expression.named_type_hash = typedef_mark_hash
+            expression.composite_type = [typedef_mark_hash, type_designator_hash, self.parent_type[type_designator_hash]]
+            expression.composite_type_hash = self.hasher.composite_hash(expression.composite_type)
+            expression.elements = [named_type_hash, type_designator_hash]
+            expression.hash_code = self.hasher.expression_hash(expression.named_type_hash, expression.elements)
+            self.symbol_hash[name] = expression.hash_code
         else:
-            self.pending_named_types.append(name)
-        return new_expression
+            self.pending_named_types.append(((name, type_designator), expression))
+        return expression
+
+    def _new_atom(self, atom_name, expression=None):
+        if expression is None:
+            expression = Expression(atom_name=atom_name)
+        named_type = self.named_types.get(atom_name, None)
+        if named_type:
+            named_type_hash = self._get_named_type_hash(named_type)
+            expression.named_type = named_type
+            expression.named_type_hash = named_type_hash
+            expression.composite_type = [named_type_hash]
+            expression.composite_type_hash = named_type_hash
+            expression.hash_code = self._get_atom_hash(named_type, atom_name)
+        else:
+            self.pending_atom_names.append((atom_name, expression))
+        return expression
+
+    def _new_symbol(self, expression_name, expression=None):
+        if expression is None:
+            expression = Expression()
+        named_type = self.named_types.get(expression_name, None)
+        if named_type:
+            named_type_hash = self._get_named_type_hash(named_type)
+            expression.named_type = named_type
+            expression.named_type_hash = named_type_hash
+            expression.composite_type = [named_type_hash]
+            expression.composite_type_hash = named_type_hash
+            expression.hash_code = self.symbol_hash[expression_name]
+        else:
+            self.pending_expression_names.append((expression_name, expression))
+        return expression
+
+    def _revisit_pending_named_types(self):
+        pending = self.pending_named_types
+        self.pending_named_types = []
+        dirty_flag = False
+        for ((name, type_designator), expression) in pending:
+            modified_expression = self._typedef(name, type_designator, expression)
+            if modified_expression.hash_code is not None:
+                dirty_flag = True
+        return dirty_flag
+
+    def _revisit_pending_atom_names(self):
+        pending = self.pending_atom_names
+        self.pending_atom_names = []
+        for (atom_name, expression) in pending:
+            modified_expression = self._new_atom(atom_name, expression)
+
+    def _revisit_pending_expression_names(self):
+        pending = self.pending_expression_names
+        self.pending_expression_names = []
+        for (expression_name, expression) in pending:
+            modified_expression = self._new_symbol(expression_name, expression)
+
+    def _revisit_pending_expressions(self):
+        pending = self.pending_expressions
+        self.pending_expressions = []
+        dirty_flag = False
+        for (sub_expressions, expression) in pending:
+            modified_expression = self._nested_expression(sub_expressions, expression)
+            if modified_expression.hash_code is not None:
+                dirty_flag = True
+        return dirty_flag
+
+    def _revisit_pending_symbols(self):
+        while self._revisit_pending_named_types():
+            pass
+        self._revisit_pending_atom_names()
+        self._revisit_pending_expression_names()
+        while self._revisit_pending_expressions():
+            pass
 
     def eof_handler(self, t):
         if self.lexer.eof_reported_flag:
