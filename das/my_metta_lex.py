@@ -13,6 +13,7 @@ class MettaLex:
             'EXPRESSION_CLOSING',
             'TYPE_DEFINITION_MARK',
             'ATOM_NAME',
+            # AQUI TODO: change atom -> terminal
             'EXPRESSION_NAME',
             'EOF',
         ] + list(self.reserved.values())

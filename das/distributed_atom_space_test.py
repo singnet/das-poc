@@ -48,4 +48,3 @@ def test_get_file_list():
 
 def test_file_parse():
     das = DistributedAtomSpace(knowledge_base_file_name="./data/samples/simple.metta")
-    assert False

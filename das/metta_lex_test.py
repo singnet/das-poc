@@ -6,6 +6,7 @@ lex_test_data = """
     (: Predicate Type)
     (: Reactome Type)
     (: Concept Type)
+    (: Set Type)
     (: "Predicate:has_name" Predicate)
     (: "Reactome:R-HSA-164843" Reactome)
     (: "Concept:2-LTR circle formation" Concept)
@@ -32,36 +33,49 @@ def test_lexer():
         "EXPRESSION_NAME", 
         "BASIC_TYPE", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "EXPRESSION_NAME", 
         "BASIC_TYPE", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "EXPRESSION_NAME", 
         "BASIC_TYPE", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "EXPRESSION_NAME", 
         "BASIC_TYPE", 
         "EXPRESSION_CLOSING", 
+
+        "EXPRESSION_OPENNING", 
+        "TYPE_DEFINITION_MARK", 
+        "EXPRESSION_NAME", 
+        "BASIC_TYPE", 
+        "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "ATOM_NAME", 
         "EXPRESSION_NAME", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "ATOM_NAME", 
         "EXPRESSION_NAME", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "TYPE_DEFINITION_MARK", 
         "ATOM_NAME", 
         "EXPRESSION_NAME", 
         "EXPRESSION_CLOSING", 
+
         "EXPRESSION_OPENNING", 
         "EXPRESSION_NAME", 
         "ATOM_NAME", 

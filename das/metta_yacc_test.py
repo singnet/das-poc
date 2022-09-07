@@ -40,11 +40,11 @@ def test_action_broker():
     result = yacc_wrap.parse(test_data)
     assert result == "SUCCESS"
     assert action_broker.count_expression == 1
-    assert action_broker.count_type == 7
+    assert action_broker.count_type == 8
 
     action_broker = ActionBroker(test_data)
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.parse_action_broker_input()
     assert result == "SUCCESS"
     assert action_broker.count_expression == 1
-    assert action_broker.count_type == 7
+    assert action_broker.count_type == 8
