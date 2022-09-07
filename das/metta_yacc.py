@@ -20,7 +20,7 @@ LIST_OF_EXPRESSIONS -> EXPRESSION
 EXPRESSION -> EXPRESSION_OPENNING LIST_OF_EXPRESSIONS EXPRESSION_CLOSING
             | EXPRESSION_OPENNING TYPE_DEFINITION_MARK EXPRESSION_NAME TYPE_DESIGNATOR EXPRESSION_CLOSING
             | EXPRESSION_NAME
-            | ATOM_NAME
+            | TERMINAL_NAME
 """
 
 from dataclasses import dataclass
@@ -35,7 +35,7 @@ class Expression:
     #AQUI : TODO: Implement non-ordered
     toplevel: bool = False
     ordered: bool = True
-    atom_name: Optional[str] = None
+    terminal_name: Optional[str] = None
     named_type: Optional[str] = None
     named_type_hash: Optional[str] = None
     composite_type: Optional[List[Any]] = None
@@ -52,7 +52,7 @@ class MettaYacc:
                  | EOF"""
         self._revisit_pending_symbols()
         missing_symbols = []
-        missing_symbols.extend([name for (name, expression) in self.pending_atom_names])
+        missing_symbols.extend([name for (name, expression) in self.pending_terminal_names])
         missing_symbols.extend([name for (name, expression) in self.pending_expression_names])
         missing_symbols.extend([type_designator for ((name, type_designator), expression) in self.pending_named_types])
         if missing_symbols:
@@ -91,7 +91,7 @@ class MettaYacc:
 
     def p_TOP_LEVEL_TYPE_DEFINITION(self, p):
         """TOP_LEVEL_TYPE_DEFINITION : EXPRESSION_OPENNING TYPE_DEFINITION_MARK EXPRESSION_NAME TYPE_DESIGNATOR EXPRESSION_CLOSING
-                                     | EXPRESSION_OPENNING TYPE_DEFINITION_MARK ATOM_NAME TYPE_DESIGNATOR EXPRESSION_CLOSING"""
+                                     | EXPRESSION_OPENNING TYPE_DEFINITION_MARK TERMINAL_NAME TYPE_DESIGNATOR EXPRESSION_CLOSING"""
         if self.check_mode or not self.action_broker:
             return
         assert self.typedef_mark == p[2]
@@ -148,7 +148,7 @@ class MettaYacc:
 
     def p_EXPRESSION_type(self, p):
         """EXPRESSION : EXPRESSION_OPENNING TYPE_DEFINITION_MARK EXPRESSION_NAME TYPE_DESIGNATOR EXPRESSION_CLOSING
-                      | EXPRESSION_OPENNING TYPE_DEFINITION_MARK ATOM_NAME TYPE_DESIGNATOR EXPRESSION_CLOSING"""
+                      | EXPRESSION_OPENNING TYPE_DEFINITION_MARK TERMINAL_NAME TYPE_DESIGNATOR EXPRESSION_CLOSING"""
         if self.check_mode or not self.action_broker:
             return
         assert self.typedef_mark == p[2]
@@ -166,12 +166,12 @@ class MettaYacc:
         expression = self._new_symbol(expression_name)
         p[0] = expression
 
-    def p_EXPRESSION_atom(self, p):
-        """EXPRESSION : ATOM_NAME"""
+    def p_EXPRESSION_terminal(self, p):
+        """EXPRESSION : TERMINAL_NAME"""
         if self.check_mode or not self.action_broker:
             return
-        atom_name = p[1]
-        expression = self._new_atom(atom_name)
+        terminal_name = p[1]
+        expression = self._new_terminal(terminal_name)
         p[0] = expression
 
     def p_error(self, p):
@@ -190,23 +190,23 @@ class MettaYacc:
         self.parser = yacc.yacc(module=self, **kwargs)
         self.check_mode = False
         self.hasher = ExpressionHasher()
-        self.pending_atom_names = []
+        self.pending_terminal_names = []
         self.pending_expression_names = []
         self.pending_named_types = []
         self.pending_expressions = []
         self.named_types = {}
         self.named_type_hash = {}
         self.symbol_hash = {}
-        self.atom_hash = {}
+        self.terminal_hash = {}
         self.parent_type = {}
 
-    def _get_atom_hash(self, named_type, atom_name):
-        key = (named_type, atom_name)
-        atom_hash = self.atom_hash.get(key, None)
-        if atom_hash is None:
-            atom_hash = self.hasher.atom_hash(*key)
-            self.atom_hash[key] = atom_hash
-        return atom_hash
+    def _get_terminal_hash(self, named_type, terminal_name):
+        key = (named_type, terminal_name)
+        terminal_hash = self.terminal_hash.get(key, None)
+        if terminal_hash is None:
+            terminal_hash = self.hasher.terminal_hash(*key)
+            self.terminal_hash[key] = terminal_hash
+        return terminal_hash
 
     def _get_named_type_hash(self, named_type):
         named_type_hash = self.named_type_hash.get(named_type, None)
@@ -261,19 +261,19 @@ class MettaYacc:
             self.pending_named_types.append(((name, type_designator), expression))
         return expression
 
-    def _new_atom(self, atom_name, expression=None):
+    def _new_terminal(self, terminal_name, expression=None):
         if expression is None:
-            expression = Expression(atom_name=atom_name)
-        named_type = self.named_types.get(atom_name, None)
+            expression = Expression(terminal_name=terminal_name)
+        named_type = self.named_types.get(terminal_name, None)
         if named_type:
             named_type_hash = self._get_named_type_hash(named_type)
             expression.named_type = named_type
             expression.named_type_hash = named_type_hash
             expression.composite_type = [named_type_hash]
             expression.composite_type_hash = named_type_hash
-            expression.hash_code = self._get_atom_hash(named_type, atom_name)
+            expression.hash_code = self._get_terminal_hash(named_type, terminal_name)
         else:
-            self.pending_atom_names.append((atom_name, expression))
+            self.pending_terminal_names.append((terminal_name, expression))
         return expression
 
     def _new_symbol(self, expression_name, expression=None):
@@ -301,11 +301,11 @@ class MettaYacc:
                 dirty_flag = True
         return dirty_flag
 
-    def _revisit_pending_atom_names(self):
-        pending = self.pending_atom_names
-        self.pending_atom_names = []
-        for (atom_name, expression) in pending:
-            modified_expression = self._new_atom(atom_name, expression)
+    def _revisit_pending_terminal_names(self):
+        pending = self.pending_terminal_names
+        self.pending_terminal_names = []
+        for (terminal_name, expression) in pending:
+            modified_expression = self._new_terminal(terminal_name, expression)
 
     def _revisit_pending_expression_names(self):
         pending = self.pending_expression_names
@@ -326,7 +326,7 @@ class MettaYacc:
     def _revisit_pending_symbols(self):
         while self._revisit_pending_named_types():
             pass
-        self._revisit_pending_atom_names()
+        self._revisit_pending_terminal_names()
         self._revisit_pending_expression_names()
         while self._revisit_pending_expressions():
             pass

@@ -12,8 +12,7 @@ class MettaLex:
             'EXPRESSION_OPENNING',
             'EXPRESSION_CLOSING',
             'TYPE_DEFINITION_MARK',
-            'ATOM_NAME',
-            # AQUI TODO: change atom -> terminal
+            'TERMINAL_NAME',
             'EXPRESSION_NAME',
             'EOF',
         ] + list(self.reserved.values())
@@ -28,7 +27,7 @@ class MettaLex:
         self.eof_handler = self.default_eof_handler
         self.lexer.filename = ""
 
-    def t_ATOM_NAME(self, t):
+    def t_TERMINAL_NAME(self, t):
         r'\"[^\"]+\"'
         t.value = t.value[1:-1]
         return t
