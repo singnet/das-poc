@@ -46,5 +46,5 @@ def test_get_file_list():
     os.remove(temp_file1)
     os.remove(temp_file2)
 
-def test_file_parse():
-    das = DistributedAtomSpace(knowledge_base_file_name="./data/samples/simple.metta")
+#def test_file_parse():
+#    das = DistributedAtomSpace(knowledge_base_file_name="./data/samples/simple.metta")

@@ -9,10 +9,10 @@ from couchbase.auth import PasswordAuthenticator
 from couchbase.bucket import Bucket
 from couchbase.cluster import Cluster
 from das.helpers import get_mongodb
-from das.pattern_matcher.db_interface import DBInterface
-from das.pattern_matcher.couch_db import CouchDB
-from das.pattern_matcher.mongo_db import MongoDB
-from das.pattern_matcher.couch_mongo_db import CouchMongoDB
+from das.database.db_interface import DBInterface
+from das.database.couch_db import CouchDB
+from das.database.mongo_db import MongoDB
+from das.database.couch_mongo_db import CouchMongoDB
 from das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not, And, Or, LinkTemplate, TypedVariable
 
 class DB_Architecture(int, Enum):

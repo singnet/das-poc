@@ -7,7 +7,7 @@ from typing import Any, Dict
 from pymongo import MongoClient
 
 from das.atomese2metta.translator import AtomType, Type
-from das.mongo_schema import FieldNames
+from das.database.mongo_schema import FieldNames
 
 
 def get_mongodb(mongodb_specs):

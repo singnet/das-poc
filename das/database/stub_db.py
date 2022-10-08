@@ -1,7 +1,7 @@
 import re
 from typing import List, Any, Tuple
 
-from das.pattern_matcher.db_interface import DBInterface
+from das.database.db_interface import DBInterface
 from das.pattern_matcher.pattern_matcher import WILDCARD
 
 

@@ -7,7 +7,9 @@ from das.exceptions import UndefinedSymbolError
 
 class ActionBroker(MettaParserActions):
     def __init__(self, data=None):
-        self.count_expression = 0
+        self.count_toplevel_expression = 0
+        self.count_nested_expression = 0
+        self.count_terminal = 0
         self.count_type = 0
         self.data = data
 
@@ -16,8 +18,14 @@ class ActionBroker(MettaParserActions):
         self.data = None
         return (answer, "")
 
+    def new_expression(self, expression: str):
+        self.count_nested_expression += 1
+
+    def new_terminal(self, expression: str):
+        self.count_terminal += 1
+
     def new_top_level_expression(self, expression: str):
-        self.count_expression += 1
+        self.count_toplevel_expression += 1
 
     def new_top_level_typedef_expression(self, expression: str):
         self.count_type += 1
@@ -33,21 +41,21 @@ def test_action_broker():
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.check(test_data)
     assert result == "SUCCESS"
-    assert action_broker.count_expression == 0
+    assert action_broker.count_toplevel_expression == 0
     assert action_broker.count_type == 0
 
     action_broker = ActionBroker()
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.parse(test_data)
     assert result == "SUCCESS"
-    assert action_broker.count_expression == 1
+    assert action_broker.count_toplevel_expression == 1
     assert action_broker.count_type == 8
 
     action_broker = ActionBroker(test_data)
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.parse_action_broker_input()
     assert result == "SUCCESS"
-    assert action_broker.count_expression == 1
+    assert action_broker.count_toplevel_expression == 1
     assert action_broker.count_type == 8
 
 def test_terminal_hash():
@@ -117,37 +125,40 @@ def test_nested_expression():
     yacc_wrap = MettaYacc()
 
     expression1 = Expression(
-        False,
-        True,
-        None,
-        'Similarity',
-        'Similarity Hash',
-        ['Typedef Similarity Type'],
-        'Typedef Similarity Type Hash',
-        None,
-        'h1')
+        toplevel=False,
+        ordered=True,
+        terminal_name=None,
+        typedef_name=None,
+        named_type='Similarity',
+        named_type_hash='Similarity Hash',
+        composite_type=['Typedef Similarity Type'],
+        composite_type_hash='Typedef Similarity Type Hash',
+        elements=None,
+        hash_code='h1')
 
     expression2 = Expression(
-        False,
-        True,
-        'c1',
-        'Concept',
-        'Concept Hash',
-        ['Concept'],
-        'Concept Hash',
-        None,
-        'h2')
+        toplevel=False,
+        ordered=True,
+        terminal_name='c1',
+        typedef_name=None,
+        named_type='Concept',
+        named_type_hash='Concept Hash',
+        composite_type=['Concept'],
+        composite_type_hash='Concept Hash',
+        elements=None,
+        hash_code='h2')
 
     expression3 = Expression(
-        False,
-        True,
-        'c2',
-        'Concept',
-        'Concept Hash',
-        ['Concept'],
-        'Concept Hash',
-        None,
-        'h3')
+        toplevel=False,
+        ordered=True,
+        terminal_name='c2',
+        typedef_name=None,
+        named_type='Concept',
+        named_type_hash='Concept Hash',
+        composite_type=['Concept'],
+        composite_type_hash='Concept Hash',
+        elements=None,
+        hash_code='h3')
 
     composite1 = yacc_wrap._nested_expression([expression1, expression2, expression3])
 
@@ -357,14 +368,14 @@ def test_pending_types():
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.parse(delayed_type1)
     assert result == "SUCCESS"
-    assert action_broker.count_expression == 1
+    assert action_broker.count_toplevel_expression == 1
     assert action_broker.count_type == 8
 
     action_broker = ActionBroker()
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.parse(delayed_type2)
     assert result == "SUCCESS"
-    assert action_broker.count_expression == 1
+    assert action_broker.count_toplevel_expression == 1
     assert action_broker.count_type == 9
 
 def test_pending_terminal_names():
@@ -452,12 +463,12 @@ def test_pending_terminal_names():
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.parse(delayed_type1)
     assert result == "SUCCESS"
-    assert action_broker.count_expression == 1
+    assert action_broker.count_toplevel_expression == 1
     assert action_broker.count_type == 8
 
     action_broker = ActionBroker()
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.parse(delayed_type2)
     assert result == "SUCCESS"
-    assert action_broker.count_expression == 1
+    assert action_broker.count_toplevel_expression == 1
     assert action_broker.count_type == 9

@@ -7,7 +7,7 @@ from das.pattern_matcher.pattern_matcher import (And, CompatibilityStatus,
                                                  Not, OrderedAssignment,
                                                  PatternMatchingAnswer, LinkTemplate,
                                                  UnorderedAssignment, Variable, TypedVariable)
-from das.pattern_matcher.stub_db import StubDB
+from das.database.stub_db import StubDB
 
 
 def test_basic_matching():

@@ -1,11 +1,13 @@
 import ply.lex as lex
 from das.exceptions import MettaLexerError
  
+BASIC_TYPE = 'Type'
+
 class MettaLex:
     def __init__(self, **kwargs):
 
         self.reserved = {
-            'Type' : 'BASIC_TYPE',
+            BASIC_TYPE : 'BASIC_TYPE',
         }
 
         self.tokens = [

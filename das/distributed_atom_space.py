@@ -4,13 +4,44 @@ Distributed Atom Space
 """
 
 import os
+from pymongo import MongoClient as MongoDBClient
+from couchbase.cluster import Cluster as CouchbaseDB
+from couchbase.auth import PasswordAuthenticator as CouchbasePasswordAuthenticator
+from couchbase.management.collections import CollectionSpec as CouchbaseCollectionSpec
 from das.metta_parser_actions import MultiFileKnowledgeBase
+from das.database.couch_mongo_db import CouchMongoDB
+from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
+
 from das.metta_yacc import MettaYacc
 
 class DistributedAtomSpace:
 
     def __init__(self, **kwargs):
+        self.database_name = 'das'
+        self._setup_database()
         self._read_knowledge_base(kwargs)
+
+    def _setup_database(self):
+        hostname = os.environ.get('DAS_MONGODB_HOSTNAME')
+        port = os.environ.get('DAS_MONGODB_PORT')
+        username = os.environ.get('DAS_DATABASE_USERNAME')
+        password = os.environ.get('DAS_DATABASE_PASSWORD')
+        mongo_db = MongoDBClient(f'mongodb://{username}:{password}@{hostname}:{port}')[self.database_name]
+
+        hostname = os.environ.get('DAS_COUCHBASE_HOSTNAME')
+        couch_db = CouchbaseDB(
+            f'couchbase://{hostname}',
+            authenticator=CouchbasePasswordAuthenticator(username, password)).bucket(self.database_name)
+
+        collection_manager = couch_db.collections()
+        for entry in CouchbaseCollections:
+            try:
+                collection_manager.create_collection(CouchbaseCollectionSpec(entry.value))
+            except Exception:
+                #TODO: should we provide a warning here?
+                pass
+
+        self.db = CouchMongoDB(couch_db, mongo_db)
 
     def _get_file_list(self, file_name, dir_name):
         """
@@ -54,6 +85,7 @@ class DistributedAtomSpace:
         if knowledge_base_file_name and knowledge_base_dir_name:
             raise ValueError("'knowledge_base_file_name' and 'knowledge_base_dir_name' can't be set simultaneously")
         knowledge_base_file_list = self._get_file_list(knowledge_base_file_name, knowledge_base_dir_name)
-        parser_actions_broker = MultiFileKnowledgeBase(knowledge_base_file_list)
-        parser = MettaYacc(action_broker=parser_actions_broker)
-        parser.parse_action_broker_input()
+        parser_actions_broker = MultiFileKnowledgeBase(self.db, knowledge_base_file_list)
+        while not parser_actions_broker.finished:
+            parser = MettaYacc(action_broker=parser_actions_broker)
+            parser.parse_action_broker_input()

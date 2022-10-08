@@ -8,10 +8,10 @@ from couchbase.bucket import Bucket
 from couchbase.cluster import Cluster
 
 from das.helpers import get_mongodb
-from das.pattern_matcher.db_interface import DBInterface
-from das.pattern_matcher.couch_mongo_db import CouchMongoDB
-from das.couchbase_schema import CollectionNames as CouchbaseCollectionNames
-from das.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
+from das.database.db_interface import DBInterface
+from das.database.couch_mongo_db import CouchMongoDB
+from das.database.couchbase_schema import CollectionNames as CouchbaseCollectionNames
+from das.database.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
 
 @pytest.fixture()
 def mongo_db():
@@ -20,7 +20,7 @@ def mongo_db():
         "port": 27017,
         "username": "dbadmin",
         "password": "dassecret",
-        "database": "TOY",
+        "database": "das",
     }
     return get_mongodb(mongodb_specs)
 
@@ -43,7 +43,9 @@ def couch_db():
 
 @pytest.fixture()
 def db(couch_db, mongo_db):
-    return CouchMongoDB(couch_db, mongo_db)
+    db = CouchMongoDB(couch_db, mongo_db)
+    db.prefetch()
+    return db
 
 NODE_SPECS = [('Concept', 'human'),
               ('Concept', 'monkey'),
@@ -79,9 +81,7 @@ def test_db_creation(db: DBInterface):
     assert db.couch_patterns_collection
     assert len(db.node_documents) == 14
     assert len(db.node_handles) == 14
-    assert len(db.atom_type_hash) == 5
-    assert len(db.atom_type_hash_reverse) == 5
-    assert len(db.type_hash) == 5
+    assert len(db.atom_type_hash) == 0
 
 def test_node_exists(db: DBInterface):
     assert db.node_exists('Concept', 'human')
@@ -106,9 +106,9 @@ def _check_link(db: DBInterface, handle: str, link_type: str, target1: str, targ
     document = collection.find_one({'_id': handle})
     type_handle = db.atom_type_hash[link_type]
     assert document
-    assert document['key1'] == type_handle
-    assert document['key2'] == target1
-    assert document['key3'] == target2
+    assert document['named_type_hash'] == type_handle
+    assert document['key_0'] == target1
+    assert document['key_1'] == target2
 
 def _get_mongo_document(db: DBInterface, handle: str):
     collection = db.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_2)
@@ -128,7 +128,7 @@ def test_get_link_handle(db: DBInterface):
     handle = db.get_link_handle('Similarity', [human, monkey])
     _check_link(db, handle, 'Similarity', human, monkey)
     handle = db.get_link_handle('Similarity', [monkey, human])
-    _check_link(db, handle, 'Similarity', human, monkey)
+    _check_link(db, handle, 'Similarity', monkey, human)
     with pytest.raises(ValueError):
         db.get_link_handle('Similarity', [mammal, human])
     with pytest.raises(ValueError):
@@ -161,11 +161,11 @@ def _check_link_targets(db: DBInterface, handle: str, target_handles: List[str],
     assert len(target_handles) == 2
     document = _get_mongo_document(db, handle)
     if ordered:
-        assert document['key2'] == target_handles[0]
-        assert document['key3'] == target_handles[1]
+        assert document['key_0'] == target_handles[0]
+        assert document['key_1'] == target_handles[1]
     else:
-        assert document['key2'] == target_handles[0] or document['key2'] == target_handles[1]
-        assert document['key3'] == target_handles[0] or document['key3'] == target_handles[1]
+        assert (document['key_0'] == target_handles[0] and document['key_1'] == target_handles[1]) or \
+               (document['key_0'] == target_handles[1] and document['key_1'] == target_handles[0])
 
 def test_get_link_targets(db: DBInterface):
     human = db.get_node_handle('Concept', 'human')
@@ -197,7 +197,7 @@ def test_is_ordered(db: DBInterface):
     monkey = db.get_node_handle('Concept', 'monkey')
     mammal = db.get_node_handle('Concept', 'mammal')
     assert db.is_ordered(db.get_link_handle('Inheritance', [human, mammal]))
-    assert not db.is_ordered(db.get_link_handle('Similarity', [human, monkey]))
+    assert db.is_ordered(db.get_link_handle('Similarity', [human, monkey]))
     with pytest.raises(ValueError):
         db.is_ordered(db.get_link_handle('Inheritance', [human, monkey]))
 
@@ -207,8 +207,8 @@ def test_get_all_nodes(db: DBInterface):
     for node_type, node_name in NODE_SPECS:
         node = db.get_node_handle(node_type, node_name)
         assert node in nodes_in_db
-    with pytest.raises(ValueError):
-        nodes_in_db = db.get_all_nodes('blah')
+    nodes_in_db = db.get_all_nodes('blah')
+    assert len(nodes_in_db) == 0
     
 def test_get_matched_links(db: DBInterface):
     # TODO: once we have API to add nodes/links, add a
@@ -228,7 +228,7 @@ def test_get_matched_links(db: DBInterface):
     assert len(db.get_matched_links('Inheritance', [mammal, animal])) == 1
     assert len(db.get_matched_links('Inheritance', [chimp, mammal])) == 1
     assert len(db.get_matched_links('Inheritance', [animal, mammal])) == 0
-    assert len(db.get_matched_links('Similarity', ['*', '*'])) == 7
+    assert len(db.get_matched_links('Similarity', ['*', '*'])) == 14
     assert len(db.get_matched_links('Similarity', [human, '*'])) == 3
     assert len(db.get_matched_links('Similarity', ['*', human])) == 3
     assert len(db.get_matched_links('Similarity', [monkey, '*'])) == 2
@@ -260,12 +260,12 @@ def test_build_hash_template(db: DBInterface):
 def test_get_matched_type_template(db: DBInterface):
     v1 = db.get_matched_type_template(['Inheritance', 'Concept', 'Concept'])
     v2 = db.get_matched_type_template(['Similarity', 'Concept', 'Concept'])
-    with pytest.raises(ValueError):
-        v3 = db.get_matched_type_template(['Inheritance', 'Concept', 'blah'])
-    with pytest.raises(ValueError):
-        v4 = db.get_matched_type_template(['Similarity', 'blah', 'Concept'])
+    v3 = db.get_matched_type_template(['Inheritance', 'Concept', 'blah'])
+    v4 = db.get_matched_type_template(['Similarity', 'blah', 'Concept'])
     assert(len(v1) == 12)
-    assert(len(v2) == 7)
+    assert(len(v2) == 14)
+    assert(len(v3) == 0)
+    assert(len(v4) == 0)
     v5 = db.get_matched_links('Inheritance', ['*', '*'])
     v6 = db.get_matched_links('Similarity', ['*', '*'])
     assert(v1 == v5)

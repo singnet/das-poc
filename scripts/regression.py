@@ -1,14 +1,12 @@
-from das.pattern_matcher.db_interface import DBInterface
+
+from das.distributed_atom_space import DistributedAtomSpace
+
+
+from das.database.db_interface import DBInterface
 from das.pattern_matcher.pattern_matcher import (And, Link, LogicalExpression,
                                                  Node, Not, Or, LinkTemplate,
                                                  PatternMatchingAnswer,
                                                  Variable, TypedVariable)
-from das.pattern_matcher.stub_db import StubDB
-from das.pattern_matcher.couch_mongo_db import CouchMongoDB
-from couchbase.auth import PasswordAuthenticator
-from couchbase.bucket import Bucket
-from couchbase.cluster import Cluster
-from das.helpers import get_mongodb
 
 def match(db_api: DBInterface, expression: LogicalExpression):
     print(f"Matching {expression}")
@@ -25,29 +23,10 @@ if __name__ == "__main__":
         "---------------------------- Integration tests ---------------------------------"
     )
 
-    mongodb_specs = {
-        "hostname": "mongo",
-        "port":  27017,
-        "username": "dbadmin",
-        "password": "dassecret",
-        "database": "BIO",
-    }
-    couchbase_specs = {
-        "hostname": "couchbase",
-        "username": "dbadmin",
-        "password": "dassecret",
-    }
-    cluster = Cluster(
-        f'couchbase://{couchbase_specs["hostname"]}',
-        authenticator=PasswordAuthenticator(
-            couchbase_specs["username"], couchbase_specs["password"]
-        ),
-    )
+    das = DistributedAtomSpace(knowledge_base_file_name="./data/samples/animals.metta")
+    das.db.prefetch()
+    db = das.db
 
-    #db: DBInterface = StubDB()
-    db: DBInterface = CouchMongoDB(cluster.bucket("das"), get_mongodb(mongodb_specs))
-
-    """
     n1 = Node("Concept", "human")
     n2 = Node("Concept", "mammal")
     match(db, n1)
@@ -310,22 +289,22 @@ if __name__ == "__main__":
         ),
     )
 
-    print(db.get_all_nodes('Concept'))
-    print(db.get_all_nodes('blah'))
-
-    """
-
-    ##match(db, LinkTemplate("Inheritance", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
-    ###match(db, LinkTemplate("Similarity", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], False))
-
-    #match(db, Link("Inheritance", [Variable("V1"), Variable("V2")], True))
-    #match(db, Link("List", [Variable("V1"), Variable("V2")], True))
-    #match(db, LinkTemplate("List", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
-
-    #match(db, Link("Similarity", [Node("Concept", "human"), Variable("V1")], False))
-    #match(db, Link("Similarity", [Variable("V1"), Node("Concept", "human")], False))
-
     print(
         "\n\n\n\n================================================================================\n"
     )
 
+    print(db.get_all_nodes('Concept'))
+    print(db.get_all_nodes('blah'))
+
+    match(db, LinkTemplate("Inheritance", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
+    match(db, LinkTemplate("Similarity", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], False))
+
+    match(db, Link("Inheritance", [Variable("V1"), Variable("V2")], True))
+    match(db, Link("List", [Variable("V1"), Variable("V2")], True))
+    match(db, LinkTemplate("List", [TypedVariable("V1", "Concept"), TypedVariable("V2", "Concept")], True))
+
+    match(db, Link("Similarity", [Node("Concept", "human"), Variable("V1")], False))
+    match(db, Link("Similarity", [Variable("V1"), Node("Concept", "human")], False))
+
+    """
+    """
