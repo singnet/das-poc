@@ -25,7 +25,7 @@ EXPRESSION -> EXPRESSION_OPENNING LIST_OF_EXPRESSIONS EXPRESSION_CLOSING
 
 from typing import List, Any, Optional
 import ply.yacc as yacc
-from das.my_metta_lex import MettaLex
+from das.metta_lex import MettaLex
 from das.exceptions import MettaSyntaxError, UndefinedSymbolError
 from das.expression_hasher import ExpressionHasher
 from das.expression import Expression
