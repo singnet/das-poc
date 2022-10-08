@@ -39,6 +39,12 @@ class MettaParserActions(ABC):
     def new_top_level_typedef_expression(self, expression: Expression):
         pass
 
+    def __init__(self):
+        self.current_line_number = 1
+
+    def update_line_number(self, current_line_number: int):
+        self.current_line_number = current_line_number
+
 def _write_key_value(file, key, value):
     if isinstance(key, list):
         key = ExpressionHasher.composite_hash(key)
@@ -106,7 +112,8 @@ def _key_value_targets_generator(input_filename, *, block_size=MAX_COUCHBASE_BLO
 
 class MultiFileKnowledgeBase(MettaParserActions):
 
-    def __init__(self, db: DBInterface, file_list: List[str], show_progress_bar=True):
+    def __init__(self, db: DBInterface, file_list: List[str], show_progress=False):
+        super().__init__()
         self.db = db
         self.file_list = [f for f in file_list]
         self.file_count = len(self.file_list)
@@ -117,8 +124,9 @@ class MultiFileKnowledgeBase(MettaParserActions):
         self.temporary_file_name = {
             s.value: f"/tmp/MultiFileKnowledgeBase_{s.value}.txt" for s in CouchbaseCollections
         }
-        self.show_progress_bar = show_progress_bar
+        self.show_progress = show_progress
         self.stopwatch_start = None
+        self.current_file_size = None
 
 
     def _build_dict_list(self, expressions):
@@ -171,7 +179,7 @@ class MultiFileKnowledgeBase(MettaParserActions):
         patterns = open(self.temporary_file_name[CouchbaseCollections.PATTERNS], "w")
         template = open(self.temporary_file_name[CouchbaseCollections.TEMPLATES], "w")
 
-        if self.show_progress_bar:
+        if self.show_progress:
             self.stopwatch_start = time.perf_counter()
             total_entries = len(self.regular_expressions)
             done = 0
@@ -206,7 +214,7 @@ class MultiFileKnowledgeBase(MettaParserActions):
                 template,
                 expression.composite_type_hash, 
                 [expression.hash_code, *expression.elements])
-            if self.show_progress_bar:
+            if self.show_progress:
                 done += 1
                 if done % 1000 == 0 or done >= total_entries:
                     self._print_progress_bar(done, total_entries)
@@ -218,7 +226,7 @@ class MultiFileKnowledgeBase(MettaParserActions):
 
     def _process_temporary_file(self, collection_name, use_targets=False, merge_rest=False):
         file_name = self.temporary_file_name[collection_name]
-        if self.show_progress_bar:
+        if self.show_progress:
             self.stopwatch_start = time.perf_counter()
             with open(file_name, 'r') as f:
                 total_entries = len(f.readlines())
@@ -237,7 +245,7 @@ class MultiFileKnowledgeBase(MettaParserActions):
                     couchbase_collection.upsert(f"{key}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
                 couchbase_collection.upsert(key, block_count + 1)
                 couchbase_collection.upsert(f"{key}_{block_count}", v, timeout=datetime.timedelta(seconds=100))
-            if self.show_progress_bar:
+            if self.show_progress:
                 i += 1
                 done += len(value)
                 if i % 100000 == 0 or done >= total_entries:
@@ -246,13 +254,16 @@ class MultiFileKnowledgeBase(MettaParserActions):
     def _flush_links(self):
 
         # Build temporary files to be used to populate Couchbase
-        print("(2/5) Pre-processing links...")
+        if self.show_progress:
+            print("(2/5) Pre-processing links...")
         self._build_temporary_files()
-        print("(3/5) Pre-processing links a bit more...")
+        if self.show_progress:
+            print("(3/5) Pre-processing links a bit more...")
         self._sort_temporary_files()
 
         # Populates MongoDB
-        print("(4/5) Adding links to MongoDB...")
+        if self.show_progress:
+            print("(4/5) Adding links to MongoDB...")
         bulk_insertion_1 = []
         bulk_insertion_2 = []
         bulk_insertion_N = []
@@ -275,7 +286,8 @@ class MultiFileKnowledgeBase(MettaParserActions):
             mongo_collection = self.db.mongo_db[MongoCollections.LINKS_ARITY_N]
             mongo_collection.insert_many(bulk_insertion_N)
 
-        print("(5/5) Creating Couchbase tables...")
+        if self.show_progress:
+            print("(5/5) Creating Couchbase tables...")
         # Populates Couchbase using temporary files
         self._process_temporary_file(CouchbaseCollections.OUTGOING_SET, use_targets=False, merge_rest=False)
         self._process_temporary_file(CouchbaseCollections.INCOMING_SET, use_targets=False, merge_rest=False)
@@ -284,28 +296,40 @@ class MultiFileKnowledgeBase(MettaParserActions):
         self._process_temporary_file(CouchbaseCollections.NAMED_ENTITIES, use_targets=False, merge_rest=True)
             
     def _flush_expressions_to_db(self):
-        print("Adding data to DB (5 steps)")
-        print("(1/5) Processing types and nodes...")
+        if self.show_progress:
+            print("Adding data to DB (5 steps)")
+            print("(1/5) Processing types and nodes...")
         self._flush_typedef()
         self._flush_nodes()
         self._flush_links()
         print("Adding data to DB - DONE")
 
     def next_input_chunk(self) -> Tuple[str, str]:
+        if self.show_progress and self.current_file_size is not None:
+            self._print_progress_bar(self.current_file_size, self.current_file_size)
         file_path = self.file_list.pop(0) if self.file_list else None
         if file_path is None:
             self._flush_expressions_to_db()
             self.finished = True
             return (None, None)
         with open(file_path, "r") as file_handle:
-            text = file_handle.read()
-        print(f"({self.file_count - len(self.file_list)}/{self.file_count}) Parsing file: {file_path}")
+            lines = file_handle.readlines()
+            self.current_file_size = len(lines)
+            text = "\n".join(lines)
+        if self.show_progress:
+            print(f"({self.file_count - len(self.file_list)}/{self.file_count}) Parsing file: {file_path}")
+            self.stopwatch_start = time.perf_counter()
+            self._print_progress_bar(1, self.current_file_size)
         return (text, file_path)
 
     def new_top_level_expression(self, expression: Expression):
         #print(f"TOPLEVEL EXPRESSION: <{expression}>")
         #print(expression.to_json())
         self.regular_expressions.add(expression)
+        if self.show_progress:
+            done = self.current_line_number
+            if done % 1000 == 0 and done < self.current_file_size:
+                self._print_progress_bar(done, self.current_file_size)
 
     def new_expression(self, expression: Expression):
         #print(f"EXPRESSION: <{expression}>")

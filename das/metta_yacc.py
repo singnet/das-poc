@@ -69,6 +69,7 @@ class MettaYacc:
         """TOP_LEVEL_EXPRESSION : TOP_LEVEL_EXPRESSION_DEFINITION"""
         if self.check_mode or not self.action_broker:
             return
+        self.action_broker.update_line_number(self.lexer.lineno)
         p[0] = p[1]
             
 

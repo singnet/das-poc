@@ -85,7 +85,8 @@ class DistributedAtomSpace:
         if knowledge_base_file_name and knowledge_base_dir_name:
             raise ValueError("'knowledge_base_file_name' and 'knowledge_base_dir_name' can't be set simultaneously")
         knowledge_base_file_list = self._get_file_list(knowledge_base_file_name, knowledge_base_dir_name)
-        parser_actions_broker = MultiFileKnowledgeBase(self.db, knowledge_base_file_list)
+        show_progress = kwargs.get("show_progress", False)
+        parser_actions_broker = MultiFileKnowledgeBase(self.db, knowledge_base_file_list,show_progress=show_progress)
         while not parser_actions_broker.finished:
             parser = MettaYacc(action_broker=parser_actions_broker)
             parser.parse_action_broker_input()
