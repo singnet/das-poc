@@ -5,6 +5,7 @@ ADD ./tests /app/tests
 ADD ./requirements.txt /app/requirements.txt
 ADD ./data/bio_atomspace/bio_atomspace.tar.gz /data
 ADD ./data/samples /data/samples
+ADD ./scripts /app/scripts
 
 WORKDIR /app
 
