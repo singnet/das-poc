@@ -6,8 +6,8 @@ import pytest
 from couchbase.auth import PasswordAuthenticator
 from couchbase.bucket import Bucket
 from couchbase.cluster import Cluster
+from pymongo import MongoClient as MongoDBClient
 
-from das.helpers import get_mongodb
 from das.database.db_interface import DBInterface
 from das.database.couch_mongo_db import CouchMongoDB
 from das.database.couchbase_schema import CollectionNames as CouchbaseCollectionNames
@@ -15,14 +15,12 @@ from das.database.mongo_schema import CollectionNames as MongoCollectionNames, F
 
 @pytest.fixture()
 def mongo_db():
-    mongodb_specs = {
-        "hostname": "mongo",
-        "port": 27017,
-        "username": "dbadmin",
-        "password": "dassecret",
-        "database": "das",
-    }
-    return get_mongodb(mongodb_specs)
+    hostname = os.environ.get('DAS_MONGODB_HOSTNAME')
+    port = os.environ.get('DAS_MONGODB_PORT')
+    username = os.environ.get('DAS_DATABASE_USERNAME')
+    password = os.environ.get('DAS_DATABASE_PASSWORD')
+    mongo_db = MongoDBClient(f'mongodb://{username}:{password}@{hostname}:{port}')['das']
+    return mongo_db
 
 
 @pytest.fixture()

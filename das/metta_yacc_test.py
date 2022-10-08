@@ -1,5 +1,5 @@
 import pytest
-from das.my_metta_lex import MettaLex
+from das.metta_lex import MettaLex
 from das.metta_lex_test import lex_test_data as test_data
 from das.metta_yacc import MettaYacc, Expression
 from das.metta_parser_actions import MettaParserActions
