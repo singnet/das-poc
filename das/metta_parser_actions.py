@@ -109,6 +109,7 @@ class MultiFileKnowledgeBase(MettaParserActions):
     def __init__(self, db: DBInterface, file_list: List[str], show_progress_bar=True):
         self.db = db
         self.file_list = [f for f in file_list]
+        self.file_count = len(self.file_list)
         self.finished = False
         self.regular_expressions = set()
         self.typedef_expressions = set()
@@ -293,13 +294,12 @@ class MultiFileKnowledgeBase(MettaParserActions):
     def next_input_chunk(self) -> Tuple[str, str]:
         file_path = self.file_list.pop(0) if self.file_list else None
         if file_path is None:
-            print("NO MORE FILES")
             self._flush_expressions_to_db()
             self.finished = True
             return (None, None)
         with open(file_path, "r") as file_handle:
             text = file_handle.read()
-        print(f"Parsing file: {file_path}")
+        print(f"({self.file_count - len(self.file_list)}/{self.file_count}) Parsing file: {file_path}")
         return (text, file_path)
 
     def new_top_level_expression(self, expression: Expression):
