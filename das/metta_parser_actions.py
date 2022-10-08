@@ -163,7 +163,7 @@ class MultiFileKnowledgeBase(MettaParserActions):
             fill='█'
             bar = fill * filled_length + '-' * (length - filled_length)
             elapsed = (time.perf_counter() - self.stopwatch_start) / 60
-            print(f'\rProgress: |{bar}| {percent}% complete ({done}/{total}) {elapsed:.0f} minutes', end = '\r')
+            print(f'\r Progress: |{bar}| {percent}% complete ({done}/{total}) {elapsed:.0f} minutes', end = '\r')
             if done == total: 
                 print()
     
@@ -304,6 +304,12 @@ class MultiFileKnowledgeBase(MettaParserActions):
         self._flush_links()
         print("Adding data to DB - DONE")
 
+    def _show_parse_progress(self):
+        if self.show_progress:
+            done = self.current_line_number // 2
+            if done < self.current_file_size:
+                self._print_progress_bar(done, self.current_file_size)
+
     def next_input_chunk(self) -> Tuple[str, str]:
         if self.show_progress and self.current_file_size is not None:
             self._print_progress_bar(self.current_file_size, self.current_file_size)
@@ -326,10 +332,7 @@ class MultiFileKnowledgeBase(MettaParserActions):
         #print(f"TOPLEVEL EXPRESSION: <{expression}>")
         #print(expression.to_json())
         self.regular_expressions.add(expression)
-        if self.show_progress:
-            done = self.current_line_number
-            if done % 1000 == 0 and done < self.current_file_size:
-                self._print_progress_bar(done, self.current_file_size)
+        self._show_parse_progress()
 
     def new_expression(self, expression: Expression):
         #print(f"EXPRESSION: <{expression}>")
@@ -340,8 +343,10 @@ class MultiFileKnowledgeBase(MettaParserActions):
         #print(f"TERMINAL: <{expression}>")
         #print(expression.to_json())
         self.terminals.add(expression)
+        self._show_parse_progress()
 
     def new_top_level_typedef_expression(self, expression: Expression):
         #print(f"TYPEDEF: <{expression}>")
         #print(expression.to_json())
         self.typedef_expressions.add(expression)
+        self._show_parse_progress()
