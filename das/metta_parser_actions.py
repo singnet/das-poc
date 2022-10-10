@@ -163,7 +163,7 @@ class MultiFileKnowledgeBase(MettaParserActions):
             fill='█'
             bar = fill * filled_length + '-' * (length - filled_length)
             elapsed = (time.perf_counter() - self.stopwatch_start) / 60
-            print(f'\r Progress: |{bar}| {percent}% complete ({done}/{total}) {elapsed:.0f} minutes', end = '\r')
+            print(f'\r    Progress: |{bar}| {percent}% complete ({done}/{total}) {elapsed:.0f} minutes', end = '\r')
             if done == total: 
                 print()
     
