@@ -49,9 +49,9 @@ class DistributedAtomSpace:
         """
         Build a list of file names according to the passed parameters.
         If file_name is not none, a list with a single file name is built
-        (provided the the file is .metta). If a dir name is passed, all .metta
-        files in that dir (no recursion) are returned in the list.
-        Only .metta files are considered. 
+        (provided the the file is .metta or .scm). If a dir name is passed,
+        all .metta and .scm files in that dir (no recursion) are returned
+        in the list. Only .metta files are considered. 
 
         file_name and dir_name should not be simultaneously None or not None. This
         check is made in the caller.
@@ -70,7 +70,7 @@ class DistributedAtomSpace:
                         answer.append(path)
             else:
                 raise ValueError(f"Invalid folder name: {dir_name}")
-        answer = [f for f in answer if f.endswith(".metta")]
+        answer = [f for f in answer if f.endswith(".metta") or f.endswith(".scm")]
         if len(answer) == 0:
             raise ValueError(f"No MeTTa files found")
         return answer

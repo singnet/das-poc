@@ -145,14 +145,17 @@ def _key_value_targets_generator(input_filename, *, block_size=MAX_COUCHBASE_BLO
 
 class ParserThread(Thread):
 
-    def __init__(self, parser_actions_broker: "MettaParserActions"):
+    def __init__(self, parser_actions_broker: "ParserActions"):
         super().__init__()
         self.parser_actions_broker = parser_actions_broker
 
     def run(self):
         print(f"Parser thread {self.name} (TID {self.native_id}) started. Parsing {self.parser_actions_broker.file_path}")
         stopwatch_start = time.perf_counter()
-        parser = MettaYacc(action_broker=self.parser_actions_broker)
+        if self.parser_actions_broker.file_path.endswith(".metta"):
+            parser = MettaYacc(action_broker=self.parser_actions_broker)
+        else:
+            parser = AtomeseYacc(action_broker=self.parser_actions_broker)
         parser.parse_action_broker_input()
         self.parser_actions_broker.shared_data.parse_ok()
         elapsed = (time.perf_counter() - stopwatch_start) // 60
