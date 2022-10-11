@@ -36,7 +36,8 @@ class MettaYacc:
 
     def p_START(self, p):
         """START : LIST_OF_TOP_LEVEL_EXPRESSIONS EOF
-                 | EOF"""
+                 | EOF
+                 |"""
         self._revisit_pending_symbols()
         missing_symbols = []
         missing_symbols.extend([name for (name, expression) in self.pending_terminal_names])
@@ -325,32 +326,13 @@ class MettaYacc:
         while self._revisit_pending_expressions():
             pass
 
-    def eof_handler(self, t):
-        if self.lexer.eof_reported_flag:
-            if self.action_broker is None:
-                return None
-            self.lexer.eof_reported_flag = False
-            next_input_chunk, file_name = self.action_broker.next_input_chunk()
-            if next_input_chunk is None:
-                return None
-            else:
-                self.lexer.lineno = 1
-                self.lexer.file_name = file_name
-                self.lexer.input(next_input_chunk)
-                return self.lexer.token()
-        else:
-            self.lexer.input("")
-            t.type = 'EOF'
-            self.lexer.eof_reported_flag = True
-            return t
-
     def parse(self, metta_string):
         self.file_name = ""
         return self.parser.parse(metta_string)
 
     def parse_action_broker_input(self):
-        metta_string, file_name = self.action_broker.next_input_chunk()
-        self.file_name = file_name
+        self.file_name = self.action_broker.file_path
+        metta_string = self.action_broker.input_string
         return self.parser.parse(metta_string)
 
     def check(self, metta_string):

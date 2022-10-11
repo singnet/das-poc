@@ -91,7 +91,7 @@ class DistributedAtomSpace:
         shared_data = SharedData()
 
         parser_threads = [
-            ParserThread(MultiFileKnowledgeBase(self.db, [file_name], shared_data))
+            ParserThread(MultiFileKnowledgeBase(self.db, file_name, shared_data))
             for file_name in knowledge_base_file_list
         ]
         for thread in parser_threads:

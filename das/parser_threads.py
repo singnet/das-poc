@@ -150,11 +150,10 @@ class ParserThread(Thread):
         self.parser_actions_broker = parser_actions_broker
 
     def run(self):
-        print(f"Parser thread {self.name} (TID {self.native_id}) started. Parsing {self.parser_actions_broker.file_list}")
+        print(f"Parser thread {self.name} (TID {self.native_id}) started. Parsing {self.parser_actions_broker.file_path}")
         stopwatch_start = time.perf_counter()
-        while not self.parser_actions_broker.finished:
-            parser = MettaYacc(action_broker=self.parser_actions_broker)
-            parser.parse_action_broker_input()
+        parser = MettaYacc(action_broker=self.parser_actions_broker)
+        parser.parse_action_broker_input()
         self.parser_actions_broker.shared_data.parse_ok()
         elapsed = (time.perf_counter() - stopwatch_start) // 60
         print(f"Parser thread {self.name} (TID {self.native_id}) Finished. {elapsed:.0f} minutes.")

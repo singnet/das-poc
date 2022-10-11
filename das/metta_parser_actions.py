@@ -7,10 +7,6 @@ from das.parser_threads import SharedData
 class MettaParserActions(ABC):
 
     @abstractmethod
-    def next_input_chunk(self) -> Tuple[str, str]:
-        pass
-
-    @abstractmethod
     def new_top_level_expression(self, expression: Expression):
         pass
 
@@ -34,24 +30,13 @@ class MettaParserActions(ABC):
 
 class MultiFileKnowledgeBase(MettaParserActions):
 
-    def __init__(self, db: DBInterface, file_list: List[str], shared_data: SharedData):
+    def __init__(self, db: DBInterface, file_path: str, shared_data: SharedData):
         super().__init__()
         self.db = db
-        self.file_list = [f for f in file_list]
-        self.shared_data = shared_data
-        self.finished = False
-
-    def next_input_chunk(self) -> Tuple[str, str]:
-        file_path = self.file_list.pop(0) if self.file_list else None
-        if file_path is None:
-            self.finished = True
-            return (None, None)
+        self.file_path = file_path
         with open(file_path, "r") as file_handle:
-            text = file_handle.read()
-        if text is None or text == "":
-            return (None, None)
-        else:
-            return (text, file_path)
+            self.input_string = file_handle.read()
+        self.shared_data = shared_data
 
     def new_top_level_expression(self, expression: Expression):
         self.shared_data.add_regular_expression(expression)

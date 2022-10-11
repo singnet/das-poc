@@ -11,12 +11,13 @@ class ActionBroker(MettaParserActions):
         self.count_nested_expression = 0
         self.count_terminal = 0
         self.count_type = 0
-        self.data = data
+        self.file_path = ""
+        self.input_string = data
 
-    def next_input_chunk(self):
-        answer = self.data
-        self.data = None
-        return (answer, "")
+    #def next_input_chunk(self):
+    #    answer = self.data
+    #    self.data = None
+    #    return (answer, "")
 
     def new_expression(self, expression: str):
         self.count_nested_expression += 1
