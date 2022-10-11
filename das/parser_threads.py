@@ -7,6 +7,7 @@ from das.database.mongo_schema import CollectionNames as MongoCollections
 from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
 from das.expression_hasher import ExpressionHasher
 from das.metta_yacc import MettaYacc
+from das.atomese_yacc import AtomeseYacc
 from das.database.db_interface import DBInterface
 from das.database.db_interface import DBInterface, WILDCARD
 
