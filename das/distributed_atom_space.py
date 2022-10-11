@@ -9,7 +9,7 @@ from couchbase.cluster import Cluster as CouchbaseDB
 from couchbase.auth import PasswordAuthenticator as CouchbasePasswordAuthenticator
 from couchbase.options import LockMode as CouchbaseLockMode
 from couchbase.management.collections import CollectionSpec as CouchbaseCollectionSpec
-from das.metta_parser_actions import MultiFileKnowledgeBase
+from das.parser_actions import KnowledgeBaseFile
 from das.database.couch_mongo_db import CouchMongoDB
 from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
 from das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread, BuildConnectivityThread, \
@@ -91,7 +91,7 @@ class DistributedAtomSpace:
         shared_data = SharedData()
 
         parser_threads = [
-            ParserThread(MultiFileKnowledgeBase(self.db, file_name, shared_data))
+            ParserThread(KnowledgeBaseFile(self.db, file_name, shared_data))
             for file_name in knowledge_base_file_list
         ]
         for thread in parser_threads:

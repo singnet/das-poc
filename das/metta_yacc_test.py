@@ -2,10 +2,10 @@ import pytest
 from das.metta_lex import MettaLex
 from das.metta_lex_test import lex_test_data as test_data
 from das.metta_yacc import MettaYacc, Expression
-from das.metta_parser_actions import MettaParserActions
+from das.parser_actions import ParserActions
 from das.exceptions import UndefinedSymbolError
 
-class ActionBroker(MettaParserActions):
+class ActionBroker(ParserActions):
     def __init__(self, data=None):
         self.count_toplevel_expression = 0
         self.count_nested_expression = 0
