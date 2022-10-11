@@ -109,7 +109,6 @@ class MettaYacc(BaseYacc):
         sub_expressions = p[2]
         expression = self._nested_expression(sub_expressions)
         expression.toplevel = True
-        self.action_broker.update_line_number(self.lexer.lineno)
         self.action_broker.new_top_level_expression(expression)
         p[0] = expression
         

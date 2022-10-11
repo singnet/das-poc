@@ -1,5 +1,7 @@
 docker-compose exec app pytest das/metta_lex_test.py
 docker-compose exec app pytest das/metta_yacc_test.py
+docker-compose exec app pytest das/atomese_lex_test.py
+docker-compose exec app pytest das/atomese_yacc_test.py
 docker-compose exec app pytest das/distributed_atom_space_test.py
 ./empty-docker-up
 docker-compose exec app python3 scripts/load_das.py
