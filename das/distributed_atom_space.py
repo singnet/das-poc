@@ -7,12 +7,13 @@ import os
 from pymongo import MongoClient as MongoDBClient
 from couchbase.cluster import Cluster as CouchbaseDB
 from couchbase.auth import PasswordAuthenticator as CouchbasePasswordAuthenticator
+from couchbase.options import LockMode as CouchbaseLockMode
 from couchbase.management.collections import CollectionSpec as CouchbaseCollectionSpec
-from das.metta_parser_actions import MultiFileKnowledgeBase
+from das.parser_actions import KnowledgeBaseFile
 from das.database.couch_mongo_db import CouchMongoDB
 from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
-
-from das.metta_yacc import MettaYacc
+from das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread, BuildConnectivityThread, \
+    BuildPatternsThread, BuildTypeTemplatesThread, PopulateMongoDBLinksThread, PopulateCouchbaseCollectionThread
 
 class DistributedAtomSpace:
 
@@ -31,7 +32,8 @@ class DistributedAtomSpace:
         hostname = os.environ.get('DAS_COUCHBASE_HOSTNAME')
         couch_db = CouchbaseDB(
             f'couchbase://{hostname}',
-            authenticator=CouchbasePasswordAuthenticator(username, password)).bucket(self.database_name)
+            authenticator=CouchbasePasswordAuthenticator(username, password),
+            lockmode=CouchbaseLockMode.WAIT).bucket(self.database_name)
 
         collection_manager = couch_db.collections()
         for entry in CouchbaseCollections:
@@ -78,6 +80,7 @@ class DistributedAtomSpace:
         Called in constructor, this method parses one or more files passed
         by kwargs and feed the databases with all MeTTa expressions.
         """
+
         knowledge_base_file_name = kwargs.get("knowledge_base_file_name", None)
         knowledge_base_dir_name = kwargs.get("knowledge_base_dir_name", None)
         if not knowledge_base_file_name and not knowledge_base_dir_name:
@@ -85,8 +88,44 @@ class DistributedAtomSpace:
         if knowledge_base_file_name and knowledge_base_dir_name:
             raise ValueError("'knowledge_base_file_name' and 'knowledge_base_dir_name' can't be set simultaneously")
         knowledge_base_file_list = self._get_file_list(knowledge_base_file_name, knowledge_base_dir_name)
-        show_progress = kwargs.get("show_progress", False)
-        parser_actions_broker = MultiFileKnowledgeBase(self.db, knowledge_base_file_list,show_progress=show_progress)
-        while not parser_actions_broker.finished:
-            parser = MettaYacc(action_broker=parser_actions_broker)
-            parser.parse_action_broker_input()
+        shared_data = SharedData()
+
+        parser_threads = [
+            ParserThread(KnowledgeBaseFile(self.db, file_name, shared_data))
+            for file_name in knowledge_base_file_list
+        ]
+        for thread in parser_threads:
+            thread.start()
+        for thread in parser_threads:
+            thread.join()
+        assert shared_data.parse_ok_count == len(parser_threads)
+        shared_data.replicate_regular_expressions()
+
+        file_builder_threads = [
+            FlushNonLinksToDBThread(self.db, shared_data),
+            BuildConnectivityThread(shared_data),
+            BuildPatternsThread(shared_data),
+            BuildTypeTemplatesThread(shared_data)
+        ]
+        for thread in file_builder_threads:
+            thread.start()
+        links_uploader_to_mongo_thread = PopulateMongoDBLinksThread(self.db, shared_data)
+        links_uploader_to_mongo_thread.start()
+        for thread in file_builder_threads:
+            thread.join()
+        assert shared_data.build_ok_count == len(file_builder_threads)
+
+        file_processor_threads = [
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.OUTGOING_SET, False, False),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.INCOMING_SET, False, False),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.PATTERNS, True, False),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.TEMPLATES, True, False),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.NAMED_ENTITIES, False, True)
+        ]
+        for thread in file_processor_threads:
+            thread.start()
+        links_uploader_to_mongo_thread.join()
+        assert shared_data.mongo_uploader_ok
+        for thread in file_processor_threads:
+            thread.join()
+        assert shared_data.process_ok_count == len(file_processor_threads)

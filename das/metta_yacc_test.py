@@ -2,21 +2,22 @@ import pytest
 from das.metta_lex import MettaLex
 from das.metta_lex_test import lex_test_data as test_data
 from das.metta_yacc import MettaYacc, Expression
-from das.metta_parser_actions import MettaParserActions
+from das.parser_actions import ParserActions
 from das.exceptions import UndefinedSymbolError
 
-class ActionBroker(MettaParserActions):
+class ActionBroker(ParserActions):
     def __init__(self, data=None):
         self.count_toplevel_expression = 0
         self.count_nested_expression = 0
         self.count_terminal = 0
         self.count_type = 0
-        self.data = data
+        self.file_path = ""
+        self.input_string = data
 
-    def next_input_chunk(self):
-        answer = self.data
-        self.data = None
-        return (answer, "")
+    #def next_input_chunk(self):
+    #    answer = self.data
+    #    self.data = None
+    #    return (answer, "")
 
     def new_expression(self, expression: str):
         self.count_nested_expression += 1
