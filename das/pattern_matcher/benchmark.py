@@ -211,7 +211,7 @@ class DAS_Benchmark:
             "port":  27017,
             "username": "dbadmin",
             "password": "dassecret",
-            "database": "BIO",
+            "database": "das",
         }
         couchbase_specs = {
             "hostname": "couchbase",

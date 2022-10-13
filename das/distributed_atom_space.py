@@ -4,6 +4,7 @@ Distributed Atom Space
 """
 
 import os
+from time import sleep
 from pymongo import MongoClient as MongoDBClient
 from couchbase.cluster import Cluster as CouchbaseDB
 from couchbase.auth import PasswordAuthenticator as CouchbasePasswordAuthenticator
@@ -49,9 +50,9 @@ class DistributedAtomSpace:
         """
         Build a list of file names according to the passed parameters.
         If file_name is not none, a list with a single file name is built
-        (provided the the file is .metta). If a dir name is passed, all .metta
-        files in that dir (no recursion) are returned in the list.
-        Only .metta files are considered. 
+        (provided the the file is .metta or .scm). If a dir name is passed,
+        all .metta and .scm files in that dir (no recursion) are returned
+        in the list. Only .metta files are considered. 
 
         file_name and dir_name should not be simultaneously None or not None. This
         check is made in the caller.
@@ -70,7 +71,7 @@ class DistributedAtomSpace:
                         answer.append(path)
             else:
                 raise ValueError(f"Invalid folder name: {dir_name}")
-        answer = [f for f in answer if f.endswith(".metta")]
+        answer = [f for f in answer if f.endswith(".metta") or f.endswith(".scm")]
         if len(answer) == 0:
             raise ValueError(f"No MeTTa files found")
         return answer
@@ -94,8 +95,12 @@ class DistributedAtomSpace:
             ParserThread(KnowledgeBaseFile(self.db, file_name, shared_data))
             for file_name in knowledge_base_file_list
         ]
-        for thread in parser_threads:
-            thread.start()
+        for i in range(len(parser_threads)):
+            parser_threads[i].start()
+            # Sleep to avoid concurrency harzard in yacc lib startup
+            # (which is not thread safe)
+            if i < (len(parser_threads) - 1):
+                sleep(10)
         for thread in parser_threads:
             thread.join()
         assert shared_data.parse_ok_count == len(parser_threads)

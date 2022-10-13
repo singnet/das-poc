@@ -25,9 +25,6 @@ class ParserActions(ABC):
     def __init__(self):
         self.current_line_number = 1
 
-    def update_line_number(self, current_line_number: int):
-        self.current_line_number = current_line_number
-
 class KnowledgeBaseFile(ParserActions):
 
     def __init__(self, db: DBInterface, file_path: str, shared_data: SharedData):

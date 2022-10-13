@@ -7,6 +7,7 @@ from das.database.mongo_schema import CollectionNames as MongoCollections
 from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
 from das.expression_hasher import ExpressionHasher
 from das.metta_yacc import MettaYacc
+from das.atomese_yacc import AtomeseYacc
 from das.database.db_interface import DBInterface
 from das.database.db_interface import DBInterface, WILDCARD
 
@@ -145,14 +146,17 @@ def _key_value_targets_generator(input_filename, *, block_size=MAX_COUCHBASE_BLO
 
 class ParserThread(Thread):
 
-    def __init__(self, parser_actions_broker: "MettaParserActions"):
+    def __init__(self, parser_actions_broker: "ParserActions"):
         super().__init__()
         self.parser_actions_broker = parser_actions_broker
 
     def run(self):
         print(f"Parser thread {self.name} (TID {self.native_id}) started. Parsing {self.parser_actions_broker.file_path}")
         stopwatch_start = time.perf_counter()
-        parser = MettaYacc(action_broker=self.parser_actions_broker)
+        if self.parser_actions_broker.file_path.endswith(".metta"):
+            parser = MettaYacc(action_broker=self.parser_actions_broker)
+        else:
+            parser = AtomeseYacc(action_broker=self.parser_actions_broker)
         parser.parse_action_broker_input()
         self.parser_actions_broker.shared_data.parse_ok()
         elapsed = (time.perf_counter() - stopwatch_start) // 60
@@ -290,6 +294,7 @@ class PopulateMongoDBLinksThread(Thread):
 
     def run(self):
         print(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) started.")
+        duplicates = 0
         stopwatch_start = time.perf_counter()
         bulk_insertion_1 = []
         bulk_insertion_2 = []
@@ -308,13 +313,17 @@ class PopulateMongoDBLinksThread(Thread):
             mongo_collection.insert_many(bulk_insertion_1)
         if bulk_insertion_2:
             mongo_collection = self.db.mongo_db[MongoCollections.LINKS_ARITY_2]
-            mongo_collection.insert_many(bulk_insertion_2)
+            try:
+                mongo_collection.insert_many(bulk_insertion_2)
+            except Exception:
+                duplicates += 1
+                pass
         if bulk_insertion_N:
             mongo_collection = self.db.mongo_db[MongoCollections.LINKS_ARITY_N]
             mongo_collection.insert_many(bulk_insertion_N)
         self.shared_data.mongo_uploader_ok = True
         elapsed = (time.perf_counter() - stopwatch_start) // 60
-        print(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")
+        print(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) finished. {duplicates} hash colisions. {elapsed:.0f} minutes.")
 
 class PopulateCouchbaseCollectionThread(Thread):
     
@@ -347,7 +356,7 @@ class PopulateCouchbaseCollectionThread(Thread):
                     first_block = couchbase_collection.get(key)
                     couchbase_collection.upsert(f"{key}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
                 couchbase_collection.upsert(key, block_count + 1)
-                couchbase_collection.upsert(f"{key}_{block_count}", v, timeout=datetime.timedelta(seconds=100))
+                couchbase_collection.upsert(f"{key}_{block_count}", value, timeout=datetime.timedelta(seconds=100))
         elapsed = (time.perf_counter() - stopwatch_start) // 60
         self.shared_data.process_ok()
         print(f"Couchbase collection uploader thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")
