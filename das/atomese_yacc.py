@@ -12,6 +12,9 @@ ATOM -> NODE
 NODE -> ATOM_OPENNING ATOM_TYPE NODE_NAME ATOM_CLOSING
 
 LINK -> ATOM_OPENNING ATOM_TYPE ATOM_LIST ATOM_CLOSING
+    | ATOM_OPENNING ATOM_TYPE STV_DEFINITION ATOM_LIST ATOM_CLOSING
+
+STV_DEFINITION -> ATOM_OPENNING STV FLOAT FLOAT ATOM_CLOSING
 
 ATOM_LIST -> ATOM
     | ATOM_LIST ATOM
@@ -89,20 +92,28 @@ class AtomeseYacc(BaseYacc):
             expression = self._new_terminal(terminal_name)
         p[0] = expression
 
-    def p_LINK(self, p):
+    def p_STV_DEFINITION(self, p):
+        """STV_DEFINITION : ATOM_OPENNING STV FLOAT FLOAT ATOM_CLOSING"""
+        pass
+
+    def p_LINK_no_stv(self, p):
         """LINK : ATOM_OPENNING ATOM_TYPE ATOM_LIST ATOM_CLOSING"""
-        link_type = p[2]
-        targets = p[3]
         if self.check_mode or not self.action_broker:
             p[0] = f"<{p[2]}: {p[3]}>"
             return
-        if link_type not in self.types:
-            self.types.add(link_type)
-            expression = self._typedef(link_type, BASIC_TYPE)
-            expression.toplevel = True
-            self.action_broker.new_top_level_typedef_expression(expression)
-        head_expression = self._new_symbol(link_type)
-        expression = self._nested_expression([head_expression, *targets])
+        link_type = p[2]
+        targets = p[3]
+        expression = self._new_link(link_type, targets)
+        p[0] = expression
+
+    def p_LINK_stv(self, p):
+        """LINK : ATOM_OPENNING ATOM_TYPE STV_DEFINITION ATOM_LIST ATOM_CLOSING"""
+        if self.check_mode or not self.action_broker:
+            p[0] = f"<{p[2]}: {p[4]}>"
+            return
+        link_type = p[2]
+        targets = p[4]
+        expression = self._new_link(link_type, targets)
         p[0] = expression
 
     def p_ATOM_LIST_base(self, p):
@@ -139,3 +150,13 @@ class AtomeseYacc(BaseYacc):
         self.nodes = set()
         named_type_hash = self._get_named_type_hash(BASIC_TYPE)
         self.parent_type[named_type_hash] = named_type_hash
+
+    def _new_link(self, link_type, targets):
+        if link_type not in self.types:
+            self.types.add(link_type)
+            expression = self._typedef(link_type, BASIC_TYPE)
+            expression.toplevel = True
+            self.action_broker.new_top_level_typedef_expression(expression)
+        head_expression = self._new_symbol(link_type)
+        expression = self._nested_expression([head_expression, *targets])
+        return expression

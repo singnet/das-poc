@@ -294,6 +294,7 @@ class PopulateMongoDBLinksThread(Thread):
 
     def run(self):
         print(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) started.")
+        duplicates = 0
         stopwatch_start = time.perf_counter()
         bulk_insertion_1 = []
         bulk_insertion_2 = []
@@ -312,13 +313,17 @@ class PopulateMongoDBLinksThread(Thread):
             mongo_collection.insert_many(bulk_insertion_1)
         if bulk_insertion_2:
             mongo_collection = self.db.mongo_db[MongoCollections.LINKS_ARITY_2]
-            mongo_collection.insert_many(bulk_insertion_2)
+            try:
+                mongo_collection.insert_many(bulk_insertion_2)
+            except Exception:
+                duplicates += 1
+                pass
         if bulk_insertion_N:
             mongo_collection = self.db.mongo_db[MongoCollections.LINKS_ARITY_N]
             mongo_collection.insert_many(bulk_insertion_N)
         self.shared_data.mongo_uploader_ok = True
         elapsed = (time.perf_counter() - stopwatch_start) // 60
-        print(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")
+        print(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) finished. {duplicates} hash colisions. {elapsed:.0f} minutes.")
 
 class PopulateCouchbaseCollectionThread(Thread):
     
@@ -351,7 +356,7 @@ class PopulateCouchbaseCollectionThread(Thread):
                     first_block = couchbase_collection.get(key)
                     couchbase_collection.upsert(f"{key}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
                 couchbase_collection.upsert(key, block_count + 1)
-                couchbase_collection.upsert(f"{key}_{block_count}", v, timeout=datetime.timedelta(seconds=100))
+                couchbase_collection.upsert(f"{key}_{block_count}", value, timeout=datetime.timedelta(seconds=100))
         elapsed = (time.perf_counter() - stopwatch_start) // 60
         self.shared_data.process_ok()
         print(f"Couchbase collection uploader thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")

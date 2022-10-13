@@ -2,6 +2,9 @@ import pytest
 from das.atomese_lex import AtomeseLex
 
 lex_test_data = """
+(EvaluationLink (stv 1.0 0.964)
+    (PredicateNode "interacts_with")
+    (GeneNode "E"))
 (ContextLink
     (MemberLink
         (ChebiNode "ChEBI:10033")
@@ -31,6 +34,22 @@ def test_lexer():
     wrap = AtomeseLex()
     #wrap.build()
     expected_tokens = [
+        "ATOM_OPENNING",
+        "ATOM_TYPE",
+        "ATOM_OPENNING",
+        "STV",
+        "FLOAT",
+        "FLOAT",
+        "ATOM_CLOSING",
+        "ATOM_OPENNING",
+        "ATOM_TYPE",
+        "NODE_NAME",
+        "ATOM_CLOSING",
+        "ATOM_OPENNING",
+        "ATOM_TYPE",
+        "NODE_NAME",
+        "ATOM_CLOSING",
+        "ATOM_CLOSING",
         "ATOM_OPENNING",
         "ATOM_TYPE",
         "ATOM_OPENNING",

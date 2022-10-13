@@ -12,6 +12,9 @@ class AtomeseLex:
             'ATOM_CLOSING',
             'ATOM_TYPE',
             'NODE_NAME',
+            'STV',
+            'FLOAT',
+            'COMMENT',
             'EOF',
         ] + list(self.reserved.values())
 
@@ -24,6 +27,7 @@ class AtomeseLex:
         self.eof_handler = self.default_eof_handler
         self.lexer.filename = ""
 
+
     def t_NODE_NAME(self, t):
         r'\"[^\"]+\"'
         t.value = t.value[1:-1]
@@ -31,11 +35,20 @@ class AtomeseLex:
 
     def t_ATOM_TYPE(self, t):
         r'[^\W0-9]\w*'
-        if t.value.endswith("Node") or t.value.endswith("Link"):
-            t.value = t.value[0:-4]
+        if t.value == 'STV' or t.value == 'stv':
+            t.type = 'STV'
+        else:
+            if t.value.endswith("Node") or t.value.endswith("Link"):
+                t.value = t.value[0:-4]
         return t
 
+    t_FLOAT = r'\d+\.\d+'
+
     t_ignore =' \t'
+
+    def t_COMMENT(self, t):
+        r'\;.*'
+        pass
 
     def t_newline(self, t):
         r'\n+'
@@ -58,4 +71,4 @@ class AtomeseLex:
         n = 80 if len(t.value) > 30 else len(t.value) - 1
         error_message = f"{source} - Illegal character at line {t.lexer.lineno}: '{t.value[0]}' " +\
                         f"Near: '{t.value[0:n]}...'"
-        raise MettaLexerError(error_message)
+        raise AtomeseLexerError(error_message)

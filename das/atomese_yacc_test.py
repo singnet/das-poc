@@ -46,16 +46,16 @@ def test_action_broker():
     yacc_wrap = AtomeseYacc(action_broker=action_broker)
     result = yacc_wrap.parse(test_data)
     assert result == "SUCCESS"
-    assert action_broker.count_terminal == 9
+    assert action_broker.count_terminal == 11
     assert action_broker.count_nested_expression == 7
-    assert action_broker.count_toplevel_expression == 3
-    assert action_broker.count_type == 8 + action_broker.count_terminal
+    assert action_broker.count_toplevel_expression == 4
+    assert action_broker.count_type == 9 + action_broker.count_terminal
 
     action_broker = ActionBroker(test_data)
     yacc_wrap = AtomeseYacc(action_broker=action_broker)
     result = yacc_wrap.parse_action_broker_input()
     assert result == "SUCCESS"
-    assert action_broker.count_terminal == 9
+    assert action_broker.count_terminal == 11
     assert action_broker.count_nested_expression == 7
-    assert action_broker.count_toplevel_expression == 3
-    assert action_broker.count_type == 8 + action_broker.count_terminal
+    assert action_broker.count_toplevel_expression == 4
+    assert action_broker.count_type == 9 + action_broker.count_terminal

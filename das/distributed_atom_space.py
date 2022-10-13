@@ -4,6 +4,7 @@ Distributed Atom Space
 """
 
 import os
+from time import sleep
 from pymongo import MongoClient as MongoDBClient
 from couchbase.cluster import Cluster as CouchbaseDB
 from couchbase.auth import PasswordAuthenticator as CouchbasePasswordAuthenticator
@@ -94,8 +95,12 @@ class DistributedAtomSpace:
             ParserThread(KnowledgeBaseFile(self.db, file_name, shared_data))
             for file_name in knowledge_base_file_list
         ]
-        for thread in parser_threads:
-            thread.start()
+        for i in range(len(parser_threads)):
+            parser_threads[i].start()
+            # Sleep to avoid concurrency harzard in yacc lib startup
+            # (which is not thread safe)
+            if i < (len(parser_threads) - 1):
+                sleep(10)
         for thread in parser_threads:
             thread.join()
         assert shared_data.parse_ok_count == len(parser_threads)
