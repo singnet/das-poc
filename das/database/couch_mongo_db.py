@@ -47,19 +47,16 @@ class CouchMongoDB(DBInterface):
         return atom_type_hash
 
     def prefetch(self) -> None:
-        print("XXXXXXXXXX")
         self.node_handles = {}
         self.node_documents = {}
         self.atom_type_hash = {}
         collection = self.mongo_nodes_collection
         for document in collection.find():
-            print("1 XXXXXXXXXX")
             node_id = document[MongoFieldNames.ID_HASH]
             node_type = document[MongoFieldNames.TYPE_NAME]
             node_name = document[MongoFieldNames.NODE_NAME]
             self.node_documents[node_id] = document
             self.node_handles[self._build_composite_node_name(node_type, node_name)] = node_id
-        print("2 XXXXXXXXXX")
         collection = self.mongo_db.get_collection(MongoCollectionNames.ATOM_TYPES)
 
     def _retrieve_mongo_document(self, handle: str, arity=-1) -> dict:

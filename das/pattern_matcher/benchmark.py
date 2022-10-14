@@ -354,7 +354,7 @@ PROGRESS_BAR = True
 for test_layout in [TestLayout.QUERY_1, TestLayout.QUERY_2, TestLayout.QUERY_3]:
 #for test_layout in [TestLayout.QUERY_3]:
     #for architecture in [DB_Architecture.COUCHBASE, DB_Architecture.MONGODB, DB_Architecture.COUCHBASE_AND_MONGODB]:
-    for architecture in [DB_Architecture.MONGODB]:
+    for architecture in [DB_Architecture.COUCHBASE_AND_MONGODB]:
         print('--------------------------------------------------------------------------------------------------------------')
         n = 5 if architecture == DB_Architecture.MONGODB else iterations[test_layout]
         benchmark = DAS_Benchmark(architecture, n, 2, test_layout)
