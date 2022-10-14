@@ -17,30 +17,23 @@ def test_get_file_list():
     _, temp_file6 = tempfile.mkstemp(dir=temp_dir2, suffix=".metta", prefix=tmp_prefix)
     temp_dir3 = tempfile.mkdtemp(dir=temp_dir1, prefix=tmp_prefix)
 
-    with pytest.raises(ValueError):
-        das = DistributedAtomSpace()
+    das = DistributedAtomSpace()
+    #das.load_knowledge_base(temp_dir_1)
 
-    with pytest.raises(ValueError):
-        das = DistributedAtomSpace(
-            knowledge_base_file_name=temp_file1, 
-            knowledge_base_dir_name=temp_dir1)
-
-    das = DistributedAtomSpace(knowledge_base_dir_name=temp_dir1)
-
-    file_list = das._get_file_list(temp_file1, None)
+    file_list = das._get_file_list(temp_file1)
     assert len(file_list) == 1
     assert temp_file1 in file_list
 
     with pytest.raises(ValueError):
-        file_list = das._get_file_list(temp_file2, None)
+        file_list = das._get_file_list(temp_file2)
 
-    file_list = das._get_file_list(None, temp_dir1)
+    file_list = das._get_file_list(temp_dir1)
     assert len(file_list) == 2
     assert temp_file3 in file_list
     assert temp_file4 in file_list
 
     with pytest.raises(ValueError):
-        file_list = das._get_file_list(None, temp_dir3)
+        file_list = das._get_file_list(temp_dir3)
 
     shutil.rmtree(temp_dir1)
     os.remove(temp_file1)

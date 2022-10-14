@@ -3,7 +3,6 @@ docker-compose exec app pytest das/metta_yacc_test.py
 docker-compose exec app pytest das/atomese_lex_test.py
 docker-compose exec app pytest das/atomese_yacc_test.py
 docker-compose exec app pytest das/distributed_atom_space_test.py
-./empty-docker-up
-docker-compose exec app python3 scripts/load_das.py
-docker-compose exec app pytest das/database/couch_mongo_db_test.py 
+./load ./data/samples/animals.metta
+docker-compose exec app pytest das/database/couch_mongo_db_test.py
 docker-compose exec app pytest das/pattern_matcher/pattern_matcher_test.py
