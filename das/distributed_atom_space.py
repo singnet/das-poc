@@ -21,6 +21,7 @@ class DistributedAtomSpace:
 
     def __init__(self, **kwargs):
         self.database_name = 'das'
+        self.db = None
         logger().info(f"New Distributed Atom Space. Database name: {self.database_name}")
         self._setup_database()
 
