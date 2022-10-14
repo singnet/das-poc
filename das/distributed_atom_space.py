@@ -15,13 +15,14 @@ from das.database.couch_mongo_db import CouchMongoDB
 from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
 from das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread, BuildConnectivityThread, \
     BuildPatternsThread, BuildTypeTemplatesThread, PopulateMongoDBLinksThread, PopulateCouchbaseCollectionThread
+from das.logger import logger
 
 class DistributedAtomSpace:
 
     def __init__(self, **kwargs):
         self.database_name = 'das'
+        logger().info(f"New Distributed Atom Space. Database name: {self.database_name}")
         self._setup_database()
-        self._read_knowledge_base(kwargs)
 
     def _setup_database(self):
         hostname = os.environ.get('DAS_MONGODB_HOSTNAME')
@@ -46,49 +47,36 @@ class DistributedAtomSpace:
 
         self.db = CouchMongoDB(couch_db, mongo_db)
 
-    def _get_file_list(self, file_name, dir_name):
+    def _get_file_list(self, source):
         """
         Build a list of file names according to the passed parameters.
-        If file_name is not none, a list with a single file name is built
-        (provided the the file is .metta or .scm). If a dir name is passed,
-        all .metta and .scm files in that dir (no recursion) are returned
-        in the list. Only .metta files are considered. 
-
-        file_name and dir_name should not be simultaneously None or not None. This
-        check is made in the caller.
         """
         answer = []
-        if file_name:
-            if os.path.exists(file_name):
-                answer.append(file_name)
-            else:
-                raise ValueError(f"Invalid file name: {file_name}")
+        if os.path.isfile(source):
+            answer.append(source)
         else:
-            if os.path.exists(dir_name):
-                for file_name in os.listdir(dir_name):
-                    path = "/".join([dir_name, file_name])
+            if os.path.isdir(source):
+                for file_name in os.listdir(source):
+                    path = "/".join([source, file_name])
                     if os.path.exists(path):
                         answer.append(path)
             else:
-                raise ValueError(f"Invalid folder name: {dir_name}")
+                raise ValueError(f"Invalid knowledge base path: {source}")
         answer = [f for f in answer if f.endswith(".metta") or f.endswith(".scm")]
         if len(answer) == 0:
-            raise ValueError(f"No MeTTa files found")
+            raise ValueError(f"No MeTTa files found in {source}")
         return answer
         
-    def _read_knowledge_base(self, kwargs):
+    def load_knowledge_base(self, source):
         """
-        Called in constructor, this method parses one or more files passed
-        by kwargs and feed the databases with all MeTTa expressions.
+        Called in constructor, this method parses one or more files
+        and feeds the databases with all MeTTa expressions.
         """
 
-        knowledge_base_file_name = kwargs.get("knowledge_base_file_name", None)
-        knowledge_base_dir_name = kwargs.get("knowledge_base_dir_name", None)
-        if not knowledge_base_file_name and not knowledge_base_dir_name:
-            raise ValueError("Either 'knowledge_base_file_name' or 'knowledge_base_dir_name' should be provided")
-        if knowledge_base_file_name and knowledge_base_dir_name:
-            raise ValueError("'knowledge_base_file_name' and 'knowledge_base_dir_name' can't be set simultaneously")
-        knowledge_base_file_list = self._get_file_list(knowledge_base_file_name, knowledge_base_dir_name)
+        logger().info(f"Loading knowledge base")
+        knowledge_base_file_list = self._get_file_list(source)
+        for file_name in knowledge_base_file_list:
+            logger().info(f"Knowledge base file: {file_name}")
         shared_data = SharedData()
 
         parser_threads = [
@@ -134,3 +122,4 @@ class DistributedAtomSpace:
         for thread in file_processor_threads:
             thread.join()
         assert shared_data.process_ok_count == len(file_processor_threads)
+        self.db.prefetch()

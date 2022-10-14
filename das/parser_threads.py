@@ -10,6 +10,7 @@ from das.metta_yacc import MettaYacc
 from das.atomese_yacc import AtomeseYacc
 from das.database.db_interface import DBInterface
 from das.database.db_interface import DBInterface, WILDCARD
+from das.logger import logger
 
 # There is a Couchbase limitation for long values (max: 20Mb)
 # So we set the it to ~15Mb, if this max size is reached
@@ -151,7 +152,8 @@ class ParserThread(Thread):
         self.parser_actions_broker = parser_actions_broker
 
     def run(self):
-        print(f"Parser thread {self.name} (TID {self.native_id}) started. Parsing {self.parser_actions_broker.file_path}")
+        logger().info(f"Parser thread {self.name} (TID {self.native_id}) started. " + \
+            f"Parsing {self.parser_actions_broker.file_path}")
         stopwatch_start = time.perf_counter()
         if self.parser_actions_broker.file_path.endswith(".metta"):
             parser = MettaYacc(action_broker=self.parser_actions_broker)
@@ -160,7 +162,8 @@ class ParserThread(Thread):
         parser.parse_action_broker_input()
         self.parser_actions_broker.shared_data.parse_ok()
         elapsed = (time.perf_counter() - stopwatch_start) // 60
-        print(f"Parser thread {self.name} (TID {self.native_id}) Finished. {elapsed:.0f} minutes.")
+        logger().info(f"Parser thread {self.name} (TID {self.native_id}) Finished. " + \
+            f"{elapsed:.0f} minutes.")
 
 class FlushNonLinksToDBThread(Thread):
 
@@ -170,7 +173,7 @@ class FlushNonLinksToDBThread(Thread):
         self.shared_data = shared_data
 
     def run(self):
-        print(f"Flush thread {self.name} (TID {self.native_id}) started.")
+        logger().info(f"Flush thread {self.name} (TID {self.native_id}) started.")
         stopwatch_start = time.perf_counter()
         bulk_insertion = []
         while self.shared_data.typedef_expressions:
@@ -192,7 +195,7 @@ class FlushNonLinksToDBThread(Thread):
         named_entities.close()
         self.shared_data.build_ok()
         elapsed = (time.perf_counter() - stopwatch_start) // 60
-        print(f"Flush thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")
+        logger().info(f"Flush thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")
 
 class BuildConnectivityThread(Thread):
 
@@ -203,7 +206,8 @@ class BuildConnectivityThread(Thread):
     def run(self):
         outgoing_file_name = self.shared_data.temporary_file_name[CouchbaseCollections.OUTGOING_SET]
         incoming_file_name = self.shared_data.temporary_file_name[CouchbaseCollections.INCOMING_SET]
-        print(f"Temporary file builder thread {self.name} (TID {self.native_id}) started. Building {outgoing_file_name} and {incoming_file_name}")
+        logger().info(f"Temporary file builder thread {self.name} (TID {self.native_id}) started. Building " + \
+            f"{outgoing_file_name} and {incoming_file_name}")
         stopwatch_start = time.perf_counter()
         outgoing = open(outgoing_file_name, "w")
         incoming = open(incoming_file_name, "w")
@@ -220,7 +224,8 @@ class BuildConnectivityThread(Thread):
         os.rename(f"{incoming_file_name}.sorted", incoming_file_name)
         self.shared_data.build_ok()
         elapsed = (time.perf_counter() - stopwatch_start) // 60
-        print(f"Temporary file builder thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")
+        logger().info(f"Temporary file builder thread {self.name} (TID {self.native_id}) finished. " + \
+            f"{elapsed:.0f} minutes.")
 
 class BuildPatternsThread(Thread):
 
@@ -230,7 +235,8 @@ class BuildPatternsThread(Thread):
 
     def run(self):
         file_name = self.shared_data.temporary_file_name[CouchbaseCollections.PATTERNS]
-        print(f"Temporary file builder thread {self.name} (TID {self.native_id}) started. Building {file_name}")
+        logger().info(f"Temporary file builder thread {self.name} (TID {self.native_id}) started. " + \
+            f"Building {file_name}")
         stopwatch_start = time.perf_counter()
         patterns = open(file_name, "w")
         for i in range(len(self.shared_data.regular_expressions_list)):
@@ -259,7 +265,7 @@ class BuildPatternsThread(Thread):
         os.rename(f"{file_name}.sorted", file_name)
         self.shared_data.build_ok()
         elapsed = (time.perf_counter() - stopwatch_start) // 60
-        print(f"Temporary file builder thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")
+        logger().info(f"Temporary file builder thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")
 
 class BuildTypeTemplatesThread(Thread):
 
@@ -269,7 +275,7 @@ class BuildTypeTemplatesThread(Thread):
 
     def run(self):
         file_name = self.shared_data.temporary_file_name[CouchbaseCollections.TEMPLATES]
-        print(f"Temporary file builder thread {self.name} (TID {self.native_id}) started. Building {file_name}")
+        logger().info(f"Temporary file builder thread {self.name} (TID {self.native_id}) started. Building {file_name}")
         stopwatch_start = time.perf_counter()
         template = open(file_name, "w")
         for i in range(len(self.shared_data.regular_expressions_list)):
@@ -283,7 +289,7 @@ class BuildTypeTemplatesThread(Thread):
         os.rename(f"{file_name}.sorted", file_name)
         self.shared_data.build_ok()
         elapsed = (time.perf_counter() - stopwatch_start) // 60
-        print(f"Temporary file builder thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")
+        logger().info(f"Temporary file builder thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")
 
 class PopulateMongoDBLinksThread(Thread):
 
@@ -293,7 +299,7 @@ class PopulateMongoDBLinksThread(Thread):
         self.shared_data = shared_data
 
     def run(self):
-        print(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) started.")
+        logger().info(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) started.")
         duplicates = 0
         stopwatch_start = time.perf_counter()
         bulk_insertion_1 = []
@@ -323,7 +329,8 @@ class PopulateMongoDBLinksThread(Thread):
             mongo_collection.insert_many(bulk_insertion_N)
         self.shared_data.mongo_uploader_ok = True
         elapsed = (time.perf_counter() - stopwatch_start) // 60
-        print(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) finished. {duplicates} hash colisions. {elapsed:.0f} minutes.")
+        logger().info(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) finished. " + \
+            f"{duplicates} hash colisions. {elapsed:.0f} minutes.")
 
 class PopulateCouchbaseCollectionThread(Thread):
     
@@ -345,7 +352,8 @@ class PopulateCouchbaseCollectionThread(Thread):
     def run(self):
         file_name = self.shared_data.temporary_file_name[self.collection_name]
         couchbase_collection = self.db.couch_db.collection(self.collection_name)
-        print(f"Couchbase collection uploader thread {self.name} (TID {self.native_id}) started. Uploading {self.collection_name}")
+        logger().info(f"Couchbase collection uploader thread {self.name} (TID {self.native_id}) started. " + \
+            f"Uploading {self.collection_name}")
         stopwatch_start = time.perf_counter()
         generator = _key_value_targets_generator if self.use_targets else _key_value_generator
         for key, value, block_count in generator(file_name, merge_rest=self.merge_rest):
@@ -359,4 +367,5 @@ class PopulateCouchbaseCollectionThread(Thread):
                 couchbase_collection.upsert(f"{key}_{block_count}", value, timeout=datetime.timedelta(seconds=100))
         elapsed = (time.perf_counter() - stopwatch_start) // 60
         self.shared_data.process_ok()
-        print(f"Couchbase collection uploader thread {self.name} (TID {self.native_id}) finished. {elapsed:.0f} minutes.")
+        logger().info(f"Couchbase collection uploader thread {self.name} (TID {self.native_id}) finished. " + \
+            f"{elapsed:.0f} minutes.")

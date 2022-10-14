@@ -10,6 +10,7 @@ services:
       - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
       - PYTHONPATH=/app
+      - TZ=${TZ}
     tty: true
     volumes:
       - ./das:/app/das
@@ -25,6 +26,7 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - MONGO_INITDB_ROOT_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
+      - TZ=${TZ}
     ports:
       - ${DAS_MONGODB_PORT:-27017}:${DAS_MONGODB_PORT:-27017}
     volumes:
@@ -38,6 +40,7 @@ services:
       - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
       - DAS_COUCHBASE_BUCKET_RAMSIZE=${DAS_COUCHBASE_BUCKET_RAMSIZE:-8192}
+      - TZ=${TZ}
     ports:
       - "8091-8095:8091-8095"
       - "11210:11210"

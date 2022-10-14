@@ -1,7 +1,19 @@
+import argparse
 from das.distributed_atom_space import DistributedAtomSpace
 
-das = DistributedAtomSpace(knowledge_base_dir_name="/tmp/bio")
-#das = DistributedAtomSpace(knowledge_base_file_name="/tmp/bio/COVID-19-biogrid_LATEST.tab3.zip_2020-10-20.scm")
-#das = DistributedAtomSpace(knowledge_base_dir_name="./data/samples",show_progress=True)
-#das = DistributedAtomSpace(knowledge_base_file_name="./data/samples/animals.metta")
+def run():
+    parser = argparse.ArgumentParser(
+        "Load MeTTa data into DAS", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
+    parser.add_argument('--knowledge-base', type=str, help='Path to a file or directory with a MeTTA knowledge base')
+
+    args = parser.parse_args()
+
+    das = DistributedAtomSpace()
+
+    if args.knowledge_base:
+        das.load_knowledge_base(args.knowledge_base)
+
+if __name__ == "__main__":
+    run()
