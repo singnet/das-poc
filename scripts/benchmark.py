@@ -5,15 +5,9 @@ from typing import List, Dict
 from enum import Enum, auto
 import numpy as np
 import re
-from couchbase.auth import PasswordAuthenticator
-from couchbase.bucket import Bucket
-from couchbase.cluster import Cluster
-from das.helpers import get_mongodb
 from das.database.db_interface import DBInterface
-from das.database.couch_db import CouchDB
-from das.database.mongo_db import MongoDB
-from das.database.couch_mongo_db import CouchMongoDB
 from das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not, And, Or, LinkTemplate, TypedVariable
+from das.distributed_atom_space import DistributedAtomSpace
 
 class DB_Architecture(int, Enum):
     """
@@ -205,31 +199,10 @@ class DAS_Benchmark:
         self.rounds = rounds
         self.gene_count = gene_count
         self.test_layout = test_layout
-        #TODO Refactory to put these collection names just in one place
-        mongodb_specs = {
-            "hostname": "mongo",
-            "port":  27017,
-            "username": "dbadmin",
-            "password": "dassecret",
-            "database": "das",
-        }
-        couchbase_specs = {
-            "hostname": "couchbase",
-            "username": "dbadmin",
-            "password": "dassecret",
-        }
-        cluster = Cluster(
-            f'couchbase://{couchbase_specs["hostname"]}',
-            authenticator=PasswordAuthenticator(
-                couchbase_specs["username"], couchbase_specs["password"]
-            ),
-        )
         if architecture == DB_Architecture.COUCHBASE_AND_MONGODB:
-            self.db = CouchMongoDB(cluster.bucket("das"), get_mongodb(mongodb_specs))
-        elif architecture == DB_Architecture.COUCHBASE:
-            self.db = CouchDB(cluster.bucket("das"), get_mongodb(mongodb_specs))
-        elif architecture == DB_Architecture.MONGODB:
-            self.db = MongoDB(get_mongodb(mongodb_specs))
+            das = DistributedAtomSpace();
+            self.db = das.db
+            self.db.prefetch()
         else:
             raise ValueError(f"Invalid DB architecture: {architecture.name}")
         self.query = {
@@ -354,7 +327,7 @@ PROGRESS_BAR = True
 for test_layout in [TestLayout.QUERY_1, TestLayout.QUERY_2, TestLayout.QUERY_3]:
 #for test_layout in [TestLayout.QUERY_3]:
     #for architecture in [DB_Architecture.COUCHBASE, DB_Architecture.MONGODB, DB_Architecture.COUCHBASE_AND_MONGODB]:
-    for architecture in [DB_Architecture.MONGODB]:
+    for architecture in [DB_Architecture.COUCHBASE_AND_MONGODB]:
         print('--------------------------------------------------------------------------------------------------------------')
         n = 5 if architecture == DB_Architecture.MONGODB else iterations[test_layout]
         benchmark = DAS_Benchmark(architecture, n, 2, test_layout)
