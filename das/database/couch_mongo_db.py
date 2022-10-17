@@ -29,10 +29,11 @@ class CouchMongoDB(DBInterface):
             'N': self.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_N),
         }
         self.mongo_nodes_collection = self.mongo_db.get_collection(MongoCollectionNames.NODES)
+        self.wildcard_hash = ExpressionHasher._compute_hash(WILDCARD)
         self.node_handles = None
         self.node_documents = None
         self.atom_type_hash = None
-        #self.prefetch()
+        self.atom_type_hash_reverse = None
 
     def _build_composite_node_name(self, node_type: str, node_name: str) -> str:
         return f'{node_type}:{node_name}'
@@ -44,12 +45,14 @@ class CouchMongoDB(DBInterface):
         if atom_type_hash is None:
             atom_type_hash = ExpressionHasher.named_type_hash(atom_type)
             self.atom_type_hash[atom_type] = atom_type_hash
+            self.atom_type_hash_reverse[atom_type_hash] = atom_type
         return atom_type_hash
 
     def prefetch(self) -> None:
         self.node_handles = {}
         self.node_documents = {}
         self.atom_type_hash = {}
+        self.atom_type_hash_reverse = {}
         collection = self.mongo_nodes_collection
         for document in collection.find():
             node_id = document[MongoFieldNames.ID_HASH]
@@ -58,6 +61,11 @@ class CouchMongoDB(DBInterface):
             self.node_documents[node_id] = document
             self.node_handles[self._build_composite_node_name(node_type, node_name)] = node_id
         collection = self.mongo_db.get_collection(MongoCollectionNames.ATOM_TYPES)
+        for document in collection.find():
+            named_type = document[MongoFieldNames.TYPE_NAME]
+            named_type_hash = document["named_type_hash"]
+            self.atom_type_hash[named_type] = named_type_hash
+            self.atom_type_hash_reverse[named_type_hash] = named_type
 
     def _retrieve_mongo_document(self, handle: str, arity=-1) -> dict:
         mongo_filter = {MongoFieldNames.ID_HASH: handle}
@@ -91,13 +99,23 @@ class CouchMongoDB(DBInterface):
             answer.extend(collection.get(key + f'_{i}').content)
         return answer
 
-    def _build_hash_template(self, template: Union[str, List[Any]]) -> List[Any]:
+    def _build_named_type_hash_template(self, template: Union[str, List[Any]]) -> List[Any]:
         if isinstance(template, str):
             return self._get_atom_type_hash(template)
         else:
             answer = []
             for element in template:
-                v = self._build_hash_template(element)
+                v = self._build_named_type_hash_template(element)
+                answer.append(v)
+            return answer
+
+    def _build_named_type_template(self, template: Union[str, List[Any]]) -> List[Any]:
+        if isinstance(template, str):
+            return self.atom_type_hash_reverse.get(template, None)
+        else:
+            answer = []
+            for element in template:
+                v = self._build_named_type_template(element)
                 answer.append(v)
             return answer
 
@@ -108,12 +126,13 @@ class CouchMongoDB(DBInterface):
         answer = []
         index = 0
         while True:
-            key = document.get(f'{MongoFieldNames.KEY_PREFIX}{index}', None)
+            key = document.get(f'{MongoFieldNames.KEY_PREFIX}_{index}', None)
             if key is None:
                 return answer
             else:
                 answer.append(key)
             index += 1
+
 
     # DB interface methods
 
@@ -151,13 +170,16 @@ class CouchMongoDB(DBInterface):
         return True
 
     def get_matched_links(self, link_type: str, target_handles: List[str]):
-        if WILDCARD not in target_handles:
+        if link_type != WILDCARD and WILDCARD not in target_handles:
             try:
                 answer = self.get_link_handle(link_type, target_handles)
                 return [answer]
             except ValueError:
                 return []
-        link_type_hash = self._get_atom_type_hash(link_type)
+        if link_type == WILDCARD:
+            link_type_hash = WILDCARD
+        else:
+            link_type_hash = self._get_atom_type_hash(link_type)
         if link_type_hash is None:
             return []
         if link_type in UNORDERED_LINK_TYPES:
@@ -182,7 +204,7 @@ class CouchMongoDB(DBInterface):
 
     def get_matched_type_template(self, template: List[Any]) -> List[str]:
         try:
-            template = self._build_hash_template(template)
+            template = self._build_named_type_hash_template(template)
             template_hash = ExpressionHasher.composite_hash(template)
         except KeyError as exception:
             raise ValueError(f'{exception}\nInvalid type')
@@ -201,3 +223,23 @@ class CouchMongoDB(DBInterface):
             MongoFieldNames.NODE_NAME: {'$regex': substring}
         }
         return [document[MongoFieldNames.ID_HASH] for document in self.mongo_nodes_collection.find(mongo_filter)]
+
+    #################################
+
+    def get_link_as_dict(self, handle: str, arity=-1) -> dict:
+        document = self._retrieve_mongo_document(handle, arity)
+        answer = {}
+        answer["handle"] = document[MongoFieldNames.ID_HASH]
+        answer["type"] = document[MongoFieldNames.TYPE_NAME]
+        answer["template"] = self._build_named_type_template(document[MongoFieldNames.COMPOSITE_TYPE])
+        answer["targets"] = self._get_mongo_document_keys(document)
+        return answer
+
+    def get_node_as_dict(self, handle) -> dict:
+        document = self._retrieve_mongo_document(handle)
+        answer = {}
+        answer["handle"] = document[MongoFieldNames.ID_HASH]
+        answer["type"] = document[MongoFieldNames.TYPE_NAME]
+        answer["name"] = document[MongoFieldNames.NODE_NAME]
+        return answer
+

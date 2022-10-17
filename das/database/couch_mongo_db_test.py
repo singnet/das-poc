@@ -79,7 +79,8 @@ def test_db_creation(db: DBInterface):
     assert db.couch_patterns_collection
     assert len(db.node_documents) == 14
     assert len(db.node_handles) == 14
-    assert len(db.atom_type_hash) == 0
+    print(db.atom_type_hash)
+    assert len(db.atom_type_hash) == 17
 
 def test_node_exists(db: DBInterface):
     assert db.node_exists('Concept', 'human')
@@ -239,9 +240,9 @@ def test_get_matched_links(db: DBInterface):
     assert len(db.get_matched_links('Similarity', [mammal, human])) == 0
 
 def test_build_hash_template(db: DBInterface):
-    v1 = db._build_hash_template(['Inheritance', 'Concept', 'Concept'])
-    v2 = db._build_hash_template(['Similarity', 'Concept', 'Concept'])
-    v3 = db._build_hash_template(['Similarity', 'Concept', ['Inheritance', 'Concept', 'Concept']])
+    v1 = db._build_named_type_hash_template(['Inheritance', 'Concept', 'Concept'])
+    v2 = db._build_named_type_hash_template(['Similarity', 'Concept', 'Concept'])
+    v3 = db._build_named_type_hash_template(['Similarity', 'Concept', ['Inheritance', 'Concept', 'Concept']])
     assert len(v1) == 3
     assert len(v2) == 3
     assert len(v3) == 3

@@ -243,21 +243,24 @@ class BuildPatternsThread(Thread):
             expression = self.shared_data.regular_expressions_list[i]
             if expression.named_type not in self.shared_data.pattern_black_list:
                 arity = len(expression.elements)
+                type_hash = expression.named_type_hash
                 keys = []
-                if arity == 1:
-                    keys.append([expression.named_type_hash, WILDCARD])
-                elif arity == 2:
-                    keys.append([expression.named_type_hash, expression.elements[0], WILDCARD])
-                    keys.append([expression.named_type_hash, WILDCARD, expression.elements[1]])
-                    keys.append([expression.named_type_hash, WILDCARD, WILDCARD])
-                elif arity == 3:
-                    keys.append([expression.named_type_hash, expression.elements[0], expression.elements[1], WILDCARD])
-                    keys.append([expression.named_type_hash, expression.elements[0], WILDCARD, expression.elements[2]])
-                    keys.append([expression.named_type_hash, WILDCARD, expression.elements[1], expression.elements[2]])
-                    keys.append([expression.named_type_hash, expression.elements[0], WILDCARD, WILDCARD])
-                    keys.append([expression.named_type_hash, WILDCARD, expression.elements[1], WILDCARD])
-                    keys.append([expression.named_type_hash, WILDCARD, WILDCARD, expression.elements[2]])
-                    keys.append([expression.named_type_hash, WILDCARD, WILDCARD, WILDCARD])
+                keys.append([WILDCARD, *expression.elements])
+                for type_key in [type_hash, WILDCARD]:
+                    if arity == 1:
+                        keys.append([type_key, WILDCARD])
+                    elif arity == 2:
+                        keys.append([type_key, expression.elements[0], WILDCARD])
+                        keys.append([type_key, WILDCARD, expression.elements[1]])
+                        keys.append([type_key, WILDCARD, WILDCARD])
+                    elif arity == 3:
+                        keys.append([type_key, expression.elements[0], expression.elements[1], WILDCARD])
+                        keys.append([type_key, expression.elements[0], WILDCARD, expression.elements[2]])
+                        keys.append([type_key, WILDCARD, expression.elements[1], expression.elements[2]])
+                        keys.append([type_key, expression.elements[0], WILDCARD, WILDCARD])
+                        keys.append([type_key, WILDCARD, expression.elements[1], WILDCARD])
+                        keys.append([type_key, WILDCARD, WILDCARD, expression.elements[2]])
+                        keys.append([type_key, WILDCARD, WILDCARD, WILDCARD])
             for key in keys:
                 _write_key_value(patterns, key, [expression.hash_code, *expression.elements])
         patterns.close()
