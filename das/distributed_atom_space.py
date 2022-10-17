@@ -5,6 +5,7 @@ Distributed Atom Space
 
 import os
 from time import sleep
+from typing import List, Optional, Union, Tuple, Dict
 from pymongo import MongoClient as MongoDBClient
 from couchbase.cluster import Cluster as CouchbaseDB
 from couchbase.auth import PasswordAuthenticator as CouchbasePasswordAuthenticator
@@ -16,6 +17,7 @@ from das.database.couchbase_schema import CollectionNames as CouchbaseCollection
 from das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread, BuildConnectivityThread, \
     BuildPatternsThread, BuildTypeTemplatesThread, PopulateMongoDBLinksThread, PopulateCouchbaseCollectionThread
 from das.logger import logger
+from das.database.db_interface import WILDCARD
 
 class DistributedAtomSpace:
 
@@ -47,6 +49,7 @@ class DistributedAtomSpace:
                 pass
 
         self.db = CouchMongoDB(couch_db, mongo_db)
+        self.db.prefetch()
 
     def _get_file_list(self, source):
         """
@@ -67,6 +70,77 @@ class DistributedAtomSpace:
         if len(answer) == 0:
             raise ValueError(f"No MeTTa files found in {source}")
         return answer
+
+    def _to_handle_list(self, atom_list: Union[List[str], List[Dict]]) -> List[str]:
+        if not atom_list:
+            return []
+        if isinstance(atom_list[0], str):
+            return atom_list
+        else:
+            return [link["handle"] for link in atom_list]
+
+    def _to_link_dict_list(self, db_answer: Union[List[str], List[Dict]]) -> List[Dict]:
+        if not db_answer:
+            return []
+        flat_handle = isinstance(db_answer[0], str)
+        answer = []
+        for atom in db_answer:
+            if flat_handle:
+                handle = atom
+                arity = -1
+            else:
+                handle = atom["handle"]
+                arity = len(atom["targets"])
+            answer.append(self.db.get_link_as_dict(handle, arity))
+        return answer
+
+    def get_node(self,
+        node_type: str,
+        node_name: str,
+        build_node_dict: bool = False) -> Union[str, Dict]:
+    
+        node_handle = None
+        try:
+            node_handle = self.db.get_node_handle(node_type, node_name)
+        except ValueError:
+            pass
+        if not build_node_dict or node_handle is None:
+            return node_handle
+        return self.db.get_node_as_dict(node_handle)
+
+    def get_link(self,
+        link_type: str,
+        targets: List[str] = None,
+        build_link_dict: bool = False) -> Union[str, Dict]:
+    
+        link_handle = None
+        try:
+            link_handle = self.db.get_link_handle(link_type, targets)
+        except ValueError:
+            pass
+
+        if not build_link_dict or link_handle is None:
+            return link_handle
+        return self.db.get_link_as_dict(link_handle, len(targets))
+
+    def get_links(self,
+        link_type: str,
+        target_types: str = None,
+        targets: List[str] = None,
+        build_link_dict: bool = False) -> Union[List[str], List[Dict]]:
+
+        assert link_type is not None
+        if target_types is not None:
+            db_answer = self.db.get_matched_type_template([link_type, *target_types])
+        elif targets is not None:
+            db_answer = self.db.get_matched_links(link_type, targets)
+        else:
+            db_answer = self.db.get_matched_links(link_type, [WILDCARD, WILDCARD])
+
+        if build_link_dict:
+            return self._to_link_dict_list(db_answer)
+        else:
+            return self._to_handle_list(db_answer)
         
     def load_knowledge_base(self, source):
         """

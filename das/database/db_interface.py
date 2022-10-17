@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 WILDCARD = '*'
 UNORDERED_LINK_TYPES = ['Similarity', 'Set']
@@ -54,4 +54,11 @@ class DBInterface(ABC):
     @abstractmethod
     def get_matched_node_name(self, node_type: str, substring: str) -> str:
         pass
-    
+
+    #############################
+
+    def get_link_as_dict(self, handle: str, arity: int):
+        pass
+
+    def get_node_as_dict(self, handle):
+        pass

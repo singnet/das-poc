@@ -178,3 +178,8 @@ class StubDB(DBInterface):
                     answer.append(node)
         return answer
 
+    def get_link_as_dict(self, handle: str, arity: int):
+        pass
+
+    def get_node_as_dict(self, handle):
+        pass

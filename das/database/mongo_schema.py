@@ -12,5 +12,6 @@ class FieldNames(str, Enum):
     TYPE_NAME = 'named_type'
     ID_HASH = '_id'
     TYPE = 'composite_type_hash'
+    COMPOSITE_TYPE = 'composite_type'
     KEY_PREFIX = 'key'
     KEYS = 'keys'

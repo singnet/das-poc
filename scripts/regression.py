@@ -23,8 +23,8 @@ if __name__ == "__main__":
         "---------------------------- Integration tests ---------------------------------"
     )
 
-    das = DistributedAtomSpace(knowledge_base_file_name="./data/samples/animals.metta")
-    das.db.prefetch()
+    das = DistributedAtomSpace()
+    das.load_knowledge_base("./data/samples/animals.metta")
     db = das.db
 
     n1 = Node("Concept", "human")
