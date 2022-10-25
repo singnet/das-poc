@@ -122,16 +122,10 @@ def test_get_link_handle(db: DBInterface):
     _check_link(db, handle, 'Inheritance', human, mammal)
     handle = db.get_link_handle('Inheritance', [monkey, mammal])
     _check_link(db, handle, 'Inheritance', monkey, mammal)
-    with pytest.raises(ValueError):
-        db.get_link_handle('Inheritance', [monkey, human])
     handle = db.get_link_handle('Similarity', [human, monkey])
     _check_link(db, handle, 'Similarity', human, monkey)
     handle = db.get_link_handle('Similarity', [monkey, human])
     _check_link(db, handle, 'Similarity', monkey, human)
-    with pytest.raises(ValueError):
-        db.get_link_handle('Similarity', [mammal, human])
-    with pytest.raises(ValueError):
-        db.get_link_handle('Similarity', [human, mammal])
 
 def test_link_exists(db: DBInterface):
     human = db.get_node_handle('Concept', 'human')
@@ -153,8 +147,6 @@ def test_get_node_handle(db: DBInterface):
         collection = db.mongo_db.get_collection(MongoCollectionNames.NODES)
         document = collection.find_one({'_id': handle})
         assert document[MongoFieldNames.NODE_NAME] == name
-    with pytest.raises(ValueError):
-        db.get_node_handle('Concept', 'blah')
 
 def _check_link_targets(db: DBInterface, handle: str, target_handles: List[str], ordered: bool):
     assert len(target_handles) == 2
