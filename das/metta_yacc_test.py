@@ -4,6 +4,8 @@ from das.metta_lex_test import lex_test_data as test_data
 from das.metta_yacc import MettaYacc, Expression
 from das.parser_actions import ParserActions
 from das.exceptions import UndefinedSymbolError
+from das.expression_hasher import ExpressionHasher
+from das.metta_lex import BASIC_TYPE
 
 class ActionBroker(ParserActions):
     def __init__(self, data=None):
@@ -43,21 +45,21 @@ def test_action_broker():
     result = yacc_wrap.check(test_data)
     assert result == "SUCCESS"
     assert action_broker.count_toplevel_expression == 0
-    assert action_broker.count_type == 0
+    assert action_broker.count_type == 1
 
     action_broker = ActionBroker()
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.parse(test_data)
     assert result == "SUCCESS"
     assert action_broker.count_toplevel_expression == 1
-    assert action_broker.count_type == 8
+    assert action_broker.count_type == 9
 
     action_broker = ActionBroker(test_data)
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.parse_action_broker_input()
     assert result == "SUCCESS"
     assert action_broker.count_toplevel_expression == 1
-    assert action_broker.count_type == 8
+    assert action_broker.count_type == 9
 
 def test_terminal_hash():
 
@@ -107,19 +109,19 @@ def test_named_type_hash():
     named_type1 = 'blah1'
     named_type2 = 'blah2'
 
-    assert(len(yacc_wrap.named_type_hash) == 0)
+    assert(len(yacc_wrap.named_type_hash) == 1)
 
     h = yacc_wrap._get_named_type_hash(named_type1)
-    assert(len(yacc_wrap.named_type_hash) == 1)
+    assert(len(yacc_wrap.named_type_hash) == 2)
     assert h == yacc_wrap._get_named_type_hash(named_type1)
-    assert(len(yacc_wrap.named_type_hash) == 1)
+    assert(len(yacc_wrap.named_type_hash) == 2)
 
     h = yacc_wrap._get_named_type_hash(named_type2)
-    assert(len(yacc_wrap.named_type_hash) == 2)
+    assert(len(yacc_wrap.named_type_hash) == 3)
     assert h == yacc_wrap._get_named_type_hash(named_type2)
     assert yacc_wrap._get_named_type_hash(named_type1) \
         != yacc_wrap._get_named_type_hash(named_type2)
-    assert(len(yacc_wrap.named_type_hash) == 2)
+    assert(len(yacc_wrap.named_type_hash) == 3)
 
 def test_nested_expression():
 
@@ -201,22 +203,31 @@ def test_typedef():
     name = 'Concept'
     type_designator = 'Type'
     expression1 = yacc_wrap._typedef(name, type_designator)
-    assert len(yacc_wrap.pending_named_types) == 1
+    typedef_mark = yacc_wrap.typedef_mark
+    typedef_mark_hash = ExpressionHasher._compute_hash(typedef_mark)
+    basic_type_hash = ExpressionHasher._compute_hash(BASIC_TYPE)
+    name_hash = ExpressionHasher._compute_hash(name)
+    assert len(yacc_wrap.pending_named_types) == 0
     assert not expression1.toplevel
     assert expression1.ordered
     assert expression1.terminal_name is None
-    assert expression1.named_type is None
-    assert expression1.named_type_hash is None
-    assert expression1.composite_type is None
-    assert expression1.composite_type_hash is None
-    assert expression1.elements is None
-    assert expression1.hash_code is None
+    assert expression1.named_type == typedef_mark
+    assert expression1.named_type_hash == typedef_mark_hash
+    assert expression1.composite_type == \
+        [typedef_mark_hash, basic_type_hash, basic_type_hash]
+    assert expression1.composite_type_hash == \
+        ExpressionHasher.expression_hash(
+            typedef_mark_hash, [basic_type_hash, basic_type_hash])
+    assert expression1.elements == [name_hash, basic_type_hash]
+    assert expression1.hash_code == \
+        ExpressionHasher.expression_hash(
+            typedef_mark_hash, [name_hash, basic_type_hash])
 
-    assert len(yacc_wrap.named_type_hash) == 0
+    assert len(yacc_wrap.named_type_hash) == 3
     h1 = yacc_wrap._get_named_type_hash(type_designator)
     yacc_wrap.parent_type[h1] = h1
-    assert len(yacc_wrap.named_type_hash) == 1
-    assert len(yacc_wrap.parent_type) == 1
+    assert len(yacc_wrap.named_type_hash) == 3
+    assert len(yacc_wrap.parent_type) == 2
     
     name = 'Concept'
     type_designator = 'Type'
@@ -370,14 +381,14 @@ def test_pending_types():
     result = yacc_wrap.parse(delayed_type1)
     assert result == "SUCCESS"
     assert action_broker.count_toplevel_expression == 1
-    assert action_broker.count_type == 8
+    assert action_broker.count_type == 9
 
     action_broker = ActionBroker()
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.parse(delayed_type2)
     assert result == "SUCCESS"
     assert action_broker.count_toplevel_expression == 1
-    assert action_broker.count_type == 9
+    assert action_broker.count_type == 10
 
 def test_pending_terminal_names():
 
@@ -465,11 +476,11 @@ def test_pending_terminal_names():
     result = yacc_wrap.parse(delayed_type1)
     assert result == "SUCCESS"
     assert action_broker.count_toplevel_expression == 1
-    assert action_broker.count_type == 8
+    assert action_broker.count_type == 9
 
     action_broker = ActionBroker()
     yacc_wrap = MettaYacc(action_broker=action_broker)
     result = yacc_wrap.parse(delayed_type2)
     assert result == "SUCCESS"
     assert action_broker.count_toplevel_expression == 1
-    assert action_broker.count_type == 9
+    assert action_broker.count_type == 10

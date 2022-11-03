@@ -78,9 +78,12 @@ def test_db_creation(db: DBInterface):
     assert db.couch_outgoing_collection
     assert db.couch_patterns_collection
     assert len(db.node_documents) == 14
-    assert len(db.node_handles) == 14
-    print(db.atom_type_hash)
-    assert len(db.atom_type_hash) == 17
+    assert len(db.terminal_hash) == 14
+    assert len(db.named_type_hash) == 18
+    assert len(db.named_type_hash_reverse) == 18
+    assert len(db.named_types) == 18
+    assert len(db.symbol_hash) == 18
+    assert len(db.parent_type) == 18
 
 def test_node_exists(db: DBInterface):
     assert db.node_exists('Concept', 'human')
@@ -103,7 +106,7 @@ def test_node_exists(db: DBInterface):
 def _check_link(db: DBInterface, handle: str, link_type: str, target1: str, target2: str):
     collection = db.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_2)
     document = collection.find_one({'_id': handle})
-    type_handle = db.atom_type_hash[link_type]
+    type_handle = db.named_type_hash[link_type]
     assert document
     assert document['named_type_hash'] == type_handle
     assert document['key_0'] == target1

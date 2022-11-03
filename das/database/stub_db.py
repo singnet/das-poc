@@ -79,10 +79,7 @@ class StubDB(DBInterface):
                 key.append(node_type)
             key = str(key)
             v = self.template_index.get(key, [])
-            v.append({
-                'handle': _build_link_handle(link[0], link[1:]),
-                'targets': link[1:]
-            })
+            v.append([_build_link_handle(link[0], link[1:]), link[1:]])
             self.template_index[key] = v
 
     def __repr__(self):
@@ -137,13 +134,13 @@ class StubDB(DBInterface):
                     if all(target == WILDCARD or target in link[1:] for target in target_handles):
                         link_target_handles = link[1:]
                         link_target_handles.sort
-                        answer.append({'handle': _build_link_handle(link[0], link[1:]), 'targets': link_target_handles})
+                        answer.append([_build_link_handle(link[0], link[1:]), link_target_handles])
                 elif link[0] == 'Inheritance' or link[0] == 'List':
                     for i in range(0, len(target_handles)):
                         if target_handles[i] != WILDCARD and target_handles[i] != link[i + 1]:
                             break
                     else:
-                        answer.append({'handle': _build_link_handle(link[0], link[1:]), 'targets': link[1:]})
+                        answer.append([_build_link_handle(link[0], link[1:]), link[1:]])
                 else:
                     raise ValueError(f"Invalid link type: {link[0]}")
         return answer

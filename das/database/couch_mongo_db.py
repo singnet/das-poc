@@ -30,10 +30,13 @@ class CouchMongoDB(DBInterface):
         self.mongo_nodes_collection = self.mongo_db.get_collection(MongoCollectionNames.NODES)
         self.mongo_types_collection = self.mongo_db.get_collection(MongoCollectionNames.ATOM_TYPES)
         self.wildcard_hash = ExpressionHasher._compute_hash(WILDCARD)
-        self.node_handles = None
+        self.named_type_hash = None
+        self.named_type_hash_reverse = None
+        self.named_types = None
+        self.symbol_hash = None
+        self.terminal_hash = None
+        self.parent_type = None
         self.node_documents = None
-        self.atom_type_hash = None
-        self.atom_type_hash_reverse = None
         self.typedef_mark_hash = ExpressionHasher._compute_hash(":")
         self.typedef_base_type_hash = ExpressionHasher._compute_hash("Type")
         self.typedef_composite_type_hash = ExpressionHasher.composite_hash([
@@ -41,44 +44,52 @@ class CouchMongoDB(DBInterface):
             self.typedef_base_type_hash,
             self.typedef_base_type_hash])
 
-    def _build_composite_node_name(self, node_type: str, node_name: str) -> str:
-        return f'{node_type}:{node_name}'
-
     def _get_atom_type_hash(self, atom_type):
         #TODO: implement a proper mongo collection to atom types so instead
         #      of this lazy hashmap, we should load the hashmap during prefetch
-        atom_type_hash = self.atom_type_hash.get(atom_type, None)
-        if atom_type_hash is None:
-            atom_type_hash = ExpressionHasher.named_type_hash(atom_type)
-            self.atom_type_hash[atom_type] = atom_type_hash
-            self.atom_type_hash_reverse[atom_type_hash] = atom_type
-        return atom_type_hash
+        named_type_hash = self.named_type_hash.get(atom_type, None)
+        if named_type_hash is None:
+            named_type_hash = ExpressionHasher.named_type_hash(atom_type)
+            self.named_type_hash[atom_type] = named_type_hash
+            self.named_type_hash_reverse[named_type_hash] = atom_type
+        return named_type_hash
 
     def _get_node_handle(self, node_type, node_name):
-        composite_name = self._build_composite_node_name(node_type, node_name)
-        node_handle = self.node_handles.get(composite_name, None)
+        composite_name = (node_type, node_name)
+        node_handle = self.terminal_hash.get(composite_name, None)
         if node_handle is None:
             node_handle = ExpressionHasher.terminal_hash(node_type, node_name)
-            self.node_handles[composite_name] = node_handle
+            self.terminal_hash[composite_name] = node_handle
         return node_handle
 
     def prefetch(self) -> None:
-        self.node_handles = {}
+        self.named_type_hash = {}
+        self.named_type_hash_reverse = {}
+        self.named_types = {}
+        self.symbol_hash = {}
+        self.terminal_hash = {}
+        self.parent_type = {}
         self.node_documents = {}
-        self.atom_type_hash = {}
-        self.atom_type_hash_reverse = {}
-        collection = self.mongo_nodes_collection
-        for document in collection.find():
+        for document in self.mongo_nodes_collection.find():
             node_id = document[MongoFieldNames.ID_HASH]
             node_type = document[MongoFieldNames.TYPE_NAME]
             node_name = document[MongoFieldNames.NODE_NAME]
             self.node_documents[node_id] = document
-            self.node_handles[self._build_composite_node_name(node_type, node_name)] = node_id
+            self.terminal_hash[(node_type, node_name)] = node_id
         for document in self.mongo_types_collection.find():
+            hash_id = document[MongoFieldNames.ID_HASH]
             named_type = document[MongoFieldNames.TYPE_NAME]
-            named_type_hash = document["named_type_hash"]
-            self.atom_type_hash[named_type] = named_type_hash
-            self.atom_type_hash_reverse[named_type_hash] = named_type
+            named_type_hash = document[MongoFieldNames.TYPE_NAME_HASH]
+            composite_type_hash = document[MongoFieldNames.TYPE]
+            type_document = self.mongo_types_collection.find_one({
+                MongoFieldNames.ID_HASH: composite_type_hash
+            })
+            self.named_type_hash[named_type] = named_type_hash
+            self.named_type_hash_reverse[named_type_hash] = named_type
+            if type_document is not None:
+                self.named_types[named_type] = type_document[MongoFieldNames.TYPE_NAME]
+                self.parent_type[named_type_hash] = type_document[MongoFieldNames.TYPE_NAME_HASH]
+            self.symbol_hash[named_type] = hash_id
 
     def _retrieve_mongo_document(self, handle: str, arity=-1) -> dict:
         mongo_filter = {MongoFieldNames.ID_HASH: handle}
@@ -124,7 +135,7 @@ class CouchMongoDB(DBInterface):
 
     def _build_named_type_template(self, template: Union[str, List[Any]]) -> List[Any]:
         if isinstance(template, str):
-            return self.atom_type_hash_reverse.get(template, None)
+            return self.named_type_hash_reverse.get(template, None)
         else:
             answer = []
             for element in template:

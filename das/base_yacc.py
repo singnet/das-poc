@@ -27,6 +27,7 @@ from typing import List, Any, Optional
 import ply.yacc as yacc
 from das.expression_hasher import ExpressionHasher
 from das.expression import Expression
+from das.metta_lex import BASIC_TYPE
 
 class BaseYacc:
 
@@ -41,15 +42,28 @@ class BaseYacc:
         self.pending_expression_names = []
         self.pending_named_types = []
         self.pending_expressions = []
-        self.named_types = {}
-        self.named_type_hash = {}
-        self.symbol_hash = {}
-        self.terminal_hash = {}
-        self.parent_type = {}
+        if kwargs.pop('use_action_broker_cache', False):
+            self.named_type_hash = self.action_broker.named_type_hash
+            self.named_types = self.action_broker.named_types
+            self.symbol_hash = self.action_broker.symbol_hash
+            self.terminal_hash = self.action_broker.terminal_hash
+            self.parent_type = self.action_broker.parent_type
+        else:
+            self.named_type_hash = {}
+            self.named_types = {}
+            self.symbol_hash = {}
+            self.terminal_hash = {}
+            self.parent_type = {}
+        basic_type_hash_code = ExpressionHasher._compute_hash(BASIC_TYPE)
+        self.named_type_hash[BASIC_TYPE] = basic_type_hash_code
+        self.parent_type[basic_type_hash_code] = basic_type_hash_code
 
     def setup(self):
         self.tokens = self.lex_wrap.tokens
         self.lexer = self.lex_wrap.lexer
+        if self.action_broker is not None:
+            expression = self._typedef(BASIC_TYPE, BASIC_TYPE)
+            self.action_broker.new_top_level_typedef_expression(expression)
         
     def _get_terminal_hash(self, named_type, terminal_name):
         key = (named_type, terminal_name)

@@ -40,7 +40,7 @@ def test_action_broker():
     assert action_broker.count_terminal == 0
     assert action_broker.count_nested_expression == 0
     assert action_broker.count_toplevel_expression == 0
-    assert action_broker.count_type == 0
+    assert action_broker.count_type == 1
 
     action_broker = ActionBroker()
     yacc_wrap = AtomeseYacc(action_broker=action_broker)
@@ -49,7 +49,7 @@ def test_action_broker():
     assert action_broker.count_terminal == 11
     assert action_broker.count_nested_expression == 7
     assert action_broker.count_toplevel_expression == 4
-    assert action_broker.count_type == 9 + action_broker.count_terminal
+    assert action_broker.count_type == 10 + action_broker.count_terminal
 
     action_broker = ActionBroker(test_data)
     yacc_wrap = AtomeseYacc(action_broker=action_broker)
@@ -58,4 +58,4 @@ def test_action_broker():
     assert action_broker.count_terminal == 11
     assert action_broker.count_nested_expression == 7
     assert action_broker.count_toplevel_expression == 4
-    assert action_broker.count_type == 9 + action_broker.count_terminal
+    assert action_broker.count_type == 10 + action_broker.count_terminal
