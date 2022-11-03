@@ -153,12 +153,10 @@ class DistributedAtomSpace:
         ]
         for thread in file_builder_threads:
             thread.start()
-            thread.join() # XXXXXXXXXXXXXXXXXXXXXXXx
         links_uploader_to_mongo_thread = PopulateMongoDBLinksThread(self.db, shared_data, update)
         links_uploader_to_mongo_thread.start()
-        links_uploader_to_mongo_thread.join() # XXXXXXXXXXXXXXXXXXXXX
-        #for thread in file_builder_threads: # XXXXXXXXXXXXXXXXXXXXXXXx
-        #    thread.join()
+        for thread in file_builder_threads:
+            thread.join()
         assert shared_data.build_ok_count == len(file_builder_threads)
 
         file_processor_threads = [
@@ -170,11 +168,10 @@ class DistributedAtomSpace:
         ]
         for thread in file_processor_threads:
             thread.start()
-            thread.join() # XXXXXXXXXXXXXXXXXXXXXXx
-        #links_uploader_to_mongo_thread.join() # XXXXXXXXXXXXXXXXXXXXXXX
+        links_uploader_to_mongo_thread.join()
         assert shared_data.mongo_uploader_ok
-        #for thread in file_processor_threads: # XXXXXXXXXXXXXXXXXXXXXXx
-        #    thread.join()
+        for thread in file_processor_threads:
+            thread.join()
         assert shared_data.process_ok_count == len(file_processor_threads)
         self.db.prefetch()
 
