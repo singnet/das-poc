@@ -10,6 +10,7 @@ class CollectionNames(str, Enum):
 class FieldNames(str, Enum):
     NODE_NAME = 'name'
     TYPE_NAME = 'named_type'
+    TYPE_NAME_HASH = 'named_type_hash'
     ID_HASH = '_id'
     TYPE = 'composite_type_hash'
     COMPOSITE_TYPE = 'composite_type'

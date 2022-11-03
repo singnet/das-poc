@@ -41,7 +41,7 @@ class SharedData():
         self.mongo_uploader_ok = False
 
         self.temporary_file_name = {
-            s.value: f"/tmp/MultiFileKnowledgeBase_{s.value}.txt" for s in CouchbaseCollections
+            s.value: f"/tmp/parser_{s.value}.txt" for s in CouchbaseCollections
         }
         self.pattern_black_list = []
 
@@ -130,7 +130,7 @@ def _key_value_targets_generator(input_filename, *, block_size=MAX_COUCHBASE_BLO
                 continue
             key, value, *targets = line.split(",")
             if last_key == key:
-                last_list.append({'handle':value, 'targets': targets})
+                last_list.append(tuple([value, tuple(targets)]))
                 if len(last_list) >= block_size:
                     yield last_key, last_list, block_count
                     block_count += 1
@@ -140,25 +140,27 @@ def _key_value_targets_generator(input_filename, *, block_size=MAX_COUCHBASE_BLO
                     yield last_key, last_list, block_count
                 block_count = 0
                 last_key = key
-                last_list = [value, *targets]
-                last_list = [{'handle':value, 'targets': targets}]
+                last_list = [tuple([value, tuple(targets)])]
     if last_key != '':
         yield last_key, last_list, block_count
 
 class ParserThread(Thread):
 
-    def __init__(self, parser_actions_broker: "ParserActions"):
+    def __init__(self, parser_actions_broker: "ParserActions", use_action_broker_cache: bool = False):
         super().__init__()
         self.parser_actions_broker = parser_actions_broker
+        self.use_action_broker_cache = use_action_broker_cache
 
     def run(self):
         logger().info(f"Parser thread {self.name} (TID {self.native_id}) started. " + \
             f"Parsing {self.parser_actions_broker.file_path}")
         stopwatch_start = time.perf_counter()
-        if self.parser_actions_broker.file_path.endswith(".metta"):
-            parser = MettaYacc(action_broker=self.parser_actions_broker)
-        else:
+        if self.parser_actions_broker.file_path.endswith(".scm"):
             parser = AtomeseYacc(action_broker=self.parser_actions_broker)
+        else:
+            parser = MettaYacc(
+                action_broker=self.parser_actions_broker, 
+                use_action_broker_cache=self.use_action_broker_cache)
         parser.parse_action_broker_input()
         self.parser_actions_broker.shared_data.parse_ok()
         elapsed = (time.perf_counter() - stopwatch_start) // 60
@@ -167,10 +169,18 @@ class ParserThread(Thread):
 
 class FlushNonLinksToDBThread(Thread):
 
-    def __init__(self, db: DBInterface, shared_data: SharedData):
+    def __init__(self, db: DBInterface, shared_data: SharedData, allow_duplicates: bool):
         super().__init__()
         self.db = db
         self.shared_data = shared_data
+        self.allow_duplicates = allow_duplicates
+
+    def _insert_many(self, collection, bulk_insertion):
+        try:
+            collection.insert_many(bulk_insertion, ordered=False)
+        except Exception as e:
+            if not self.allow_duplicates:
+                logger().error(str(e))
 
     def run(self):
         logger().info(f"Flush thread {self.name} (TID {self.native_id}) started.")
@@ -180,7 +190,7 @@ class FlushNonLinksToDBThread(Thread):
             bulk_insertion.append(self.shared_data.typedef_expressions.pop().to_dict())
         if bulk_insertion:
             mongo_collection = self.db.mongo_db[MongoCollections.ATOM_TYPES]
-            mongo_collection.insert_many(bulk_insertion)
+            self._insert_many(mongo_collection, bulk_insertion)
 
         named_entities = open(self.shared_data.temporary_file_name[CouchbaseCollections.NAMED_ENTITIES], "w")
         bulk_insertion = []
@@ -191,7 +201,7 @@ class FlushNonLinksToDBThread(Thread):
         named_entities.close()
         if bulk_insertion:
             mongo_collection = self.db.mongo_db[MongoCollections.NODES]
-            mongo_collection.insert_many(bulk_insertion)
+            self._insert_many(mongo_collection, bulk_insertion)
         named_entities.close()
         self.shared_data.build_ok()
         elapsed = (time.perf_counter() - stopwatch_start) // 60
@@ -296,10 +306,18 @@ class BuildTypeTemplatesThread(Thread):
 
 class PopulateMongoDBLinksThread(Thread):
 
-    def __init__(self, db: DBInterface, shared_data: SharedData):
+    def __init__(self, db: DBInterface, shared_data: SharedData, allow_duplicates: bool):
         super().__init__()
         self.db = db
         self.shared_data = shared_data
+        self.allow_duplicates = allow_duplicates
+
+    def _insert_many(self, collection, bulk_insertion):
+        try:
+            collection.insert_many(bulk_insertion, ordered=False)
+        except Exception as e:
+            if not self.allow_duplicates:
+                logger().error(str(e))
 
     def run(self):
         logger().info(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) started.")
@@ -319,17 +337,13 @@ class PopulateMongoDBLinksThread(Thread):
                 bulk_insertion_N.append(expression.to_dict())
         if bulk_insertion_1:
             mongo_collection = self.db.mongo_db[MongoCollections.LINKS_ARITY_1]
-            mongo_collection.insert_many(bulk_insertion_1)
+            self._insert_many(mongo_collection, bulk_insertion_1)
         if bulk_insertion_2:
             mongo_collection = self.db.mongo_db[MongoCollections.LINKS_ARITY_2]
-            try:
-                mongo_collection.insert_many(bulk_insertion_2)
-            except Exception:
-                duplicates += 1
-                pass
+            self._insert_many(mongo_collection, bulk_insertion_2)
         if bulk_insertion_N:
             mongo_collection = self.db.mongo_db[MongoCollections.LINKS_ARITY_N]
-            mongo_collection.insert_many(bulk_insertion_N)
+            self._insert_many(mongo_collection, bulk_insertion_N)
         self.shared_data.mongo_uploader_ok = True
         elapsed = (time.perf_counter() - stopwatch_start) // 60
         logger().info(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) finished. " + \
@@ -343,7 +357,8 @@ class PopulateCouchbaseCollectionThread(Thread):
         shared_data: SharedData, 
         collection_name: str,
         use_targets: bool,
-        merge_rest: bool):
+        merge_rest: bool,
+        update: bool):
 
         super().__init__()
         self.db = db
@@ -351,6 +366,7 @@ class PopulateCouchbaseCollectionThread(Thread):
         self.collection_name = collection_name
         self.use_targets = use_targets
         self.merge_rest = merge_rest
+        self.update = update
 
     def run(self):
         file_name = self.shared_data.temporary_file_name[self.collection_name]
@@ -360,8 +376,28 @@ class PopulateCouchbaseCollectionThread(Thread):
         stopwatch_start = time.perf_counter()
         generator = _key_value_targets_generator if self.use_targets else _key_value_generator
         for key, value, block_count in generator(file_name, merge_rest=self.merge_rest):
+            assert not (block_count > 0 and self.update)
             if block_count == 0:
-                couchbase_collection.upsert(key, value, timeout=datetime.timedelta(seconds=100))
+                if self.update:
+                    outdated = None
+                    try:
+                        outdated = couchbase_collection.get(key)
+                    except Exception:
+                        pass
+                    if outdated is None:
+                        couchbase_collection.upsert(key, list(set(value)), timeout=datetime.timedelta(seconds=100))
+                    else:
+                        converted_outdated = []
+                        for entry in outdated.content:
+                            if isinstance(entry, str):
+                                converted_outdated.append(entry)
+                            else:
+                                handle = entry[0]
+                                targets = entry[1]
+                                converted_outdated.append(tuple([handle, tuple(targets)]))
+                        couchbase_collection.upsert(key, list(set([*converted_outdated, *value])), timeout=datetime.timedelta(seconds=100))
+                else:
+                    couchbase_collection.upsert(key, value, timeout=datetime.timedelta(seconds=100))
             else:
                 if block_count == 1:
                     first_block = couchbase_collection.get(key)

@@ -522,8 +522,7 @@ class Link(Atom):
             start = time.perf_counter()
             answer.assignments = set()
             for match in matched:
-                link = match['handle']
-                targets = match['targets']
+                link, targets = match
                 if DEBUG_LINK: print(f'match = {match}')
                 if DEBUG_LINK: print(f'link = {link}')
                 if DEBUG_LINK: print(f'targets = {targets}')
@@ -607,8 +606,7 @@ class LinkTemplate(LogicalExpression):
         if DEBUG_LINK_TEMPLATE: print('len(matched)', len(matched))
         answer.assignments = set()
         for match in matched:
-            link = match['handle']
-            targets = match['targets']
+            link, targets = match
             asn = self._assign_variables(db, link, targets)
             if asn:
                 if DEBUG_LINK_TEMPLATE: print('asn', asn)

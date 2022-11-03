@@ -11,13 +11,14 @@ from couchbase.cluster import Cluster as CouchbaseDB
 from couchbase.auth import PasswordAuthenticator as CouchbasePasswordAuthenticator
 from couchbase.options import LockMode as CouchbaseLockMode
 from couchbase.management.collections import CollectionSpec as CouchbaseCollectionSpec
-from das.parser_actions import KnowledgeBaseFile
+from das.parser_actions import KnowledgeBaseFile, MultiThreadParsing
 from das.database.couch_mongo_db import CouchMongoDB
 from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
 from das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread, BuildConnectivityThread, \
     BuildPatternsThread, BuildTypeTemplatesThread, PopulateMongoDBLinksThread, PopulateCouchbaseCollectionThread
 from das.logger import logger
 from das.database.db_interface import WILDCARD
+from das.transaction import Transaction
 
 class DistributedAtomSpace:
 
@@ -77,7 +78,7 @@ class DistributedAtomSpace:
         if isinstance(atom_list[0], str):
             return atom_list
         else:
-            return [link["handle"] for link in atom_list]
+            return [handle for handle, _ in atom_list]
 
     def _to_link_dict_list(self, db_answer: Union[List[str], List[Dict]]) -> List[Dict]:
         if not db_answer:
@@ -89,8 +90,8 @@ class DistributedAtomSpace:
                 handle = atom
                 arity = -1
             else:
-                handle = atom["handle"]
-                arity = len(atom["targets"])
+                handle, targets = atom
+                arity = len(targets)
             answer.append(self.db.get_link_as_dict(handle, arity))
         return answer
 
@@ -141,13 +142,57 @@ class DistributedAtomSpace:
             return self._to_link_dict_list(db_answer)
         else:
             return self._to_handle_list(db_answer)
-        
+
+    def _process_parsed_data(self, shared_data: SharedData, update: bool):
+        shared_data.replicate_regular_expressions()
+        file_builder_threads = [
+            FlushNonLinksToDBThread(self.db, shared_data, update),
+            BuildConnectivityThread(shared_data),
+            BuildPatternsThread(shared_data),
+            BuildTypeTemplatesThread(shared_data)
+        ]
+        for thread in file_builder_threads:
+            thread.start()
+        links_uploader_to_mongo_thread = PopulateMongoDBLinksThread(self.db, shared_data, update)
+        links_uploader_to_mongo_thread.start()
+        for thread in file_builder_threads:
+            thread.join()
+        assert shared_data.build_ok_count == len(file_builder_threads)
+
+        file_processor_threads = [
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.OUTGOING_SET, False, False, update),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.INCOMING_SET, False, False, update),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.PATTERNS, True, False, update),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.TEMPLATES, True, False, update),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.NAMED_ENTITIES, False, True, update)
+        ]
+        for thread in file_processor_threads:
+            thread.start()
+        links_uploader_to_mongo_thread.join()
+        assert shared_data.mongo_uploader_ok
+        for thread in file_processor_threads:
+            thread.join()
+        assert shared_data.process_ok_count == len(file_processor_threads)
+        self.db.prefetch()
+
+    def open_transaction(self) -> Transaction:
+        return Transaction()
+
+    def commit_transaction(self, transaction: Transaction) -> None:
+        shared_data = SharedData()
+        parser_thread = ParserThread(
+            MultiThreadParsing(self.db, transaction.metta_string(), shared_data, use_action_broker_cache=True), 
+            use_action_broker_cache=True)
+        parser_thread.start()
+        parser_thread.join()
+        assert shared_data.parse_ok_count == 1
+        self._process_parsed_data(shared_data, True)
+
     def load_knowledge_base(self, source):
         """
         Called in constructor, this method parses one or more files
         and feeds the databases with all MeTTa expressions.
         """
-
         logger().info(f"Loading knowledge base")
         knowledge_base_file_list = self._get_file_list(source)
         for file_name in knowledge_base_file_list:
@@ -167,34 +212,4 @@ class DistributedAtomSpace:
         for thread in parser_threads:
             thread.join()
         assert shared_data.parse_ok_count == len(parser_threads)
-        shared_data.replicate_regular_expressions()
-
-        file_builder_threads = [
-            FlushNonLinksToDBThread(self.db, shared_data),
-            BuildConnectivityThread(shared_data),
-            BuildPatternsThread(shared_data),
-            BuildTypeTemplatesThread(shared_data)
-        ]
-        for thread in file_builder_threads:
-            thread.start()
-        links_uploader_to_mongo_thread = PopulateMongoDBLinksThread(self.db, shared_data)
-        links_uploader_to_mongo_thread.start()
-        for thread in file_builder_threads:
-            thread.join()
-        assert shared_data.build_ok_count == len(file_builder_threads)
-
-        file_processor_threads = [
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.OUTGOING_SET, False, False),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.INCOMING_SET, False, False),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.PATTERNS, True, False),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.TEMPLATES, True, False),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.NAMED_ENTITIES, False, True)
-        ]
-        for thread in file_processor_threads:
-            thread.start()
-        links_uploader_to_mongo_thread.join()
-        assert shared_data.mongo_uploader_ok
-        for thread in file_processor_threads:
-            thread.join()
-        assert shared_data.process_ok_count == len(file_processor_threads)
-        self.db.prefetch()
+        self._process_parsed_data(shared_data, False)
