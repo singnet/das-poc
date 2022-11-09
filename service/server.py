@@ -50,10 +50,29 @@ class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
         self.atom_space_status = {}
         self.lock = Lock()
 
-    def _add_new_das(self, name: str):
+    def _get_das(self, key: str):
+        self.lock.acquire()
+        das = self.atom_spaces[key]
+        self.lock.release()
+        return das
+
+    def _set_das_status(self, key: str, status: str):
+        self.lock.acquire()
+        self.atom_space_status[key] = status
+        self.lock.release()
+
+    def _error(self, error_message: str):
+        return pb2.Status(success=False, msg=error_message)
+        
+    def _success(self, message=AtomSpaceStatus.READY):
+        return pb2.Status(success=True, msg=message)
+        
+    def create(self, request, context):
+        name = request.name
         self.lock.acquire()
         if any(das.database_name == name for das in self.atom_spaces.values()):
-            return None
+            self.lock.release()
+            return self._error(f"DAS named '{name}' already exists")
         while True:
             token = build_random_string(20)
             if token not in self.atom_spaces:
@@ -62,82 +81,59 @@ class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
         self.atom_spaces[token] = das
         self.atom_space_status[token] = AtomSpaceStatus.READY
         self.lock.release()
-        return token
+        return self._success(token)
 
-    def _load_knowledge_base(self, key: str, url: str):
+    def load_knowledge_base(self, request, context):
+        key = request.das_key
+        url = request.url
         self.lock.acquire()
         if self.atom_space_status[key] != AtomSpaceStatus.READY:
             self.lock.release()
-            return f"DAS {key} is busy"
+            return self._error(f"DAS {key} is busy")
         else:
             self.atom_space_status[key] = AtomSpaceStatus.LOADING
             thread = KnowledgeBaseLoader(self, key, url)
             thread.start()
         self.lock.release()
-        return None
+        return self._success(AtomSpaceStatus.LOADING)
 
-    def _clear_knowledge_base(self, key: str):
+    def check_das_status(self, request, context):
+        self.lock.acquire()
+        das_status = self.atom_space_status[request.key]
+        self.lock.release()
+        return self._success(das_status)
+        
+    def clear(self, request, context):
+        key = request.key
         self.lock.acquire()
         if self.atom_space_status[key] != AtomSpaceStatus.READY:
             self.lock.release()
-            return f"DAS {key} is busy"
+            return self._error(f"DAS {key} is busy")
         else:
             das = self.atom_spaces[key]
-            das.clear_database()
+            try:
+                das.clear_database()
+            except Exception as exception:
+                self.lock.release()
+                return self._error(str(exception))
         self.lock.release()
-        return None
+        return self._success()
 
-    def _get_das(self, key: str):
-        self.lock.acquire()
-        das = self.atom_spaces[key]
-        self.lock.release()
-        return das
-
-    def _get_das_status(self, key: str):
-        self.lock.acquire()
-        das_status = self.atom_space_status[key]
-        self.lock.release()
-        return das_status
-
-    def _set_das_status(self, key: str, status: str):
-        self.lock.acquire()
-        self.atom_space_status[key] = status
-        self.lock.release()
-        
-    def create(self, request, context):
-        knowledge_base_name = request.name
-        token = self._add_new_das(knowledge_base_name)
-        return pb2.DASKey(key=token)
-
-    def load_knowledge_base(self, request, context):
-        key = request.das_key
-        url = request.url
-        error_message = self._load_knowledge_base(key, url)
-        if error_message is None:
-            return pb2.Status(success=True, msg=AtomSpaceStatus.LOADING)
-        else:
-            return pb2.Status(success=False, msg=error_message)
-
-    def check_das_status(self, request, context):
+    def count(self, request, context):
         key = request.key
-        msg = self._get_das_status(key)
-        return pb2.Status(success=True, msg=msg)
-
-    def clear(self, request, context):
-        key = request.key
-        error_message = self._clear_knowledge_base(key)
-        if error_message is None:
-            return pb2.Status(success=True, msg=AtomSpaceStatus.READY)
+        self.lock.acquire()
+        if self.atom_space_status[key] != AtomSpaceStatus.READY:
+            self.lock.release()
+            return self._error(f"DAS {key} is busy")
         else:
-            return pb2.Status(success=False, msg=error_message)
-
-    #def count(self, request, context):
-    #    key = request.key
-    #    node_count, link_count = self._knowledge_base_count(key)
-    #    if error_message is None:
-    #        return pb2.Status(success=True, msg=AtomSpaceStatus.READY)
-    #    else:
-    #        return pb2.Status(success=False, msg=error_message)
+            das = self.atom_spaces[key]
+            try:
+                node_count, link_count = das.count_atoms()
+            except Exception as exception:
+                self.lock.release()
+                return self._error(str(exception))
+        self.lock.release()
+        return self._success(f"{node_count} {link_count}")
 
 def main():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

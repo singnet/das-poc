@@ -11,24 +11,25 @@ message LoadRequest {
     string url = 2;
 }
 
+message DASKey {
+    string key = 1;
+}
+
 message Status {
     bool success = 1;
     string msg = 2;
 }
 
-message DASKey {
-    string key = 1;
-}
-
 message Count {
     int32 node_count = 1;
     int32 link_count = 2;
+    Status status = 3;
 }
 
 service ServiceDefinition {
-    rpc create(CreationRequest) returns (DASKey) {}
+    rpc create(CreationRequest) returns (Status) {}
     rpc load_knowledge_base(LoadRequest) returns (Status) {}
     rpc check_das_status(DASKey) returns (Status) {}
     rpc clear(DASKey) returns (Status) {}
-    rpc count(DASKey) returns (Count) {}
+    rpc count(DASKey) returns (Status) {}
 }

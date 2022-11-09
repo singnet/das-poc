@@ -103,6 +103,9 @@ class DistributedAtomSpace:
             collection_manager.drop_collection(CouchbaseCollectionSpec(entry.value))
             collection_manager.create_collection(CouchbaseCollectionSpec(entry.value))
 
+    def count_atoms(self) -> Tuple[int, int]:
+        return self.db.count_atoms()
+
     def get_node(self,
         node_type: str,
         node_name: str,
