@@ -23,7 +23,7 @@ from das.transaction import Transaction
 class DistributedAtomSpace:
 
     def __init__(self, **kwargs):
-        self.database_name = 'das'
+        self.database_name = kwargs.get("database_name", "das")
         self.db = None
         logger().info(f"New Distributed Atom Space. Database name: {self.database_name}")
         self._setup_database()
@@ -33,15 +33,15 @@ class DistributedAtomSpace:
         port = os.environ.get('DAS_MONGODB_PORT')
         username = os.environ.get('DAS_DATABASE_USERNAME')
         password = os.environ.get('DAS_DATABASE_PASSWORD')
-        mongo_db = MongoDBClient(f'mongodb://{username}:{password}@{hostname}:{port}')[self.database_name]
+        self.mongo_db = MongoDBClient(f'mongodb://{username}:{password}@{hostname}:{port}')[self.database_name]
 
         hostname = os.environ.get('DAS_COUCHBASE_HOSTNAME')
-        couch_db = CouchbaseDB(
+        self.couch_db = CouchbaseDB(
             f'couchbase://{hostname}',
             authenticator=CouchbasePasswordAuthenticator(username, password),
             lockmode=CouchbaseLockMode.WAIT).bucket(self.database_name)
 
-        collection_manager = couch_db.collections()
+        collection_manager = self.couch_db.collections()
         for entry in CouchbaseCollections:
             try:
                 collection_manager.create_collection(CouchbaseCollectionSpec(entry.value))
@@ -49,7 +49,7 @@ class DistributedAtomSpace:
                 #TODO: should we provide a warning here?
                 pass
 
-        self.db = CouchMongoDB(couch_db, mongo_db)
+        self.db = CouchMongoDB(self.couch_db, self.mongo_db)
         self.db.prefetch()
 
     def _get_file_list(self, source):
@@ -94,6 +94,14 @@ class DistributedAtomSpace:
                 arity = len(targets)
             answer.append(self.db.get_link_as_dict(handle, arity))
         return answer
+
+    def clear_database(self):
+        for collection_name in self.mongo_db.collection_names():
+            self.mongo_db.drop_collection(collection_name)
+        collection_manager = self.couch_db.collections()
+        for entry in CouchbaseCollections:
+            collection_manager.drop_collection(CouchbaseCollectionSpec(entry.value))
+            collection_manager.create_collection(CouchbaseCollectionSpec(entry.value))
 
     def get_node(self,
         node_type: str,
@@ -190,7 +198,7 @@ class DistributedAtomSpace:
 
     def load_knowledge_base(self, source):
         """
-        Called in constructor, this method parses one or more files
+        This method parses one or more files
         and feeds the databases with all MeTTa expressions.
         """
         logger().info(f"Loading knowledge base")
