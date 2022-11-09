@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 WILDCARD = '*'
 UNORDERED_LINK_TYPES = ['Similarity', 'Set']
@@ -61,4 +61,7 @@ class DBInterface(ABC):
         pass
 
     def get_node_as_dict(self, handle):
+        pass
+
+    def count_atoms(self):
         pass

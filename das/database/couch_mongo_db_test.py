@@ -278,3 +278,8 @@ def test_get_matched_node_name(db: DBInterface):
         db.get_node_handle('Concept', 'animal'),])
     assert sorted(db.get_matched_node_name('blah', 'Concept')) == []
     assert sorted(db.get_matched_node_name('Concept', 'blah')) == []
+
+def test_atom_count(db: DBInterface):
+    node_count, link_count = db.count_atoms()
+    assert node_count == 14
+    assert link_count == 26

@@ -1,6 +1,6 @@
 import os
 from signal import raise_signal
-from typing import List, Dict, Optional, Union, Any
+from typing import List, Dict, Optional, Union, Any, Tuple
 
 from couchbase.bucket import Bucket
 from couchbase.collection import CBCollection as CouchbaseCollection
@@ -264,3 +264,10 @@ class CouchMongoDB(DBInterface):
         answer["type"] = document[MongoFieldNames.TYPE_NAME]
         answer["name"] = document[MongoFieldNames.NODE_NAME]
         return answer
+
+    def count_atoms(self) -> Tuple[int, int]:
+        node_count = self.mongo_nodes_collection.estimated_document_count()
+        link_count = 0
+        for collection in self.mongo_link_collection.values():
+            link_count += collection.estimated_document_count()
+        return (node_count, link_count)

@@ -180,3 +180,6 @@ class StubDB(DBInterface):
 
     def get_node_as_dict(self, handle):
         pass
+
+    def count_atoms(self):
+        return (len(self.all_nodes), len(self.all_links))
