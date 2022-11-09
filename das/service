@@ -1,0 +1,34 @@
+import os
+import sys
+import time
+from concurrent import futures
+import random
+
+import grpc
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "service_spec"))
+import das_pb2 as pb2
+import das_pb2_grpc as pb2_grpc
+
+SERVICE_PORT = 7025
+
+# SERVICE_API
+class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
+    def create(self, request, context):
+        return pb2.Output(DASIdentifier(id="ola"))
+
+def main():
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    pb2_grpc.add_ServiceDefinitionServicer_to_server(ServiceDefinition(), server)
+    server.add_insecure_port(f"[::]:{SERVICE_PORT}")
+    server.start()
+    print(f"Server listening on 0.0.0.0:{SERVICE_PORT}")
+    try:
+        while True:
+            time.sleep(10)
+    except KeyboardInterrupt:
+        server.stop(0)
+
+
+if __name__ == "__main__":
+    main()

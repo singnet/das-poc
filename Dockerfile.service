@@ -1,0 +1,61 @@
+FROM python:3.9
+
+ARG USER_ID
+ARG GROUP_ID
+
+ARG git_owner="singnet"
+ARG git_repo="das"
+ARG git_branch="service_deployment"
+
+ENV SINGNET_DIR=/opt/${git_owner}
+ENV PROJECT_DIR=/opt/${git_owner}/${git_repo}
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+ENV PYTHONPATH="${PYTONPATH}:${PROJECT_DIR}/das"
+ENV LD_LIBRARY_PATH=/usr/local/lib
+
+RUN mkdir -p ${PROJECT_DIR}
+
+ENV TZ=GMT
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN apt-get update && \
+    apt-get install -y \
+    apt-utils \
+    curl \
+    git \
+    libudev-dev \
+    libusb-1.0-0-dev \
+    nano \
+    software-properties-common \
+    vim \
+    wget \
+    tzdata \
+    zip
+
+RUN python3 -m pip install -U --force-reinstall pip && \
+    python3 -m pip install cython && \
+    python3 -m pip install protobuf==3.20 && \
+    python3 -m pip install snet-cli
+
+RUN SNETD_VERSION=`curl -s https://api.github.com/repos/singnet/snet-daemon/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")'` && \
+    cd /tmp && \
+    wget https://github.com/singnet/snet-daemon/releases/download/${SNETD_VERSION}/snet-daemon-${SNETD_VERSION}-linux-amd64.tar.gz && \
+    tar -xvf snet-daemon-${SNETD_VERSION}-linux-amd64.tar.gz && \
+    mv snet-daemon-${SNETD_VERSION}-linux-amd64/snetd /usr/bin/snetd
+
+ADD ./requirements.txt ${SINGNET_DIR}
+
+RUN cd ${SINGNET_DIR} && \
+    python3 -m pip install -r requirements.txt
+
+ADD . ${PROJECT_DIR}
+
+RUN addgroup --gid $GROUP_ID user && \
+    adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID user
+
+RUN cd ${PROJECT_DIR}/service && \
+    ./build-proto.sh
+    
+USER user
+WORKDIR ${PROJECT_DIR}

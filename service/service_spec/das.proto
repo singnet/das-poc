@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package das;
+
+message CreationRequest {
+    string name = 1;
+}
+
+message LoadRequest {
+    string das_key = 1;
+    string url = 2;
+}
+
+message Status {
+    bool success = 1;
+    string msg = 2;
+}
+
+message DASKey {
+    string key = 1;
+}
+
+message Count {
+    int32 node_count = 1;
+    int32 link_count = 2;
+}
+
+service ServiceDefinition {
+    rpc create(CreationRequest) returns (DASKey) {}
+    rpc load_knowledge_base(LoadRequest) returns (Status) {}
+    rpc check_das_status(DASKey) returns (Status) {}
+    rpc clear(DASKey) returns (Status) {}
+    rpc count(DASKey) returns (Count) {}
+}

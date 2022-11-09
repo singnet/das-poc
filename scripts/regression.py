@@ -308,3 +308,5 @@ if __name__ == "__main__":
 
     """
     """
+
+    das.clear_database()

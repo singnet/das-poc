@@ -1,0 +1,57 @@
+version: "3.9"
+services:
+  das_service:
+    build: .
+    image: das_service
+    environment:
+      - DAS_MONGODB_HOSTNAME=${DAS_MONGODB_HOSTNAME:-mongo}
+      - DAS_MONGODB_PORT=${DAS_MONGODB_PORT:-27017}
+      - DAS_COUCHBASE_HOSTNAME=${DAS_COUCHBASE_HOSTNAME:-couchbase}
+      - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
+      - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
+      - PYTHONPATH=/opt/singnet/das
+      - TZ=${TZ}
+    tty: true
+    volumes:
+      - ./das:/opt/snet/das
+      - ./tests:/opt/snet/tests
+      - ./data:/opt/snet/data
+      - /tmp:/tmp
+    links:
+      - mongo
+      - couchbase
+    command: tail -f /dev/null
+
+  mongo:
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
+      - MONGO_INITDB_ROOT_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
+      - TZ=${TZ}
+    ports:
+      - ${DAS_MONGODB_PORT:-27017}:${DAS_MONGODB_PORT:-27017}
+    volumes:
+      - mongodbdata:/data/db
+      - /tmp:/tmp
+    command: mongod --port ${DAS_MONGODB_PORT:-27017}
+
+  couchbase:
+    image: couchbase
+    environment:
+      - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
+      - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
+      - DAS_COUCHBASE_BUCKET_RAMSIZE=${DAS_COUCHBASE_BUCKET_RAMSIZE:-8192}
+      - TZ=${TZ}
+    ports:
+      - "8091-8095:8091-8095"
+      - "11210:11210"
+    expose:
+      - "8091"
+      - "8094"
+    volumes:
+      - couchbasedata:/opt/couchbase/var
+      - /tmp:/tmp
+
+volumes:
+  mongodbdata: { }
+  couchbasedata: { }
