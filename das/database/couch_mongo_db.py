@@ -157,6 +157,20 @@ class CouchMongoDB(DBInterface):
                 answer.append(key)
             index += 1
 
+    def _build_deep_representation(self, handle, arity=-1):
+        answer = {}
+        document = self.node_documents.get(handle, None)
+        if document is None:
+            document = self._retrieve_mongo_document(handle, arity)
+            answer["type"] = document[MongoFieldNames.TYPE_NAME]
+            answer["targets"] = []
+            for target_handle in self._get_mongo_document_keys(document):
+                answer["targets"].append(self._build_deep_representation(target_handle))
+        else:
+            answer["type"] = document[MongoFieldNames.TYPE_NAME]
+            answer["name"] = document[MongoFieldNames.NODE_NAME]
+        return answer
+
 
     # DB interface methods
 
@@ -248,22 +262,23 @@ class CouchMongoDB(DBInterface):
 
     #################################
 
-    def get_link_as_dict(self, handle: str, arity=-1) -> dict:
-        document = self._retrieve_mongo_document(handle, arity)
+    def get_atom_as_dict(self, handle, arity=-1) -> dict:
         answer = {}
-        answer["handle"] = document[MongoFieldNames.ID_HASH]
-        answer["type"] = document[MongoFieldNames.TYPE_NAME]
-        answer["template"] = self._build_named_type_template(document[MongoFieldNames.COMPOSITE_TYPE])
-        answer["targets"] = self._get_mongo_document_keys(document)
+        document = self.node_documents.get(handle, None) if arity <= 0 else None
+        if document is None:
+            document = self._retrieve_mongo_document(handle, arity)
+            answer["handle"] = document[MongoFieldNames.ID_HASH]
+            answer["type"] = document[MongoFieldNames.TYPE_NAME]
+            answer["template"] = self._build_named_type_template(document[MongoFieldNames.COMPOSITE_TYPE])
+            answer["targets"] = self._get_mongo_document_keys(document)
+        else:
+            answer["handle"] = document[MongoFieldNames.ID_HASH]
+            answer["type"] = document[MongoFieldNames.TYPE_NAME]
+            answer["name"] = document[MongoFieldNames.NODE_NAME]
         return answer
 
-    def get_node_as_dict(self, handle) -> dict:
-        document = self._retrieve_mongo_document(handle)
-        answer = {}
-        answer["handle"] = document[MongoFieldNames.ID_HASH]
-        answer["type"] = document[MongoFieldNames.TYPE_NAME]
-        answer["name"] = document[MongoFieldNames.NODE_NAME]
-        return answer
+    def get_atom_as_deep_representation(self, handle: str, arity=-1) -> str:
+        return self._build_deep_representation(handle, arity)
 
     def count_atoms(self) -> Tuple[int, int]:
         node_count = self.mongo_nodes_collection.estimated_document_count()

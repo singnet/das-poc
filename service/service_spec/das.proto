@@ -15,15 +15,17 @@ message DASKey {
     string key = 1;
 }
 
+message LinkRequest {
+    string das_key = 1;
+    string link_type = 2;
+    repeated string target_types = 3;
+    repeated string targets = 4;
+    string output_format = 5;
+}
+
 message Status {
     bool success = 1;
     string msg = 2;
-}
-
-message Count {
-    int32 node_count = 1;
-    int32 link_count = 2;
-    Status status = 3;
 }
 
 service ServiceDefinition {
@@ -32,4 +34,5 @@ service ServiceDefinition {
     rpc check_das_status(DASKey) returns (Status) {}
     rpc clear(DASKey) returns (Status) {}
     rpc count(DASKey) returns (Status) {}
+    rpc search_links(LinkRequest) returns (Status) {}
 }

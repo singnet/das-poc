@@ -2,7 +2,7 @@ import tempfile
 import shutil
 import os
 import pytest
-from das.distributed_atom_space import DistributedAtomSpace, WILDCARD
+from das.distributed_atom_space import DistributedAtomSpace, WILDCARD, QueryOutputFormat
 from das.database.db_interface import UNORDERED_LINK_TYPES
 
 das = DistributedAtomSpace()
@@ -69,50 +69,50 @@ template_similarity = [similarity, concept, concept]
 template_inheritance = [inheritance, concept, concept]
 
 def test_get_node():
-    human_document = das.get_node(concept, "human", build_node_dict=True)
+    human_document = das.get_node(concept, "human", output_format=QueryOutputFormat.ATOM_INFO)
     assert human_document["handle"] == human
     assert human_document["type"] == concept
     assert human_document["name"] == "human"
 
-    gorilla_document = das.get_node(concept, "gorilla", build_node_dict=True)
+    gorilla_document = das.get_node(concept, "gorilla", output_format=QueryOutputFormat.ATOM_INFO)
     assert gorilla_document["handle"] == gorilla
     assert gorilla_document["type"] == concept
     assert gorilla_document["name"] == "gorilla"
 
 def test_get_link():
     link_handle = das.get_link(similarity, [human, monkey])
-    link = das.get_link(similarity, [human, monkey], build_link_dict = True)
+    link = das.get_link(similarity, [human, monkey], output_format=QueryOutputFormat.ATOM_INFO)
     assert link["handle"] == link_handle
     assert link["type"] == similarity
     assert link["template"] == template_similarity
 
     link_handle = das.get_link(similarity, [human, gorilla])
-    link = das.get_link(similarity, [human, gorilla], build_link_dict = True)
+    link = das.get_link(similarity, [human, gorilla], output_format=QueryOutputFormat.ATOM_INFO)
     assert link["handle"] == link_handle
     assert link["type"] == similarity
     assert link["template"] == template_similarity
 
     link_handle = das.get_link(similarity, [gorilla, monkey])
-    link = das.get_link(similarity, [gorilla, monkey], build_link_dict = True)
+    link = das.get_link(similarity, [gorilla, monkey], output_format=QueryOutputFormat.ATOM_INFO)
     assert link["handle"] == link_handle
     assert link["type"] == similarity
     assert link["template"] == template_similarity
 
     link_handle = das.get_link(similarity, [gorilla, chimp])
-    link = das.get_link(similarity, [gorilla, chimp], build_link_dict = True)
+    link = das.get_link(similarity, [gorilla, chimp], output_format=QueryOutputFormat.ATOM_INFO)
     assert link["handle"] == link_handle
     assert link["type"] == similarity
     assert link["template"] == template_similarity
 
     link_handle = das.get_link(inheritance, [gorilla, mammal])
-    link = das.get_link(inheritance, [gorilla, mammal], build_link_dict = True)
+    link = das.get_link(inheritance, [gorilla, mammal], output_format=QueryOutputFormat.ATOM_INFO)
     assert link["handle"] == link_handle
     assert link["type"] == inheritance
     assert link["template"] == template_inheritance
 
 def test_get_links_with_link_templates():
     link_handles = das.get_links(link_type=similarity, target_types=[concept, concept])
-    links = das.get_links(link_type=similarity, target_types=[concept, concept], build_link_dict=True)
+    links = das.get_links(link_type=similarity, target_types=[concept, concept], output_format=QueryOutputFormat.ATOM_INFO)
     assert len(link_handles) == len(links)
     for link in links:
         assert link["handle"] in link_handles
@@ -122,7 +122,7 @@ def test_get_links_with_link_templates():
 
 def _check_pattern(link_type, targets, expected):
     link_handles = das.get_links(link_type=link_type, targets=targets)
-    links = das.get_links(link_type=link_type, targets=targets, build_link_dict=True)
+    links = das.get_links(link_type=link_type, targets=targets, output_format=QueryOutputFormat.ATOM_INFO)
     for link in links:
         print(link)
     assert len(link_handles) == len(links)

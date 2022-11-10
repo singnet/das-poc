@@ -11,7 +11,7 @@ from threading import Lock, Thread
 sys.path.append(os.path.join(os.path.dirname(__file__), "service_spec"))
 import das_pb2 as pb2
 import das_pb2_grpc as pb2_grpc
-from das.distributed_atom_space import DistributedAtomSpace
+from das.distributed_atom_space import DistributedAtomSpace, QueryOutputFormat
 
 SERVICE_PORT = 7025
 
@@ -21,6 +21,11 @@ def build_random_string(length):
 class AtomSpaceStatus(str, Enum):
     READY = "Ready"
     LOADING = "Loading knowledge base"
+
+class OutputFormat(str, Enum):
+    HANDLE = "HANDLE"
+    DICT = "DICT"
+    JSON = "JSON"
 
 class KnowledgeBaseLoader(Thread):
 
@@ -49,6 +54,11 @@ class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
         self.atom_spaces = {}
         self.atom_space_status = {}
         self.lock = Lock()
+        self.query_output_map = {
+            OutputFormat.HANDLE: QueryOutputFormat.HANDLE,
+            OutputFormat.DICT: QueryOutputFormat.ATOM_INFO,
+            OutputFormat.JSON: QueryOutputFormat.JSON
+        }
 
     def _get_das(self, key: str):
         self.lock.acquire()
@@ -134,6 +144,26 @@ class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
                 return self._error(str(exception))
         self.lock.release()
         return self._success(f"{node_count} {link_count}")
+
+    def search_links(self, request, context):
+        key = request.das_key
+        link_type = request.link_type if request.link_type else None
+        target_types = request.target_types if request.target_types else None
+        targets = request.targets if request.targets else None
+        output_format = self.query_output_map[request.output_format]
+        self.lock.acquire()
+        if self.atom_space_status[key] != AtomSpaceStatus.READY:
+            self.lock.release()
+            return self._error(f"DAS {key} is busy")
+        else:
+            das = self.atom_spaces[key]
+            try:
+                answer = das.get_links(link_type, target_types, targets, output_format)
+            except Exception as exception:
+                self.lock.release()
+                return self._error(str(exception))
+        self.lock.release()
+        return self._success(f"{answer}")
 
 def main():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

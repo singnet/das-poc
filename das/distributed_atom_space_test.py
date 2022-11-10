@@ -2,7 +2,7 @@ import tempfile
 import shutil
 import os
 import pytest
-from das.distributed_atom_space import DistributedAtomSpace, WILDCARD
+from das.distributed_atom_space import DistributedAtomSpace, WILDCARD, QueryOutputFormat
 from das.database.db_interface import UNORDERED_LINK_TYPES
 
 das = DistributedAtomSpace()
@@ -84,21 +84,21 @@ def test_get_file_list():
     os.remove(temp_file2)
 
 def test_get_node():
-    human_document = das.get_node(concept, "human", build_node_dict=True)
+    human_document = das.get_node(concept, "human", output_format=QueryOutputFormat.ATOM_INFO)
     assert human_document["handle"] == human
     assert human_document["type"] == concept
     assert human_document["name"] == "human"
 
 def test_get_link():
     link_handle = das.get_link(similarity, [human, monkey])
-    link = das.get_link(similarity, [human, monkey], build_link_dict = True)
+    link = das.get_link(similarity, [human, monkey], output_format=QueryOutputFormat.ATOM_INFO)
     assert link["handle"] == link_handle
     assert link["type"] == similarity
     assert link["template"] == template_similarity
 
 def test_get_links_with_link_templates():
     link_handles = das.get_links(link_type=similarity, target_types=[concept, concept])
-    links = das.get_links(link_type=similarity, target_types=[concept, concept], build_link_dict=True)
+    links = das.get_links(link_type=similarity, target_types=[concept, concept], output_format=QueryOutputFormat.ATOM_INFO)
     assert len(link_handles) == len(links)
     for link in links:
         assert link["handle"] in link_handles
@@ -108,7 +108,7 @@ def test_get_links_with_link_templates():
 
 def _check_pattern(link_type, targets, expected):
     link_handles = das.get_links(link_type=link_type, targets=targets)
-    links = das.get_links(link_type=link_type, targets=targets, build_link_dict=True)
+    links = das.get_links(link_type=link_type, targets=targets, output_format=QueryOutputFormat.ATOM_INFO)
     assert len(link_handles) == len(links)
     assert len(links) == len(expected)
     for link in links:
