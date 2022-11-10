@@ -175,10 +175,10 @@ class StubDB(DBInterface):
                     answer.append(node)
         return answer
 
-    def get_link_as_dict(self, handle: str, arity: int):
+    def get_atom_as_dict(self, handle: str, arity: int):
         pass
 
-    def get_node_as_dict(self, handle):
+    def get_atom_as_deep_representation(self, handle: str, arity: int):
         pass
 
     def count_atoms(self):

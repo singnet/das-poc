@@ -4,6 +4,7 @@ Distributed Atom Space
 """
 
 import os
+import json
 from time import sleep
 from typing import List, Optional, Union, Tuple, Dict
 from pymongo import MongoClient as MongoDBClient
@@ -11,6 +12,7 @@ from couchbase.cluster import Cluster as CouchbaseDB
 from couchbase.auth import PasswordAuthenticator as CouchbasePasswordAuthenticator
 from couchbase.options import LockMode as CouchbaseLockMode
 from couchbase.management.collections import CollectionSpec as CouchbaseCollectionSpec
+from enum import Enum, auto
 from das.parser_actions import KnowledgeBaseFile, MultiThreadParsing
 from das.database.couch_mongo_db import CouchMongoDB
 from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
@@ -19,6 +21,11 @@ from das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread
 from das.logger import logger
 from das.database.db_interface import WILDCARD
 from das.transaction import Transaction
+
+class QueryOutputFormat(int, Enum):
+    HANDLE = auto()
+    ATOM_INFO = auto()
+    JSON = auto()
 
 class DistributedAtomSpace:
 
@@ -92,8 +99,22 @@ class DistributedAtomSpace:
             else:
                 handle, targets = atom
                 arity = len(targets)
-            answer.append(self.db.get_link_as_dict(handle, arity))
+            answer.append(self.db.get_atom_as_dict(handle, arity))
         return answer
+
+    def _to_json(self, db_answer: Union[List[str], List[Dict]]) -> List[Dict]:
+        answer = []
+        if db_answer:
+            flat_handle = isinstance(db_answer[0], str)
+            for atom in db_answer:
+                if flat_handle:
+                    handle = atom
+                    arity = -1
+                else:
+                    handle, targets = atom
+                    arity = len(targets)
+                answer.append(self.db.get_atom_as_deep_representation(handle, arity))
+        return json.dumps(answer, sort_keys=False, indent=4)
 
     def clear_database(self):
         for collection_name in self.mongo_db.collection_names():
@@ -109,21 +130,27 @@ class DistributedAtomSpace:
     def get_node(self,
         node_type: str,
         node_name: str,
-        build_node_dict: bool = False) -> Union[str, Dict]:
+        output_format: QueryOutputFormat = QueryOutputFormat.HANDLE) -> Union[str, Dict]:
     
         node_handle = None
         try:
             node_handle = self.db.get_node_handle(node_type, node_name)
         except ValueError:
-            pass
-        if not build_node_dict or node_handle is None:
+            logger().warn(f"Attempt to access an invalid Node '{node_type}:{node_name}'")
+        if output_format == QueryOutputFormat.HANDLE or node_handle is None:
             return node_handle
-        return self.db.get_node_as_dict(node_handle)
+        elif output_format == QueryOutputFormat.ATOM_INFO:
+            return self.db.get_atom_as_dict(node_handle)
+        elif output_format == QueryOutputFormat.JSON:
+            answer = self.db.get_atom_as_deep_representation(node_handle)
+            return json.dumps(answer, sort_keys=False, indent=4)
+        else:
+            raise ValueError(f"Invalid output format: '{output_format}'")
 
     def get_link(self,
         link_type: str,
         targets: List[str] = None,
-        build_link_dict: bool = False) -> Union[str, Dict]:
+        output_format: QueryOutputFormat = QueryOutputFormat.HANDLE) -> Union[str, Dict]:
     
         link_handle = None
         try:
@@ -131,15 +158,21 @@ class DistributedAtomSpace:
         except ValueError:
             pass
 
-        if not build_link_dict or link_handle is None:
+        if link_handle is None or output_format == QueryOutputFormat.HANDLE:
             return link_handle
-        return self.db.get_link_as_dict(link_handle, len(targets))
+        elif output_format == QueryOutputFormat.ATOM_INFO:
+            return self.db.get_atom_as_dict(link_handle, len(targets))
+        elif output_format == QueryOutputFormat.JSON:
+            answer = self.db.get_atom_as_deep_representation(link_handle, len(targets))
+            return json.dumps(answer, sort_keys=False, indent=4)
+        else:
+            raise ValueError(f"Invalid output format: '{output_format}'")
 
     def get_links(self,
         link_type: str,
         target_types: str = None,
         targets: List[str] = None,
-        build_link_dict: bool = False) -> Union[List[str], List[Dict]]:
+        output_format: QueryOutputFormat = QueryOutputFormat.HANDLE) -> Union[List[str], List[Dict]]:
 
         assert link_type is not None
         if target_types is not None:
@@ -149,10 +182,14 @@ class DistributedAtomSpace:
         else:
             db_answer = self.db.get_matched_links(link_type, [WILDCARD, WILDCARD])
 
-        if build_link_dict:
-            return self._to_link_dict_list(db_answer)
-        else:
+        if output_format == QueryOutputFormat.HANDLE:
             return self._to_handle_list(db_answer)
+        elif output_format == QueryOutputFormat.ATOM_INFO:
+            return self._to_link_dict_list(db_answer)
+        elif output_format == QueryOutputFormat.JSON:
+            return self._to_json(db_answer)
+        else:
+            raise ValueError(f"Invalid output format: '{output_format}'")
 
     def _process_parsed_data(self, shared_data: SharedData, update: bool):
         shared_data.replicate_regular_expressions()
