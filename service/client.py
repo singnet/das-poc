@@ -17,6 +17,7 @@ class ClientCommands(str, Enum):
     CLEAR = "clear"
     COUNT = "count"
     SEARCH_LINKS = "search_links"
+    SEARCH_NODES = "search_nodes"
 
 def _check(response):
     assert response.success,response.msg
@@ -40,6 +41,10 @@ def main():
     parser.add_argument("--url", type=str, 
         help="URL pointing to a MeTTa (or .scm) file to be loaded. Optionally, the URL can point " + \
              "to a .tgz, .tar or .zip files containing MeTTa or .scm files.")
+    parser.add_argument("--node-type", type=str, 
+        help="Type of nodes being searched. Only nodes of the passed type will be returned.")
+    parser.add_argument("--node-name", type=str, 
+        help="Name of node being searched. Requires --node-type.")
     parser.add_argument("--link-type", type=str, 
         help="Type of links being searched. Only links of the passed type will be returned.")
     parser.add_argument("--target-types", type=str, 
@@ -48,7 +53,7 @@ def main():
     parser.add_argument("--targets", type=str, 
         help="Target handles being searched. If something like 'key1,key2' is passed, only links " + \
              "whose targets are 'key1' and 'key2' are returned.")
-    parser.add_argument("--output-format", default=f"'{OutputFormat.HANDLE}'",
+    parser.add_argument("--output-format", default=f"{OutputFormat.HANDLE}",
         choices=[fmt.value for fmt in OutputFormat],
         help=f"Tells how the query output should be formatted. " + \
              f"'{OutputFormat.HANDLE}' returns only the handle of atoms that satisfy the query. This is the fastest " + \
@@ -92,6 +97,20 @@ def main():
             response = _check(stub.count(das_key))
             node_count, link_count = response.msg.split()
             print(f"{node_count} nodes {link_count} links")
+        elif command == ClientCommands.SEARCH_NODES:
+            assert args.das_key
+            assert args.node_type
+            das_key = args.das_key
+            node_type = args.node_type
+            node_name = args.node_name if args.node_name else None
+            output_format = args.output_format
+            node_request = pb2.NodeRequest(
+                das_key=das_key,
+                node_type=node_type,
+                node_name=node_name,
+                output_format=output_format)
+            response = _check(stub.search_nodes(node_request))
+            print(f"{response.msg}")
         elif command == ClientCommands.SEARCH_LINKS:
             assert args.das_key
             das_key = args.das_key

@@ -145,6 +145,25 @@ class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
         self.lock.release()
         return self._success(f"{node_count} {link_count}")
 
+    def search_nodes(self, request, context):
+        key = request.das_key
+        node_type = request.node_type if request.node_type else None
+        node_name = request.node_name if request.node_name else None
+        output_format = self.query_output_map[request.output_format]
+        self.lock.acquire()
+        if self.atom_space_status[key] != AtomSpaceStatus.READY:
+            self.lock.release()
+            return self._error(f"DAS {key} is busy")
+        else:
+            das = self.atom_spaces[key]
+            try:
+                answer = das.get_nodes(node_type, node_name, output_format)
+            except Exception as exception:
+                self.lock.release()
+                return self._error(str(exception))
+        self.lock.release()
+        return self._success(f"{answer}")
+
     def search_links(self, request, context):
         key = request.das_key
         link_type = request.link_type if request.link_type else None
