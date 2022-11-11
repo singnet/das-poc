@@ -137,12 +137,34 @@ class DistributedAtomSpace:
             node_handle = self.db.get_node_handle(node_type, node_name)
         except ValueError:
             logger().warn(f"Attempt to access an invalid Node '{node_type}:{node_name}'")
+            return None
         if output_format == QueryOutputFormat.HANDLE or node_handle is None:
             return node_handle
         elif output_format == QueryOutputFormat.ATOM_INFO:
             return self.db.get_atom_as_dict(node_handle)
         elif output_format == QueryOutputFormat.JSON:
             answer = self.db.get_atom_as_deep_representation(node_handle)
+            return json.dumps(answer, sort_keys=False, indent=4)
+        else:
+            raise ValueError(f"Invalid output format: '{output_format}'")
+
+    def get_nodes(self,
+        node_type: str,
+        node_name: str = None,
+        output_format: QueryOutputFormat = QueryOutputFormat.HANDLE) -> Union[str, Dict]:
+
+        if node_name is not None:
+            answer = self.db.get_node_handle(node_type, node_name)
+            if answer is not None:
+                answer = [answer]
+        else:
+            answer = self.db.get_all_nodes(node_type)
+        if output_format == QueryOutputFormat.HANDLE or not answer:
+            return answer
+        elif output_format == QueryOutputFormat.ATOM_INFO:
+            return [self.db.get_atom_as_dict(handle) for handle in answer]
+        elif output_format == QueryOutputFormat.JSON:
+            answer = [self.db.get_atom_as_deep_representation(handle) for handle in answer]
             return json.dumps(answer, sort_keys=False, indent=4)
         else:
             raise ValueError(f"Invalid output format: '{output_format}'")

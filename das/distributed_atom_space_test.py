@@ -48,6 +48,23 @@ all_inheritances = [
     [ent, plant],
 ]
 
+all_nodes = [
+    animal,
+    mammal,
+    reptile,
+    plant,
+    human,
+    monkey,
+    chimp,
+    earthworm,
+    snake,
+    triceratops,
+    rhino,
+    vine,
+    ent,
+    dinosaur
+]
+
 template_similarity = [similarity, concept, concept]
 template_inheritance = [inheritance, concept, concept]
 
@@ -88,6 +105,16 @@ def test_get_node():
     assert human_document["handle"] == human
     assert human_document["type"] == concept
     assert human_document["name"] == "human"
+
+def test_get_nodes():
+    human_document = das.get_nodes(concept, "human", output_format=QueryOutputFormat.ATOM_INFO)[0]
+    assert human_document["handle"] == human
+    assert human_document["type"] == concept
+    assert human_document["name"] == "human"
+
+    concepts = das.get_nodes(concept)
+    assert sorted(concepts) == sorted(all_nodes)
+    
 
 def test_get_link():
     link_handle = das.get_link(similarity, [human, monkey])

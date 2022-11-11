@@ -23,6 +23,13 @@ message LinkRequest {
     string output_format = 5;
 }
 
+message NodeRequest {
+    string das_key = 1;
+    string node_type = 2;
+    string node_name = 3;
+    string output_format = 4;
+}
+
 message Status {
     bool success = 1;
     string msg = 2;
@@ -34,5 +41,6 @@ service ServiceDefinition {
     rpc check_das_status(DASKey) returns (Status) {}
     rpc clear(DASKey) returns (Status) {}
     rpc count(DASKey) returns (Status) {}
+    rpc search_nodes(NodeRequest) returns (Status) {}
     rpc search_links(LinkRequest) returns (Status) {}
 }
