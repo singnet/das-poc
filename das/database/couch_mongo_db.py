@@ -246,6 +246,10 @@ class CouchMongoDB(DBInterface):
             raise ValueError(f'{exception}\nInvalid type')
         return self._retrieve_couchbase_value(self.couch_templates_collection, template_hash)
 
+    def get_matched_type(self, link_type: str) -> List[str]:
+        named_type_hash = self._get_atom_type_hash(link_type)
+        return self._retrieve_couchbase_value(self.couch_templates_collection, named_type_hash)
+
     def get_node_name(self, node_handle: str) -> str:
         document = self.node_documents.get(node_handle, None)
         if not document:

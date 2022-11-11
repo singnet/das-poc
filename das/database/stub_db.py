@@ -175,6 +175,9 @@ class StubDB(DBInterface):
                     answer.append(node)
         return answer
 
+    def get_matched_type(self, link_named_type: str):
+        pass
+
     def get_atom_as_dict(self, handle: str, arity: int):
         pass
 

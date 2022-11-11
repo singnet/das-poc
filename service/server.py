@@ -16,7 +16,9 @@ from das.distributed_atom_space import DistributedAtomSpace, QueryOutputFormat
 SERVICE_PORT = 7025
 
 def build_random_string(length):
-    return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
+    # XXXX TODO
+    return "nydkmlzqbvyhbpvynlgx"
+    #return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
 
 class AtomSpaceStatus(str, Enum):
     READY = "Ready"
