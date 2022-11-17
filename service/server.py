@@ -14,9 +14,12 @@ import das_pb2_grpc as pb2_grpc
 from das.distributed_atom_space import DistributedAtomSpace, QueryOutputFormat
 
 SERVICE_PORT = 7025
+COUCHBASE_SETUP_DIR = os.environ['COUCHBASE_SETUP_DIR']
 
 def build_random_string(length):
-    return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
+    # XXXX TODO
+    return "nydkmlzqbvyhbpvynlgx"
+    #return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
 
 class AtomSpaceStatus(str, Enum):
     READY = "Ready"
@@ -87,6 +90,9 @@ class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
             token = build_random_string(20)
             if token not in self.atom_spaces:
                 break
+        #TODO Remove hardwired folder reference
+        os.system(f"touch {COUCHBASE_SETUP_DIR}/new_das/{name}.das")
+        time.sleep(5)
         das = DistributedAtomSpace(database_name=name)
         self.atom_spaces[token] = das
         self.atom_space_status[token] = AtomSpaceStatus.READY

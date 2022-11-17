@@ -265,6 +265,12 @@ def test_get_matched_type_template(db: DBInterface):
     assert(v1 == v5)
     assert(v2 == v6)
 
+def test_get_matched_type(db: DBInterface):
+    v1 = db.get_matched_type('Inheritance')
+    v2 = db.get_matched_type('Similarity')
+    assert(len(v1) == 12)
+    assert(len(v2) == 14)
+
 def test_get_node_name(db: DBInterface):
     for node_type, node_name in NODE_SPECS:
         handle = db.get_node_handle(node_type, node_name)

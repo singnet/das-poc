@@ -1,7 +1,9 @@
 version: "3.9"
 services:
   das_service:
-    build: .
+    build:
+        context: .
+        dockerfile: Dockerfile.service
     image: das_service
     environment:
       - DAS_MONGODB_HOSTNAME=${DAS_MONGODB_HOSTNAME:-mongo}
@@ -10,12 +12,14 @@ services:
       - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
       - PYTHONPATH=/opt/singnet/das
+      - COUCHBASE_SETUP_DIR=/opt/couchbase_setup
       - TZ=${TZ}
     tty: true
     volumes:
       - ./das:/opt/snet/das
       - ./tests:/opt/snet/tests
       - ./data:/opt/snet/data
+      - couchbasesetup:/opt/couchbase_setup
       - /tmp:/tmp
     links:
       - mongo
@@ -37,10 +41,14 @@ services:
 
   couchbase:
     image: couchbase
+    build:
+        context: .
+        dockerfile: Dockerfile.couchbase
     environment:
       - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
       - DAS_COUCHBASE_BUCKET_RAMSIZE=${DAS_COUCHBASE_BUCKET_RAMSIZE:-8192}
+      - COUCHBASE_SETUP_DIR=/opt/couchbase_setup
       - TZ=${TZ}
     ports:
       - "8091-8095:8091-8095"
@@ -50,8 +58,10 @@ services:
       - "8094"
     volumes:
       - couchbasedata:/opt/couchbase/var
+      - couchbasesetup:/opt/couchbase_setup
       - /tmp:/tmp
 
 volumes:
   mongodbdata: { }
   couchbasedata: { }
+  couchbasesetup: { }

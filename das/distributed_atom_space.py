@@ -116,6 +116,41 @@ class DistributedAtomSpace:
                 answer.append(self.db.get_atom_as_deep_representation(handle, arity))
         return json.dumps(answer, sort_keys=False, indent=4)
 
+    def _process_parsed_data(self, shared_data: SharedData, update: bool):
+        shared_data.replicate_regular_expressions()
+        file_builder_threads = [
+            FlushNonLinksToDBThread(self.db, shared_data, update),
+            BuildConnectivityThread(shared_data),
+            BuildPatternsThread(shared_data),
+            BuildTypeTemplatesThread(shared_data)
+        ]
+        for thread in file_builder_threads:
+            thread.start()
+        links_uploader_to_mongo_thread = PopulateMongoDBLinksThread(self.db, shared_data, update)
+        links_uploader_to_mongo_thread.start()
+        for thread in file_builder_threads:
+            thread.join()
+        assert shared_data.build_ok_count == len(file_builder_threads)
+
+        file_processor_threads = [
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.OUTGOING_SET, False, False, update),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.INCOMING_SET, False, False, update),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.PATTERNS, True, False, update),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.TEMPLATES, True, False, update),
+            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.NAMED_ENTITIES, False, True, update)
+        ]
+        for thread in file_processor_threads:
+            thread.start()
+        links_uploader_to_mongo_thread.join()
+        assert shared_data.mongo_uploader_ok
+        for thread in file_processor_threads:
+            thread.join()
+        assert shared_data.process_ok_count == len(file_processor_threads)
+        self.db.prefetch()
+
+
+    # Public API
+
     def clear_database(self):
         for collection_name in self.mongo_db.collection_names():
             self.mongo_db.drop_collection(collection_name)
@@ -196,13 +231,17 @@ class DistributedAtomSpace:
         targets: List[str] = None,
         output_format: QueryOutputFormat = QueryOutputFormat.HANDLE) -> Union[List[str], List[Dict]]:
 
-        assert link_type is not None
-        if target_types is not None:
+        if link_type is None:
+            link_type = WILDCARD
+
+        if target_types is not None and link_type != WILDCARD:
             db_answer = self.db.get_matched_type_template([link_type, *target_types])
         elif targets is not None:
             db_answer = self.db.get_matched_links(link_type, targets)
+        elif link_type != WILDCARD:
+            db_answer = self.db.get_matched_type(link_type)
         else:
-            db_answer = self.db.get_matched_links(link_type, [WILDCARD, WILDCARD])
+            raise ValueError("Invalid parameters")
 
         if output_format == QueryOutputFormat.HANDLE:
             return self._to_handle_list(db_answer)
@@ -212,38 +251,6 @@ class DistributedAtomSpace:
             return self._to_json(db_answer)
         else:
             raise ValueError(f"Invalid output format: '{output_format}'")
-
-    def _process_parsed_data(self, shared_data: SharedData, update: bool):
-        shared_data.replicate_regular_expressions()
-        file_builder_threads = [
-            FlushNonLinksToDBThread(self.db, shared_data, update),
-            BuildConnectivityThread(shared_data),
-            BuildPatternsThread(shared_data),
-            BuildTypeTemplatesThread(shared_data)
-        ]
-        for thread in file_builder_threads:
-            thread.start()
-        links_uploader_to_mongo_thread = PopulateMongoDBLinksThread(self.db, shared_data, update)
-        links_uploader_to_mongo_thread.start()
-        for thread in file_builder_threads:
-            thread.join()
-        assert shared_data.build_ok_count == len(file_builder_threads)
-
-        file_processor_threads = [
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.OUTGOING_SET, False, False, update),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.INCOMING_SET, False, False, update),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.PATTERNS, True, False, update),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.TEMPLATES, True, False, update),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.NAMED_ENTITIES, False, True, update)
-        ]
-        for thread in file_processor_threads:
-            thread.start()
-        links_uploader_to_mongo_thread.join()
-        assert shared_data.mongo_uploader_ok
-        for thread in file_processor_threads:
-            thread.join()
-        assert shared_data.process_ok_count == len(file_processor_threads)
-        self.db.prefetch()
 
     def open_transaction(self) -> Transaction:
         return Transaction()

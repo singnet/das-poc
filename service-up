@@ -1,6 +1,2 @@
-unset DAS_MONGODB_HOSTNAME
-unset DAS_COUCHBASE_HOSTNAME
-docker volume rm das_couchbasedata >& /dev/null
-docker volume rm das_mongodbdata >& /dev/null
-docker-compose -f docker-compose-service.yml up --detach --no-build
+docker-compose -f docker-compose-service.yml up --detach
 ./scripts/couchbase_setup.sh

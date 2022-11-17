@@ -256,21 +256,34 @@ class BuildPatternsThread(Thread):
                 type_hash = expression.named_type_hash
                 keys = []
                 keys.append([WILDCARD, *expression.elements])
-                for type_key in [type_hash, WILDCARD]:
-                    if arity == 1:
-                        keys.append([type_key, WILDCARD])
-                    elif arity == 2:
-                        keys.append([type_key, expression.elements[0], WILDCARD])
-                        keys.append([type_key, WILDCARD, expression.elements[1]])
-                        keys.append([type_key, WILDCARD, WILDCARD])
-                    elif arity == 3:
-                        keys.append([type_key, expression.elements[0], expression.elements[1], WILDCARD])
-                        keys.append([type_key, expression.elements[0], WILDCARD, expression.elements[2]])
-                        keys.append([type_key, WILDCARD, expression.elements[1], expression.elements[2]])
-                        keys.append([type_key, expression.elements[0], WILDCARD, WILDCARD])
-                        keys.append([type_key, WILDCARD, expression.elements[1], WILDCARD])
-                        keys.append([type_key, WILDCARD, WILDCARD, expression.elements[2]])
-                        keys.append([type_key, WILDCARD, WILDCARD, WILDCARD])
+                if arity == 1:
+                    keys.append([type_hash, WILDCARD])
+                    keys.append([WILDCARD, expression.elements[0]])
+                    keys.append([WILDCARD, WILDCARD])
+                elif arity == 2:
+                    keys.append([type_hash, expression.elements[0], WILDCARD])
+                    keys.append([type_hash, WILDCARD, expression.elements[1]])
+                    keys.append([type_hash, WILDCARD, WILDCARD])
+                    keys.append([WILDCARD, expression.elements[0], expression.elements[1]])
+                    keys.append([WILDCARD, expression.elements[0], WILDCARD])
+                    keys.append([WILDCARD, WILDCARD, expression.elements[1]])
+                    keys.append([WILDCARD, WILDCARD, WILDCARD])
+                elif arity == 3:
+                    keys.append([type_hash, expression.elements[0], expression.elements[1], WILDCARD])
+                    keys.append([type_hash, expression.elements[0], WILDCARD, expression.elements[2]])
+                    keys.append([type_hash, WILDCARD, expression.elements[1], expression.elements[2]])
+                    keys.append([type_hash, expression.elements[0], WILDCARD, WILDCARD])
+                    keys.append([type_hash, WILDCARD, expression.elements[1], WILDCARD])
+                    keys.append([type_hash, WILDCARD, WILDCARD, expression.elements[2]])
+                    keys.append([type_hash, WILDCARD, WILDCARD, WILDCARD])
+                    keys.append([WILDCARD, expression.elements[0], expression.elements[1], expression.elements[2]])
+                    keys.append([WILDCARD, expression.elements[0], expression.elements[1], WILDCARD])
+                    keys.append([WILDCARD, expression.elements[0], WILDCARD, expression.elements[2]])
+                    keys.append([WILDCARD, WILDCARD, expression.elements[1], expression.elements[2]])
+                    keys.append([WILDCARD, expression.elements[0], WILDCARD, WILDCARD])
+                    keys.append([WILDCARD, WILDCARD, expression.elements[1], WILDCARD])
+                    keys.append([WILDCARD, WILDCARD, WILDCARD, expression.elements[2]])
+                    keys.append([WILDCARD, WILDCARD, WILDCARD, WILDCARD])
             for key in keys:
                 _write_key_value(patterns, key, [expression.hash_code, *expression.elements])
         patterns.close()
@@ -296,6 +309,10 @@ class BuildTypeTemplatesThread(Thread):
             _write_key_value(
                 template,
                 expression.composite_type_hash, 
+                [expression.hash_code, *expression.elements])
+            _write_key_value(
+                template,
+                expression.named_type_hash,
                 [expression.hash_code, *expression.elements])
         template.close()
         os.system(f"sort -t , -k 1,1 {file_name} > {file_name}.sorted")
