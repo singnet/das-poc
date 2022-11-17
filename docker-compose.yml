@@ -48,8 +48,8 @@ services:
       - "8091"
       - "8094"
     volumes:
-      - couchbasedata:/opt/couchbase/var
       - /tmp:/tmp
+      - couchbasedata:/opt/couchbase/var
 
 volumes:
   mongodbdata: { }
