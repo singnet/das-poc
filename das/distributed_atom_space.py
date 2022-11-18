@@ -21,6 +21,7 @@ from das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread
 from das.logger import logger
 from das.database.db_interface import WILDCARD
 from das.transaction import Transaction
+from das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression
 
 class QueryOutputFormat(int, Enum):
     HANDLE = auto()
@@ -251,6 +252,31 @@ class DistributedAtomSpace:
             return self._to_json(db_answer)
         else:
             raise ValueError(f"Invalid output format: '{output_format}'")
+
+    def query(self,
+        query: LogicalExpression,
+        output_format: QueryOutputFormat = QueryOutputFormat.HANDLE) -> str:
+
+        query_answer = PatternMatchingAnswer()
+        matched = query.matched(self.db, query_answer)
+        tag_not = ""
+        mapping = ""
+        if matched:
+            if query_answer.negation:
+                tag_not = "NOT "
+            if output_format == QueryOutputFormat.HANDLE:
+                mapping = str(query_answer.assignments)
+            elif output_format == QueryOutputFormat.ATOM_INFO:
+                mapping = str({
+                    var: self.db.get_atom_as_dict(handle)
+                    for var, handle in query_answer.assignments.items()})
+            elif output_format == QueryOutputFormat.JSON:
+                mapping = json.dumps({
+                    var: self.db.get_atom_as_deep_representation(handle)
+                    for var, handle in query_answer.assignments.items()}, sort_keys=False, indent=4)
+            else:
+                raise ValueError(f"Invalid output format: '{output_format}'")
+        return f"{tag_not}{mapping}"
 
     def open_transaction(self) -> Transaction:
         return Transaction()

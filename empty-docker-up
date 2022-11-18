@@ -5,5 +5,5 @@ docker rm `docker ps -a | grep 'das_app\|das_couchbase\|das_mongo' | cut -d' ' -
 docker volume rm das_couchbasedata >& /dev/null
 docker volume rm das_mongodbdata >& /dev/null
 docker-compose up -d
-./scripts/couchbase_setup.sh
+./scripts/couchbase_test_setup.sh
 
