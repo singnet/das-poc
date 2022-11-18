@@ -89,7 +89,7 @@ def main():
             assert args.url
             das_key = args.das_key
             url = args.url
-            response = _check(stub.load_knowledge_base(pb2.LoadRequest(das_key=das_key, url=url)))
+            response = _check(stub.load_knowledge_base(pb2.LoadRequest(key=das_key, url=url)))
             print(f"Load request submitted. Check status using the command 'check'")
         elif command == ClientCommands.CHECK:
             assert args.das_key
@@ -104,8 +104,7 @@ def main():
             assert args.das_key
             das_key = pb2.DASKey(key=args.das_key)
             response = _check(stub.count(das_key))
-            node_count, link_count = response.msg.split()
-            print(f"{node_count} nodes {link_count} links")
+            print(f"{response.msg}")
         elif command == ClientCommands.SEARCH_NODES:
             assert args.das_key
             assert args.node_type
@@ -114,7 +113,7 @@ def main():
             node_name = args.node_name if args.node_name else None
             output_format = args.output_format
             node_request = pb2.NodeRequest(
-                das_key=das_key,
+                key=das_key,
                 node_type=node_type,
                 node_name=node_name,
                 output_format=output_format)
@@ -128,7 +127,7 @@ def main():
             targets = args.targets.split(",") if args.targets else None
             output_format = args.output_format
             link_request = pb2.LinkRequest(
-                das_key=das_key,
+                key=das_key,
                 link_type=link_type,
                 target_types=target_types,
                 targets=targets,
@@ -142,7 +141,7 @@ def main():
             query = args.query
             output_format = args.output_format
             query_request = pb2.Query(
-                das_key=das_key,
+                key=das_key,
                 query=query,
                 output_format=output_format)
             response = _check(stub.query(query_request))
