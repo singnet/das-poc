@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package das;
 
-message CreationRequest {
+message BindingRequest {
     string name = 1;
 }
 
@@ -42,7 +42,8 @@ message Status {
 }
 
 service ServiceDefinition {
-    rpc create(CreationRequest) returns (Status) {}
+    rpc create(BindingRequest) returns (Status) {}
+    rpc reconnect(BindingRequest) returns (Status) {}
     rpc load_knowledge_base(LoadRequest) returns (Status) {}
     rpc check_das_status(DASKey) returns (Status) {}
     rpc clear(DASKey) returns (Status) {}

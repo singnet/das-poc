@@ -19,9 +19,7 @@ SERVICE_PORT = 7025
 COUCHBASE_SETUP_DIR = os.environ['COUCHBASE_SETUP_DIR']
 
 def build_random_string(length):
-    # XXXX TODO
-    return "nydkmlzqbvyhbpvynlgx"
-    #return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
+    return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
 
 class AtomSpaceStatus(str, Enum):
     READY = "Ready"
@@ -144,6 +142,22 @@ class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
         #TODO Remove hardwired folder reference
         os.system(f"touch {COUCHBASE_SETUP_DIR}/new_das/{name}.das")
         time.sleep(5)
+        das = DistributedAtomSpace(database_name=name)
+        self.atom_spaces[token] = das
+        self.atom_space_status[token] = AtomSpaceStatus.READY
+        self.lock.release()
+        return self._success(token)
+        
+    def reconnect(self, request, context):
+        name = request.name
+        self.lock.acquire()
+        if any(das.database_name == name for das in self.atom_spaces.values()):
+            self.lock.release()
+            return self._error(f"DAS named '{name}' already exists")
+        while True:
+            token = build_random_string(20)
+            if token not in self.atom_spaces:
+                break
         das = DistributedAtomSpace(database_name=name)
         self.atom_spaces[token] = das
         self.atom_space_status[token] = AtomSpaceStatus.READY
