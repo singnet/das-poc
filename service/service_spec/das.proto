@@ -7,12 +7,12 @@ message BindingRequest {
 }
 
 message LoadRequest {
-    string das_key = 1;
+    string key = 1;
     string url = 2;
 }
 
 message LinkRequest {
-    string das_key = 1;
+    string key = 1;
     string link_type = 2;
     repeated string target_types = 3;
     repeated string targets = 4;
@@ -20,14 +20,14 @@ message LinkRequest {
 }
 
 message NodeRequest {
-    string das_key = 1;
+    string key = 1;
     string node_type = 2;
     string node_name = 3;
     string output_format = 4;
 }
 
 message Query {
-    string das_key = 1;
+    string key = 1;
     string query = 2;
     string output_format = 3;
 }
