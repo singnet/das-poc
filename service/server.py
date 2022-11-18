@@ -12,6 +12,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "service_spec"))
 import das_pb2 as pb2
 import das_pb2_grpc as pb2_grpc
 from das.distributed_atom_space import DistributedAtomSpace, QueryOutputFormat
+from das.database.db_interface import UNORDERED_LINK_TYPES
+from das.pattern_matcher.pattern_matcher import Node, Link, And, Or, Not, Variable
 
 SERVICE_PORT = 7025
 COUCHBASE_SETUP_DIR = os.environ['COUCHBASE_SETUP_DIR']
@@ -29,6 +31,55 @@ class OutputFormat(str, Enum):
     HANDLE = "HANDLE"
     DICT = "DICT"
     JSON = "JSON"
+
+def _parse_query(query_str: str):
+    current_state = 0
+    nodes = {}
+    stack = []
+    for chunk in query_str.split(","):
+        chunk = chunk.strip().split()
+        head = chunk[0]
+        if current_state == 0:
+            if head == 'Node':
+                if len(chunk) != 4:
+                    return None
+                nodes[chunk[1]] = Node(chunk[2], chunk[3])
+            else:
+                current_state = 1
+        if current_state == 1:
+            if head == 'Link':
+                if len(chunk) < 3:
+                    return None
+                link_type = chunk[1]
+                args_str = chunk[2:]
+                args = []
+                for arg in args_str:
+                    if arg.startswith("$"):
+                        args.append(Variable(arg))
+                    else:
+                        node = nodes.get(arg, None)
+                        if node is None:
+                            return None
+                        args.append(node)
+                ordered = not link_type in UNORDERED_LINK_TYPES
+                stack.append(Link(link_type, args, ordered))
+            else:
+                if not stack:
+                    return None
+                if head == 'AND':
+                    new_logic_operation = And(stack)
+                    stack = [new_logic_operation]
+                elif head == 'OR':
+                    new_logic_operation = Or(stack)
+                    stack = [new_logic_operation]
+                elif head == 'NOT':
+                    new_logic_operation = Not(stack.pop())
+                    stack.append(new_logic_operation)
+                else:
+                    return None
+    if len(stack) != 1:
+        return None
+    return stack[0]
 
 class KnowledgeBaseLoader(Thread):
 
@@ -184,6 +235,27 @@ class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
             das = self.atom_spaces[key]
             try:
                 answer = das.get_links(link_type, target_types, targets, output_format)
+            except Exception as exception:
+                self.lock.release()
+                return self._error(str(exception))
+        self.lock.release()
+        return self._success(f"{answer}")
+
+    def query(self, request, context):
+        key = request.das_key
+        query_str = request.query
+        output_format = self.query_output_map[request.output_format]
+        query = _parse_query(query_str)
+        if query is None:
+            return self._error(f"Invalid query")
+        self.lock.acquire()
+        if self.atom_space_status[key] != AtomSpaceStatus.READY:
+            self.lock.release()
+            return self._error(f"DAS {key} is busy")
+        else:
+            das = self.atom_spaces[key]
+            try:
+                answer = das.query(query, output_format)
             except Exception as exception:
                 self.lock.release()
                 return self._error(str(exception))

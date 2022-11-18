@@ -18,6 +18,7 @@ class ClientCommands(str, Enum):
     COUNT = "count"
     SEARCH_LINKS = "search_links"
     SEARCH_NODES = "search_nodes"
+    QUERY = "query"
 
 def _check(response):
     assert response.success,response.msg
@@ -53,9 +54,11 @@ def main():
     parser.add_argument("--targets", type=str, 
         help="Target handles being searched. If something like 'key1,key2' is passed, only links " + \
              "whose targets are 'key1' and 'key2' are returned.")
+    parser.add_argument("--query", type=str, 
+        help="Query string for 'query' command.")
     parser.add_argument("--output-format", default=f"{OutputFormat.HANDLE}",
         choices=[fmt.value for fmt in OutputFormat],
-        help=f"Tells how the query output should be formatted. " + \
+        help=f"Tells how the query or node/link search output should be formatted. " + \
              f"'{OutputFormat.HANDLE}' returns only the handle of atoms that satisfy the query. This is the fastest " + \
              f"option as no overhead is added to post-process query results. " + \
              f"'{OutputFormat.DICT}' return more structured information about the atoms that matches the query but " + \
@@ -126,26 +129,18 @@ def main():
                 output_format=output_format)
             response = _check(stub.search_links(link_request))
             print(f"{response.msg}")
+        elif command == ClientCommands.QUERY:
+            assert args.das_key
+            assert args.query
+            das_key = args.das_key
+            query = args.query
+            output_format = args.output_format
+            query_request = pb2.Query(
+                das_key=das_key,
+                query=query,
+                output_format=output_format)
+            response = _check(stub.query(query_request))
+            print(f"{response.msg}")
     
-def main_test():
-    with grpc.insecure_channel(f"localhost:{SERVICE_PORT}") as channel:
-        stub = pb2_grpc.ServiceDefinitionStub(channel)
-        response = stub.create(pb2.CreationRequest(name="das"))
-        print(response)
-        das_key = pb2.DASKey(key=response.msg)
-        service_input = pb2.LoadRequest(das_key=das_key.key, url="https://raw.githubusercontent.com/singnet/das/main/data/samples/animals.metta")
-        response = stub.load_knowledge_base(service_input)
-        print(response)
-        while True:
-            response = stub.check_das_status(das_key)
-            print(response)
-            if response.msg == AtomSpaceStatus.READY:
-                break
-            else:
-                time.sleep(1)
-        response = stub.clear(das_key)
-        print(response)
-
-
 if __name__ == "__main__":
     main()

@@ -134,10 +134,9 @@ def test_get_links_with_link_templates():
         assert set(link["targets"]) in all_similarities
 
 def _check_pattern(link_type, targets, expected):
-    link_handles = das.get_links(link_type=link_type, targets=targets)
+    link_handles = list(set(das.get_links(link_type=link_type, targets=targets)))
     links = das.get_links(link_type=link_type, targets=targets, output_format=QueryOutputFormat.ATOM_INFO)
-    assert len(link_handles) == len(links)
-    assert len(links) == len(expected)
+    assert len(link_handles) == len(expected)
     for link in links:
         assert link["handle"] in link_handles
         assert link["type"] == link_type or link_type == WILDCARD

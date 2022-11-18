@@ -11,10 +11,6 @@ message LoadRequest {
     string url = 2;
 }
 
-message DASKey {
-    string key = 1;
-}
-
 message LinkRequest {
     string das_key = 1;
     string link_type = 2;
@@ -30,6 +26,16 @@ message NodeRequest {
     string output_format = 4;
 }
 
+message Query {
+    string das_key = 1;
+    string query = 2;
+    string output_format = 3;
+}
+
+message DASKey {
+    string key = 1;
+}
+
 message Status {
     bool success = 1;
     string msg = 2;
@@ -43,4 +49,5 @@ service ServiceDefinition {
     rpc count(DASKey) returns (Status) {}
     rpc search_nodes(NodeRequest) returns (Status) {}
     rpc search_links(LinkRequest) returns (Status) {}
+    rpc query(Query) returns (Status) {}
 }
