@@ -12,6 +12,7 @@ from server import SERVICE_PORT, AtomSpaceStatus, OutputFormat
 
 class ClientCommands(str, Enum):
     CREATE = "create"
+    RECONNECT = "reconnect"
     LOAD = "load"
     CHECK = "check"
     CLEAR = "clear"
@@ -76,8 +77,13 @@ def main():
         if command == ClientCommands.CREATE:
             assert args.new_das_name
             das_name = args.new_das_name
-            response = _check(stub.create(pb2.CreationRequest(name=das_name)))
-            print(f"New DAS '{das_name}' successfully created. Access key: {response.msg}")
+            response = _check(stub.create(pb2.BindingRequest(name=das_name)))
+            print(f"{response.msg}")
+        if command == ClientCommands.RECONNECT:
+            assert args.new_das_name
+            das_name = args.new_das_name
+            response = _check(stub.reconnect(pb2.BindingRequest(name=das_name)))
+            print(f"{response.msg}")
         elif command == ClientCommands.LOAD:
             assert args.das_key
             assert args.url
