@@ -20,11 +20,10 @@ services:
       - ./tests:/opt/snet/tests
       - ./data:/opt/snet/data
       - couchbasesetup:/opt/couchbase_setup
-      - /tmp:/tmp
     links:
       - mongo
       - couchbase
-    command: tail -f /dev/null
+    command: python3 service/server.py
 
   mongo:
     image: mongo
@@ -36,7 +35,6 @@ services:
       - ${DAS_MONGODB_PORT:-27017}:${DAS_MONGODB_PORT:-27017}
     volumes:
       - mongodbdata:/data/db
-      - /tmp:/tmp
     command: mongod --port ${DAS_MONGODB_PORT:-27017}
 
   couchbase:
@@ -59,7 +57,6 @@ services:
     volumes:
       - couchbasedata:/opt/couchbase/var
       - couchbasesetup:/opt/couchbase_setup
-      - /tmp:/tmp
 
 volumes:
   mongodbdata: { }
