@@ -301,6 +301,7 @@ The output is a set of possible assignments for $1, $2 and $2. Let us re-format 
     {'$1': 'af12f10f9ae2002a1607ba0b47ba8407', '$2': 'bdfe4e7a431f73386f37c6448afe5840', '$3': '0a32b476852eeb954979b87f5f6cb7af'}, # human -> mammal -> animal
     {'$1': '08126b066d32ee37743e255a2558cccd', '$2': 'b99ae727c787f1b13b452fd4c9ce1b9a', '$3': '0a32b476852eeb954979b87f5f6cb7af'}, # dinosaur -> reptile -> animal
     {'$1': 'c1db9b517073e51eb7ef6fed608ec204', '$2': 'b99ae727c787f1b13b452fd4c9ce1b9a', '$3': '0a32b476852eeb954979b87f5f6cb7af'}} # snake -> reptile -> animal
+}
 ```
 
 The query string is a list of terms separated by commas. Each term can be a node definition, a link definition or an operator. In this example we have two link definitions and the operator `AND`.
@@ -362,7 +363,7 @@ Lets do another query example with `OR`. Now we'll search for any concepts that 
 }
 ```
 
-The asterisk `*' in the beginning of each assignment indicates an unordered assignment. This is not relevant for assignments with only one variable as the above but it's relevant when we have more than one variable. Let's search for concepts that are similar to eachother:
+The asterisk `*` in the beginning of each assignment indicates an unordered assignment. This is not relevant for assignments with only one variable as the above but it's relevant when we have more than one variable. Let's search for concepts that are similar to each other:
 
 ```
 ./scripts/das-cli.sh --das-key iemxjwpwmkoildfjwecj query --query "Link Similarity \$1 \$2"
@@ -379,9 +380,11 @@ The asterisk `*' in the beginning of each assignment indicates an unordered assi
 
 In these assignments, the values for $1 and $2 are interchangeable.
 
-# How to build and run a serve
+# How to build and run a server
 
 In this tutorial we show how to build and deploy a DAS gRPC server using Docker containers ([Docker documentation](https://docs.docker.com/)).
+
+We tested the tutorial in a Ubuntu 22.04 but it should work in previous versions of Ubuntu as well. If you tested it in another Ubuntu version or another OS and needed to make adjustment, please submit a PR so we can update this documentation.
 
 ## Step 1 - download Github repository
 
@@ -414,7 +417,7 @@ There are two other Docker images to build but this can be done while we put the
 $ ./scripts/service-up.sh
 ```
 
-After building the images it's supposed to output something like:
+After building the images, it's supposed to output something like this:
 
 ```
 Creating das_mongo_1     ... done
