@@ -388,6 +388,10 @@ We tested the tutorial in a Ubuntu 22.04 but it should work in previous versions
 
 ## Step 1 - download Github repository
 
+```
+$ git clone git@github.com:singnet/das.git
+```
+
 ## Step 2 - build service image
 
 There's a Bash script to build the service image.
