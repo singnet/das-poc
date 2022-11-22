@@ -106,6 +106,15 @@ def test_get_node():
     assert human_document["type"] == concept
     assert human_document["name"] == "human"
 
+def test_get_atom():
+    assert human == das.get_atom(human)
+    human_document = das.get_atom(human, output_format=QueryOutputFormat.ATOM_INFO)
+    assert human_document["handle"] == human
+    assert human_document["type"] == concept
+    assert human_document["name"] == "human"
+    link = das.get_link(inheritance, [human, mammal])
+    assert das.get_atom(link) == link
+
 def test_get_nodes():
     human_document = das.get_nodes(concept, "human", output_format=QueryOutputFormat.ATOM_INFO)[0]
     assert human_document["handle"] == human

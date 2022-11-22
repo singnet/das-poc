@@ -163,6 +163,21 @@ class DistributedAtomSpace:
     def count_atoms(self) -> Tuple[int, int]:
         return self.db.count_atoms()
 
+    def get_atom(self,
+        handle: str,
+        output_format: QueryOutputFormat = QueryOutputFormat.HANDLE) -> Union[str, Dict]:
+    
+        if output_format == QueryOutputFormat.HANDLE or not handle:
+            atom = self.db.get_atom_as_dict(handle)
+            return atom["handle"] if atom else ""
+        elif output_format == QueryOutputFormat.ATOM_INFO:
+            return self.db.get_atom_as_dict(handle)
+        elif output_format == QueryOutputFormat.JSON:
+            answer = self.db.get_atom_as_deep_representation(handle)
+            return json.dumps(answer, sort_keys=False, indent=4)
+        else:
+            raise ValueError(f"Invalid output format: '{output_format}'")
+
     def get_node(self,
         node_type: str,
         node_name: str,

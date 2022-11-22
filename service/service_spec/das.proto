@@ -11,6 +11,11 @@ message LoadRequest {
     string url = 2;
 }
 
+message AtomRequest {
+    string key = 1;
+    string handle = 2;
+    string output_format = 3;
+}
 message LinkRequest {
     string key = 1;
     string link_type = 2;
@@ -48,6 +53,7 @@ service ServiceDefinition {
     rpc check_das_status(DASKey) returns (Status) {}
     rpc clear(DASKey) returns (Status) {}
     rpc count(DASKey) returns (Status) {}
+    rpc get_atom(AtomRequest) returns (Status) {}
     rpc search_nodes(NodeRequest) returns (Status) {}
     rpc search_links(LinkRequest) returns (Status) {}
     rpc query(Query) returns (Status) {}

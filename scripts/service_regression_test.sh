@@ -58,6 +58,14 @@ if [ "$OUTPUT" != "$EXPECTED" ]; then
     exit 1
 fi
 
+OUTPUT=`docker exec -ti das_das_service_1 python3 service/client.py atom --das-key ${DAS} --handle "bdfe4e7a431f73386f37c6448afe5840" --output-format DICT`
+OUTPUT=${OUTPUT//$'\r'/}
+if [ $DEBUG == 1 ]; then echo ${OUTPUT}; fi
+if [ "${OUTPUT}" != "{'handle': 'bdfe4e7a431f73386f37c6448afe5840', 'type': 'Concept', 'name': 'mammal'}" ]; then
+    echo "atom FAILED"
+    exit 1
+fi
+
 docker exec -ti das_das_service_1 python3 service/client.py clear --das-key ${DAS}
 sleep 5
 
