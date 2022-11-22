@@ -1,4 +1,4 @@
-# GRPC wrapper for Distributed Atom Space (DAS)
+# gRPC wrapper for Distributed Atom Space (DAS)
 
 In this module we implement a server and a client to allow the use of DAS through gRPC calls ([gRPC documentation](https://grpc.io/docs/)).
 
@@ -8,7 +8,7 @@ The gRPC server is a wrapper which exposes all the public API of DAS. The gRPC c
 
 Later in this document we provide a step-by-step to build and run the server. For now, we assume there's a server running locally in the same machine.
 
-A DAS GRPC server can store more them one Distributed Atom Space from different users. You can use `das-cli.sh` to manipulate your DAS. `das-cli.sh` is a Command-line interface with a number of commands to create, populate que query DAS.
+A DAS gRPC server can store more them one Distributed Atom Space from different users. You can use `das-cli.sh` to manipulate your DAS. `das-cli.sh` is a Command-line interface with a number of commands to create, populate que query DAS.
 If you didn't build a DAS yet you need to create a new one. You can do this using the command `create`:
 
 ```
@@ -16,16 +16,16 @@ $ ./scripts/das-cli.sh create --new-das-name my_knowledge_base
 zkgftedbgvlwstjivhte
 ```
 
-After `create` returns, you have a new empty DAS named `my_knowledge_base` created in the DAS GRPC server. The command returns a key (`zkgftedbgvlwstjivhte` in our example) which need to be used in all the commands which manipulates or query this DAS.
+After `create` returns, you have a new empty DAS named `my_knowledge_base` created in the DAS gRPC server. The command returns a key (`zkgftedbgvlwstjivhte` in our example) which needs to be used in all the commands which manipulates or query this DAS.
 
-Your DAS is empty, meaning that it has 0 nodes and 0 links. You can confirm this by calling:
+Our DAS is empty, meaning that it has 0 nodes and 0 links. You can confirm this by calling:
 
 ```
 $ /scripts/das-cli.sh --das-key zkgftedbgvlwstjivhte count
 (0, 0)
 ```
 
-You can feed your knowledge base with MeTTa (.metta) or Atomese (.scm) files. Currently, the only way to do this is by calling the command `load` and passing a URL pointing to the file you want to be loaded.
+You can feed your knowledge base with MeTTa (`.metta`) or Atomese (`.scm`) files. Currently, the only way to do this is by calling the command `load` and passing a URL pointing to the file you want to be loaded.
 Lets use a simple MeTTa example file we have in the service repository:
 
 ```
@@ -40,7 +40,7 @@ $ ./scripts/das-cli.sh --das-key zkgftedbgvlwstjivhte check
 Ready
 ```
 
-It's possible to load multiple-file knowledge bases using zip'ed or tar'ed bases. I.e. the file pointed by the URL can be a `.zip`, `.tar` or `.tgz` with a set of `.metta` or `.scm` files (no recursion on sulbdirectories).
+It's possible to load multiple-file knowledge bases using zip'ed or tar'ed bases. I.e. the file pointed by the URL can be a `.zip`, `.tar` or `.tgz` with a set of `.metta` or `.scm` files (no recursion on sub-directories).
 
 Our example knowledge base is a simple one:
 
@@ -83,16 +83,16 @@ Our example knowledge base is a simple one:
 (Inheritance "ent" "plant")
 ```
 
-Let's check the node/link count again:
+![kbdiagram](documentation/kb_diagram.png 'Simple knowledge base')
+
+Let's check the node/link count again after loading it:
 
 ```
 $ ./scripts/das-cli.sh --das-key zkgftedbgvlwstjivhte count
 (14, 26)
 ```
 
-![kbdiagram](documentation/kb_diagram.png 'Simple knowledge base')
-
-We can query for nodes, links or logical expressions.
+Now we can query for nodes, links or logical expressions.
 
 ## Querying for nodes
 
@@ -303,9 +303,11 @@ The output is a set of possible assignments for $1, $2 and $2. Let us re-format 
     {'$1': 'c1db9b517073e51eb7ef6fed608ec204', '$2': 'b99ae727c787f1b13b452fd4c9ce1b9a', '$3': '0a32b476852eeb954979b87f5f6cb7af'}} # snake -> reptile -> animal
 ```
 
-The query string is a list of terms separated by commas. Each term can be a node definition, a link definition or an operator. In this example we have two link definitions and the operator AND.
+The query string is a list of terms separated by commas. Each term can be a node definition, a link definition or an operator. In this example we have two link definitions and the operator `AND`.
 
-A link definition is the keyword Link followed by link type and the expected targets for that link. In this case we used variables as targets. Operators are pos-fixed AND, OR and NOT. AND and OR operates on any number of arguments (>= 1) while NOT operates on a single argument.
+A link definition is the keyword `Link` followed by link type and the expected targets for that link. In this case we used variables as targets. Operators are pos-fixed `AND`, `OR` and `NOT`. `AND` and `OR` operates on any number of arguments (>= 1) while `NOT` operates on a single argument.
+
+**Important Note:** keywords, types and node names are case sensitive
 
 Lets redo the same query but excluding "mammals":
 
@@ -318,9 +320,9 @@ $ ./scripts/das-cli.sh --das-key zkgftedbgvlwstjivhte query --query "Node n1 Con
 }
 ```
 
-Nodes can be defined at the beginning of the query and used to build other query terms. They are not operated by operators and must be placed always as the first elements in a query, i.e. there can not be node definitions after the first Link term is defined.
+Nodes can be defined at the beginning of the query and used to build other query terms. They are not operated by operators and must be placed always as the first elements in a query, i.e. there can not be node definitions after the first `Link` term is defined.
 
-The NOT operator will operate `Link Inheritance \$1 n1` and the AND operator will operate on the resulting negation and the two passed Link terms.
+The `NOT` operator will operate `Link Inheritance \$1 n1` and the `AND` operator will operate on the resulting negation and the two passed `Link` terms.
 
 We could re-write this query like this, which will give the same output:
 
@@ -333,7 +335,7 @@ $ ./scripts/das-cli.sh --das-key zkgftedbgvlwstjivhte query --query "Node n1 Con
 }
 ```
 
-Now lets redo this query but adding any Inheritance links pointing to "human"
+Now lets redo this query but adding any "Inheritance" links pointing to "human"
 
 ```
 ./scripts/das-cli.sh --das-key zkgftedbgvlwstjivhte query --query "Node n1 Concept mammal, Node n2 Concept human, Link Inheritance \$1 \$2, Link Inheritance \$2 \$3, Link Inheritance \$1 n1, NOT, AND, Link Inheritance n2 \$2, OR"
@@ -347,7 +349,7 @@ Now lets redo this query but adding any Inheritance links pointing to "human"
 
 The answer for this query is the answer for the previous one plus a solution where `$2 == mammal` and the other variables don't care.
 
-Lets do another query example with OR. Now we'll search for any concepts that are similar to humans or snakes.
+Lets do another query example with `OR`. Now we'll search for any concepts that are similar to humans or snakes.
 
 ```
 ./scripts/das-cli.sh --das-key zkgftedbgvlwstjivhte query --query "Node n1 Concept human, Node n2 Concept snake, Link Similarity \$1 n1, Link Similarity \$1 n2, OR"
@@ -360,7 +362,7 @@ Lets do another query example with OR. Now we'll search for any concepts that ar
 }
 ```
 
-The asterisk '*' in the beginning of each assignment indicates an unordered assignment. This is not relevant for assignments with only one variable as the above but it's relevant when we have more than one variable. Let's search for concepts that are similar to eachother:
+The asterisk `*' in the beginning of each assignment indicates an unordered assignment. This is not relevant for assignments with only one variable as the above but it's relevant when we have more than one variable. Let's search for concepts that are similar to eachother:
 
 ```
 ./scripts/das-cli.sh --das-key iemxjwpwmkoildfjwecj query --query "Link Similarity \$1 \$2"
@@ -375,11 +377,11 @@ The asterisk '*' in the beginning of each assignment indicates an unordered assi
 }
 ```
 
-In these assignments, the values for $1 and $2 can are interchangeable.
+In these assignments, the values for $1 and $2 are interchangeable.
 
 # How to build and run a serve
 
-In this tutorial we show how to build and deploy a DAS GRPC server using Docker containers ([Docker documentation](https://docs.docker.com/)).
+In this tutorial we show how to build and deploy a DAS gRPC server using Docker containers ([Docker documentation](https://docs.docker.com/)).
 
 ## Step 1 - download Github repository
 
@@ -433,4 +435,4 @@ bf299b85e372   mongo         "docker-entrypoint.s…"   2 minutes ago   Up 2 min
 3d79b349fd60   couchbase     "/entrypoint.sh couc…"   2 minutes ago   Up 2 minutes   8096/tcp, 0.0.0.0:8091-8095->8091-8095/tcp, :::8091-8095->8091-8095/tcp, 11207/tcp, 11211/tcp, 0.0.0.0:11210->11210/tcp, :::11210->11210/tcp, 18091-18096/tcp   das_couchbase_1
 ```
 
-You are ready to go! At this point you are ready to submit requests to your GRPC server. 
+You are ready to go! At this point you are ready to submit requests to your gRPC server. 
