@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import traceback
 from concurrent import futures
 import string
 import random
@@ -88,6 +89,7 @@ class KnowledgeBaseLoader(Thread):
         self.url = url
 
     def run(self):
+        #TODO: make this block thread-safe
         temp_dir = tempfile.mkdtemp()
         os.system(f"wget -P {temp_dir} {self.url}")
         if self.url.endswith(".tgz"):
@@ -194,7 +196,8 @@ class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
             callable_method = getattr(DistributedAtomSpace, method)
             answer = callable_method(*[das, *args])
         except Exception as exception:
-            return self._error(str(exception))
+            formatted_lines = traceback.format_exc().splitlines()
+            return self._error(str(exception) + " " + str(formatted_lines))
         return self._success(str(answer))
         
     def clear(self, request, context):
@@ -204,6 +207,12 @@ class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
     def count(self, request, context):
         with self.locked_scope:
             return self._basic_das_call(request.key, "count_atoms", [])
+
+    def get_atom(self, request, context):
+        with self.locked_scope:
+            handle = request.handle
+            output_format = self.query_output_map[request.output_format]
+            return self._basic_das_call(request.key, "get_atom", [handle, output_format])
 
     def search_nodes(self, request, context):
         with self.locked_scope:

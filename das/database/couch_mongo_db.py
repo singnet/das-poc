@@ -271,10 +271,11 @@ class CouchMongoDB(DBInterface):
         document = self.node_documents.get(handle, None) if arity <= 0 else None
         if document is None:
             document = self._retrieve_mongo_document(handle, arity)
-            answer["handle"] = document[MongoFieldNames.ID_HASH]
-            answer["type"] = document[MongoFieldNames.TYPE_NAME]
-            answer["template"] = self._build_named_type_template(document[MongoFieldNames.COMPOSITE_TYPE])
-            answer["targets"] = self._get_mongo_document_keys(document)
+            if document:
+                answer["handle"] = document[MongoFieldNames.ID_HASH]
+                answer["type"] = document[MongoFieldNames.TYPE_NAME]
+                answer["template"] = self._build_named_type_template(document[MongoFieldNames.COMPOSITE_TYPE])
+                answer["targets"] = self._get_mongo_document_keys(document)
         else:
             answer["handle"] = document[MongoFieldNames.ID_HASH]
             answer["type"] = document[MongoFieldNames.TYPE_NAME]

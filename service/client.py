@@ -17,6 +17,7 @@ class ClientCommands(str, Enum):
     CHECK = "check"
     CLEAR = "clear"
     COUNT = "count"
+    ATOM = "atom"
     SEARCH_LINKS = "search_links"
     SEARCH_NODES = "search_nodes"
     QUERY = "query"
@@ -49,6 +50,8 @@ def main():
         help="Name of node being searched. Requires --node-type.")
     parser.add_argument("--link-type", type=str, 
         help="Type of links being searched. Only links of the passed type will be returned.")
+    parser.add_argument("--handle", type=str, 
+        help="The handle of node or link to be retrieved by 'atom' command.")
     parser.add_argument("--target-types", type=str, 
         help="Target types being searched. If something like 'type1,type2' is passed, only links " + \
              "whose target types are 'type1' and 'type2' are returned.")
@@ -104,6 +107,15 @@ def main():
             assert args.das_key
             das_key = pb2.DASKey(key=args.das_key)
             response = _check(stub.count(das_key))
+            print(f"{response.msg}")
+        elif command == ClientCommands.ATOM:
+            assert args.das_key
+            assert args.handle
+            atom_request = pb2.AtomRequest(
+                key=args.das_key,
+                handle=args.handle,
+                output_format=args.output_format)
+            response = _check(stub.get_atom(atom_request))
             print(f"{response.msg}")
         elif command == ClientCommands.SEARCH_NODES:
             assert args.das_key
