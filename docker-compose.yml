@@ -36,10 +36,14 @@ services:
 
   couchbase:
     image: couchbase
+    build:
+        context: .
+        dockerfile: Dockerfile.couchbase
     environment:
       - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
       - DAS_COUCHBASE_BUCKET_RAMSIZE=${DAS_COUCHBASE_BUCKET_RAMSIZE:-8192}
+      - COUCHBASE_SETUP_DIR=/opt/couchbase_setup
       - TZ=${TZ}
     ports:
       - "8091-8095:8091-8095"
@@ -50,7 +54,9 @@ services:
     volumes:
       - /tmp:/tmp
       - couchbasedata:/opt/couchbase/var
+      - couchbasesetup:/opt/couchbase_setup
 
 volumes:
   mongodbdata: { }
   couchbasedata: { }
+  couchbasesetup: { }
