@@ -40,6 +40,6 @@ setup() {
 
 # Couchbase initial setup (attempts=5)
 setup 5
-docker exec das_couchbase_1 mkdir /opt/couchbase_setup/new_das
+docker exec das_couchbase_1 mkdir -p /opt/couchbase_setup/new_das
 docker exec das_couchbase_1 chmod 777 /opt/couchbase_setup/new_das
 docker exec das_couchbase_1 couchbase_bucket_setup.sh &
