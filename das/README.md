@@ -22,7 +22,7 @@ export DAS_DATABASE_PASSWORD=dassecret
 docker-compose up -d
 
 # Setup Couchbase
-./scripts/setup_couchbase.sh
+./scripts/couchbase_test_setup.sh
 # > INFO: Waiting for Couchbase...
 # > SUCCESS: Cluster initialized
 # > SUCCESS: Bucket created
@@ -31,31 +31,36 @@ docker-compose up -d
 
 The command creates three containers:
 
-- `das_couchbase_1`
-- `das_mongo_1`
-- `das_app_1`
+- `das-couchbase-1`
+- `das-mongo-1`
+- `das-app-1`
 
 At this moment:
 
 - Is possible run scripts in `das` directory
 - The mongo database instance is available on port `27017`
-- There are some `.metta` files available in `/data` directory into the `das_app_1` container
+- There are some `.metta` files available in `/data` directory into the `das-app-1` container
     - Use `docker-compose exec app ls /data` to see them without need to attach the container.
+
+### Stop and reset environment
+
+```
+docker-compose rm -s -f -v
+docker volume rm das_couchbasedata das_couchbasesetup das_mongodbdata
+```
 
 ### Uploading MeTTa data to MongoDB
 
-The `das_upload_to_mongo.py` script loads MeTTa files into a specified mongo database.
+The `load_das.py` script loads MeTTa files into a mongo database.
 
 ```sh
 # show help message
-docker-compose exec app python das/das_upload_to_mongo.py --help
+docker-compose exec app python scripts/load_das.py --help
 
-# load data from file.metta to mongo database with default config to connection
-docker-compose exec app python das/das_upload_to_mongo.py file.metta
-
-# the following command load data from /data/Go-Plus-UBERON_2020-10-20.metta file
-# into a mongo database named UBERON
-docker-compose exec app python das/das_upload_to_mongo.py -d UBERON /data/Go-Plus-UBERON_2020-10-20.metta
+# load data from ./data/annotation_service/ChEBI2Reactome_PE_Pathway.txt_2020-10-20.metta
+# to mongo database with default config to connection
+docker-compose exec app python scripts/load_das.py --knowledge-base \
+    ./data/annotation_service/ChEBI2Reactome_PE_Pathway.txt_2020-10-20.metta
 ```
 
 ### Populating Couchbase from file
@@ -83,20 +88,20 @@ docker-compose exec app python das/das_upload_to_couch_from_file.py --file-path 
 
 There are 2 exceptional tests here to pay attention to:
 
-- `das/pattern_matching/pattern_matcher_test.py`; and
-- `das/pattern_matching/regression.py`.
+- `das/pattern_matcher/pattern_matcher_test.py`; and
+- `das/pattern_matcher/regression.py`.
 
 Both them are runned with different commands.
 
 The first one is runned with the following command:
 ```bash
-pytest das/pattern_matching/pattern_matcher_test.py
+pytest das/pattern_matcher/pattern_matcher_test.py
 ```
 > It is runned directly, not being captured just by running `pytest`.
 
 The second one is an integration test that is runned as follows:
 ```bash
-PYTHONPATH=.:$PYTHONPATH python das/pattern_matching/regression.py
+PYTHONPATH=.:$PYTHONPATH python scripts/regression.py
 ```
 
 ## Docker Volumes
