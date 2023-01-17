@@ -424,9 +424,9 @@ $ ./scripts/service-up.sh
 After building the images, it's supposed to output something like this:
 
 ```
-Creating das_mongo_1     ... done
-Creating das_couchbase_1 ... done
-Creating das_das_service_1 ... done
+Creating das-mongo-1     ... done
+Creating das-couchbase-1 ... done
+Creating das-das_service-1 ... done
 INFO: Waiting for Couchbase...
 SUCCESS: Cluster initialized
 SUCCESS: Couchbase is ready.
@@ -437,9 +437,9 @@ At this point you should have three Docker containers running. You can inspect t
 ```
 $ docker ps
 CONTAINER ID   IMAGE         COMMAND                  CREATED         STATUS         PORTS                                                                                                                                                           NAMES
-11fd5d80265c   das_service   "python3 service/ser…"   2 minutes ago   Up 2 minutes                                                                                                                                                                   das_das_service_1
-bf299b85e372   mongo         "docker-entrypoint.s…"   2 minutes ago   Up 2 minutes   0.0.0.0:27017->27017/tcp, :::27017->27017/tcp                                                                                                                   das_mongo_1
-3d79b349fd60   couchbase     "/entrypoint.sh couc…"   2 minutes ago   Up 2 minutes   8096/tcp, 0.0.0.0:8091-8095->8091-8095/tcp, :::8091-8095->8091-8095/tcp, 11207/tcp, 11211/tcp, 0.0.0.0:11210->11210/tcp, :::11210->11210/tcp, 18091-18096/tcp   das_couchbase_1
+11fd5d80265c   das_service   "python3 service/ser…"   2 minutes ago   Up 2 minutes                                                                                                                                                                   das-das_service-1
+bf299b85e372   mongo         "docker-entrypoint.s…"   2 minutes ago   Up 2 minutes   0.0.0.0:27017->27017/tcp, :::27017->27017/tcp                                                                                                                   das-mongo-1
+3d79b349fd60   couchbase     "/entrypoint.sh couc…"   2 minutes ago   Up 2 minutes   8096/tcp, 0.0.0.0:8091-8095->8091-8095/tcp, :::8091-8095->8091-8095/tcp, 11207/tcp, 11211/tcp, 0.0.0.0:11210->11210/tcp, :::11210->11210/tcp, 18091-18096/tcp   das-couchbase-1
 ```
 
 You are ready to go! At this point you are ready to submit requests to your gRPC server. 

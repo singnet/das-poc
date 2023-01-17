@@ -31,15 +31,15 @@ docker-compose up -d
 
 The command creates three containers:
 
-- `das_couchbase_1`
-- `das_mongo_1`
-- `das_app_1`
+- `das-couchbase-1`
+- `das-mongo-1`
+- `das-app-1`
 
 At this moment:
 
 - Is possible run scripts in `das` directory
 - The mongo database instance is available on port `27017`
-- There are some `.metta` files available in `/data` directory into the `das_app_1` container
+- There are some `.metta` files available in `/data` directory into the `das-app-1` container
     - Use `docker-compose exec app ls /data` to see them without need to attach the container.
 
 ### Uploading MeTTa data to MongoDB
