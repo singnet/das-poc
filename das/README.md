@@ -42,6 +42,13 @@ At this moment:
 - There are some `.metta` files available in `/data` directory into the `das-app-1` container
     - Use `docker-compose exec app ls /data` to see them without need to attach the container.
 
+### Stop and reset environment
+
+```
+docker-compose rm -s -f -v
+docker volume rm das_couchbasedata das_couchbasesetup das_mongodbdata
+```
+
 ### Uploading MeTTa data to MongoDB
 
 The `das_upload_to_mongo.py` script loads MeTTa files into a specified mongo database.
