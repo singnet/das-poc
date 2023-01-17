@@ -22,7 +22,7 @@ export DAS_DATABASE_PASSWORD=dassecret
 docker-compose up -d
 
 # Setup Couchbase
-./scripts/setup_couchbase.sh
+./scripts/couchbase_test_setup.sh
 # > INFO: Waiting for Couchbase...
 # > SUCCESS: Cluster initialized
 # > SUCCESS: Bucket created
