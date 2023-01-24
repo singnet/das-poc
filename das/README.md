@@ -8,15 +8,8 @@ These scripts run actions related to DAS context (Eg. conversion, loading).
 Assuming there is a running console where the current directory is the root of this project:
 
 ```sh
-# MongoDB variables
-export DAS_MONGODB_HOSTNAME=mongo
-export DAS_MONGODB_PORT=27017
-# Couchbase variables (Using 8Gb of RAM)
-export DAS_COUCHBASE_HOSTNAME=couchbase
-export DAS_COUCHBASE_BUCKET_RAMSIZE=$((8*1024))
-# Change the following values when running on a public instance (used by MongoDB and Couchbase)
-export DAS_DATABASE_USERNAME=dbadmin
-export DAS_DATABASE_PASSWORD=dassecret
+# Export necessary environment
+source environment
 
 # Build and run containers
 docker-compose up -d
