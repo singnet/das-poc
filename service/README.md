@@ -415,6 +415,11 @@ das_service   latest    fb5f0224202f   2 minutes ago   1.95GB
 
 ## Step 3 - build extra docker images and start the service
 
+Prepare environment, by exporting all necessary variables:
+```
+$ source environment
+```
+
 There are two other Docker images to build but this can be done while we put the service container up. Just call the following:
 
 ```
