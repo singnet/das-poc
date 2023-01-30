@@ -5,9 +5,8 @@ from enum import Enum, auto
 import sqlparse
 
 SQL_LINES_PER_CHUNK = 3000000
-fname = '/tmp/FB2022_05.sql'
-#fname = '/tmp/cut.sql'
-#fname = '/tmp/cut2.sql'
+SQL_FILE = '/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql'
+OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
 SCHEMA_ONLY = False
 SHOW_PROGRESS = True
 
@@ -48,11 +47,11 @@ class LazyParser():
         self.current_table_header = None
         self.current_output_file_number = 1
         base_name = sql_file_name.split("/")[-1].split(".")[0]
-        self.target_dir = f"/tmp/{base_name}"
+        self.target_dir = f"/{OUTPUT_DIR}/{base_name}"
         self.current_output_file = None
-        self.error_file_name = f"/tmp/{base_name}_errors.txt"
+        self.error_file_name = f"/{OUTPUT_DIR}/{base_name}_errors.txt"
         self.error_file = None
-        self.schema_file_name = f"/tmp/{base_name}_schema.txt"
+        self.schema_file_name = f"/{OUTPUT_DIR}/{base_name}_schema.txt"
         self.schema_file = None
         self.errors = False
         self.current_table_node = None
@@ -61,6 +60,7 @@ class LazyParser():
         self.all_types = set()
         self.current_field_types = {}
         self.discarded_tables = []
+        self.line_count = None
 
         Path(self.target_dir).mkdir(parents=True, exist_ok=True)
         for filename in os.listdir(self.target_dir):
@@ -220,7 +220,9 @@ class LazyParser():
         fkeys = table['foreign_keys']
         assert pkey,f"self.current_table = {self.current_table} pkey = {pkey} \n{table}"
         data = line.split("\t")
-        assert len(self.current_table_header) == len(data)
+        if len(self.current_table_header) != len(data):
+            self._error(f"Invalid row at line {self.line_count} Table: {self.current_table} Header: {self.current_table_header} Raw line: <{line}>")
+            return
         pkey_node = None
         for name, value in zip(self.current_table_header, data):
             if name == pkey:
@@ -276,7 +278,7 @@ class LazyParser():
         PRIMARY_KEY = " PRIMARY KEY "
         FOREIGN_KEY = " FOREIGN KEY "
         text = ""
-        line_count = 0
+        self.line_count = 0
         file_size = 557414268
 
         state = State.WAIT_KNOWN_COMMAND
@@ -284,9 +286,9 @@ class LazyParser():
             line = file.readline()
             previous_line = None
             while line:
-                line_count += 1
+                self.line_count += 1
                 if SHOW_PROGRESS:
-                    self._print_progress_bar(line_count, file_size, length=50)
+                    self._print_progress_bar(self.line_count, file_size, length=50)
                 line = line.replace('\n', '').strip()
                 if state == State.WAIT_KNOWN_COMMAND:
                     if line.startswith(CREATE_TABLE_PREFIX):
@@ -314,7 +316,7 @@ class LazyParser():
         COPY_PREFIX = "COPY "
         COPY_SUFFIX = "\."
         text = ""
-        line_count = 0
+        self.line_count = 0
         chunk_count = 0
         file_size = 557414268
 
@@ -328,13 +330,13 @@ class LazyParser():
         with open(self.sql_file_name, 'r') as file:
             line = file.readline()
             while line:
-                line_count += 1
+                self.line_count += 1
                 chunk_count += 1
                 if chunk_count == SQL_LINES_PER_CHUNK:
                     self._checkpoint()
                     chunk_count = 0
                 if SHOW_PROGRESS:
-                    self._print_progress_bar(line_count, file_size, length=50)
+                    self._print_progress_bar(self.line_count, file_size, length=50)
                 line = line.replace('\n', '').strip()
                 if state == State.WAIT_KNOWN_COMMAND:
                     if line.startswith(COPY_PREFIX):
@@ -361,10 +363,10 @@ class LazyParser():
         self._tear_down()
 
 def main():
-    #schema = parse_from_file(fname)
+    #schema = parse_from_file(SQL_FILE)
     #print(schema)
 
-    #with open(fname, 'r') as file:
+    #with open(SQL_FILE, 'r') as file:
     #    sql_string = file.read().replace('\n', '')
     #statements = sqlparse.split(sql_string)
     #print("---------------")
@@ -374,7 +376,7 @@ def main():
     #    print(statement)
     #print("---------------")
 
-    parser = LazyParser(fname)
+    parser = LazyParser(SQL_FILE)
     parser.parse()
 
     #for t in sorted(parser.all_types):
