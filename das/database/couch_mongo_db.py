@@ -44,6 +44,14 @@ class CouchMongoDB(DBInterface):
             self.typedef_base_type_hash,
             self.typedef_base_type_hash])
 
+        self.named_type_hash = {}
+        self.named_type_hash_reverse = {}
+        self.named_types = {}
+        self.symbol_hash = {}
+        self.terminal_hash = {}
+        self.parent_type = {}
+        self.node_documents = {}
+
     def _get_atom_type_hash(self, atom_type):
         #TODO: implement a proper mongo collection to atom types so instead
         #      of this lazy hashmap, we should load the hashmap during prefetch

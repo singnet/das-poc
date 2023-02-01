@@ -1,3 +1,4 @@
+import os
 from typing import List, Tuple
 from abc import ABC, abstractmethod
 from das.expression import Expression
@@ -63,6 +64,8 @@ class KnowledgeBaseFile(MultiThreadParsing):
 
     def __init__(self, db: DBInterface, file_path: str, shared_data: SharedData):
         self.file_path = file_path
+        self.input_line_count = int(os.popen(f"wc -l {file_path}").read().split()[0])
+        self.progress_chunk_size = self.input_line_count // 100
         with open(file_path, "r") as file_handle:
             input_string = file_handle.read()
         super().__init__(db, input_string, shared_data)

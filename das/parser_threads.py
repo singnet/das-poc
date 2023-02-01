@@ -46,39 +46,39 @@ class SharedData():
         self.pattern_black_list = []
 
     def add_regular_expression(self, expression: Expression) -> None:
-        self.lock_regular_expressions.acquire()
+        #self.lock_regular_expressions.acquire()
         self.regular_expressions.add(expression)
-        self.lock_regular_expressions.release()
+        #self.lock_regular_expressions.release()
 
     def replicate_regular_expressions(self) -> None:
-        self.lock_regular_expressions.acquire()
+        #self.lock_regular_expressions.acquire()
         self.regular_expressions_list = [expression for expression in self.regular_expressions]
-        self.lock_regular_expressions.release()
+        #self.lock_regular_expressions.release()
         
     def add_typedef_expression(self, expression: Expression) -> None:
-        self.lock_typedef_expressions.acquire()
+        #self.lock_typedef_expressions.acquire()
         self.typedef_expressions.add(expression)
-        self.lock_typedef_expressions.release()
+        #self.lock_typedef_expressions.release()
         
     def add_terminal(self, terminal: Expression) -> None:
-        self.lock_terminals.acquire()
+        #self.lock_terminals.acquire()
         self.terminals.add(terminal)
-        self.lock_terminals.release()
+        #self.lock_terminals.release()
 
     def parse_ok(self):
-        self.lock_parse_ok_count.acquire()
+        #self.lock_parse_ok_count.acquire()
         self.parse_ok_count += 1
-        self.lock_parse_ok_count.release()
+        #self.lock_parse_ok_count.release()
 
     def build_ok(self):
-        self.lock_build_ok_count.acquire()
+        #self.lock_build_ok_count.acquire()
         self.build_ok_count += 1
-        self.lock_build_ok_count.release()
+        #self.lock_build_ok_count.release()
 
     def process_ok(self):
-        self.lock_process_ok_count.acquire()
+        #self.lock_process_ok_count.acquire()
         self.process_ok_count += 1
-        self.lock_process_ok_count.release()
+        #self.lock_process_ok_count.release()
         
 def _write_key_value(file, key, value):
     if isinstance(key, list):
@@ -161,6 +161,8 @@ class ParserThread(Thread):
             parser = MettaYacc(
                 action_broker=self.parser_actions_broker, 
                 use_action_broker_cache=self.use_action_broker_cache)
+        parser.lex_wrap.progress_chunk_size = self.parser_actions_broker.progress_chunk_size
+        parser.lex_wrap.input_line_count = self.parser_actions_broker.input_line_count
         parser.parse_action_broker_input()
         self.parser_actions_broker.shared_data.parse_ok()
         elapsed = (time.perf_counter() - stopwatch_start) // 60

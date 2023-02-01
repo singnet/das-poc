@@ -1,5 +1,6 @@
 import ply.lex as lex
 from das.exceptions import MettaLexerError
+from das.logger import logger
  
 BASIC_TYPE = 'Type'
 
@@ -20,14 +21,17 @@ class MettaLex:
         ] + list(self.reserved.values())
 
         self.t_TYPE_DEFINITION_MARK = r'\:'
-        self.t_EXPRESSION_OPENNING = r'\('
-        self.t_EXPRESSION_CLOSING = r'\)'
+        self.t_EXPRESSION_OPENNING = r'\(|\{'
+        self.t_EXPRESSION_CLOSING = r'\)|\}'
 
         self.lexer = lex.lex(module=self, **kwargs)
         self.lexer.eof_reported_flag = False
         self.action_broker = None
         self.eof_handler = self.default_eof_handler
         self.lexer.filename = ""
+        self.progress_chunk_count = 0
+        self.progress_chunk_size = None
+        self.input_line_count = None
 
     def t_TERMINAL_NAME(self, t):
         r'\"[^\"]+\"'
@@ -44,6 +48,11 @@ class MettaLex:
     def t_newline(self, t):
         r'\n+'
         t.lexer.lineno += len(t.value)
+        self.progress_chunk_count += 1
+        if self.progress_chunk_count >= self.progress_chunk_size:
+            percent = ("{0:.0f}").format(100 * (t.lexer.lineno / float(self.input_line_count)))
+            logger().info(f"Parser progress: {t.lexer.lineno} / {self.input_line_count} ({percent}%)")
+            self.progress_chunk_count = 0
 
     def t_eof(self, t):
         return self.eof_handler(t)

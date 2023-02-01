@@ -58,7 +58,7 @@ class DistributedAtomSpace:
                 pass
 
         self.db = CouchMongoDB(self.couch_db, self.mongo_db)
-        self.db.prefetch()
+        #self.db.prefetch()
 
     def _get_file_list(self, source):
         """
@@ -147,7 +147,7 @@ class DistributedAtomSpace:
         for thread in file_processor_threads:
             thread.join()
         assert shared_data.process_ok_count == len(file_processor_threads)
-        self.db.prefetch()
+        #self.db.prefetch()
 
 
     # Public API
