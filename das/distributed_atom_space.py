@@ -21,6 +21,7 @@ from das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread
 from das.logger import logger
 from das.database.db_interface import WILDCARD
 from das.transaction import Transaction
+from das.canonical_parser import CanonicalParser
 from das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression
 
 class QueryOutputFormat(int, Enum):
@@ -331,3 +332,49 @@ class DistributedAtomSpace:
             thread.join()
         assert shared_data.parse_ok_count == len(parser_threads)
         self._process_parsed_data(shared_data, False)
+
+    def load_canonical_knowledge_base(self, source):
+        """
+        This method loads a MeTTa knowledge base under certain assumptions:
+
+            * The DBs are empty.
+            * All MeTTa files have exactly one toplevel expression per line.
+            * There are no empty lines.
+            * Every "named" expressions (e.g. nodes) mentioned in a given
+              expression is already mentioned in a typedef (i.e. something
+              like '(: "my_node_name" my_type)' previously IN THE SAME FILE).
+            * Every type mentioned in a typedef is already defined IN THE SAME FILE.
+            * All expressions are normalized (regarding separators, parenthesis etc)
+              like '(: "my_node_name" my_type)' or
+              '(Evaluation "name" (Evaluation "name" (List "name" "name")))'. No tabs,
+              no double spaces, no spaces after '(', etc.
+            * All typedefs appear before any regular expressions
+            * Among typedefs, any terminal types (e.g. '(: "my_node_name" my_type)') appear
+              after all actual type definitions (e.g. '(: Concept Type)')
+
+        A typycal canonical file have all type definition expressions, followed by terminal
+        type definition followed by the expressions. Something like:
+
+        (: Evaluation Type)
+        (: Predicate Type)
+        (: Reactome Type)
+        (: Concept Type)
+        (: Set Type)
+        (: "Predicate:has_name" Predicate)
+        (: "Reactome:R-HSA-164843" Reactome)
+        (: "Reactome:R-HSA-164842" Reactome)
+        (: "Concept:2-LTR circle formation" Concept)
+        (Evaluation "Predicate Predicate:has_name" (Evaluation "Predicate Predicate:has_name" (List "Reactome Reactome:R-HSA-164843" "Concept Concept:2-LTR circle formation")))
+        (Evaluation "Predicate Predicate:has_name" (Evaluation "Predicate Predicate:has_name" (List "Reactome Reactome:R-HSA-164842" "Concept Concept:2-LTR circle formation B")))
+
+        Typically this method is used to load huge knowledge bases generated (or translated
+        to MeTTa) by an automated tool.
+        """
+        logger().info(f"Loading canonical knowledge base")
+        knowledge_base_file_list = self._get_file_list(source)
+        for file_name in knowledge_base_file_list:
+            logger().info(f"Knowledge base file: {file_name}")
+        canonical_parser = CanonicalParser()
+        for file_name in knowledge_base_file_list:
+            canonical_parser.parse(file_name)
+        #canonical_parser.populate_indexes()
