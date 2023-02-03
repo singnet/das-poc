@@ -22,8 +22,7 @@ class CanonicalParser:
             
     def _check(self, flag):
         if not flag:
-            print(f"Line {self.current_line_count}: {self.current_line}")
-            print(f"Current state: {self.current_state.name}")
+            print(f"({self.current_state.name}) Line #{self.current_line_count}: {self.current_line}")
             assert False
         
     def parse(self, path):

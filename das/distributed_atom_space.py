@@ -351,6 +351,7 @@ class DistributedAtomSpace:
             * All typedefs appear before any regular expressions
             * Among typedefs, any terminal types (e.g. '(: "my_node_name" my_type)') appear
               after all actual type definitions (e.g. '(: Concept Type)')
+            * No "(" or ")" in atom names
 
         A typycal canonical file have all type definition expressions, followed by terminal
         type definition followed by the expressions. Something like:
