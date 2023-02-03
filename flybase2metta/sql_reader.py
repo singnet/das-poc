@@ -182,10 +182,12 @@ class LazyParser():
         # metta
         if node_type in TYPED_NAME:
             quoted_node_name = f'"{node_type}:{node_name}"'
+            quoted_canonical_node_name = f'"{node_type} {node_type}:{node_name}"'
         else:
             quoted_node_name = f'"{node_name}"'
+            quoted_canonical_node_name = f'"{node_type} {node_name}"'
         self.current_node_set.add(f"(: {quoted_node_name} {node_type})")
-        return quoted_node_name
+        return quoted_canonical_node_name
 
     def _add_inheritance(self, node1, node2):
         # metta
