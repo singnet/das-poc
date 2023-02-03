@@ -111,7 +111,7 @@ class LazyParser():
     def _open_new_output_file(self):
         if self.current_output_file_number > 1:
             self.current_output_file.close()
-        fname = f"{self.target_dir}/file_{self.current_output_file_number}.metta"
+        fname = f"{self.target_dir}/file_{str(self.current_output_file_number).zfill(3)}.metta"
         self.current_output_file_number += 1
         self.current_output_file = open(fname, "w")
         self._emit_file_header()
