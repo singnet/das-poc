@@ -1,0 +1,8 @@
+#!/bin/bash
+
+mongoexport --jsonFormat=canonical -d das -c nodes --authenticationDatabase=admin --uri=mongodb://dbadmin:dassecret@localhost:27017/ >> $1.nodes
+sort -o $1.nodes $1.nodes
+mongoexport --jsonFormat=canonical -d das -c links_2 --authenticationDatabase=admin --uri=mongodb://dbadmin:dassecret@localhost:27017/ >> $1.links_2
+sort -o $1.links_2 $1.links_2
+mongoexport --jsonFormat=canonical -d das -c atom_types --authenticationDatabase=admin --uri=mongodb://dbadmin:dassecret@localhost:27017/ > $1.atom_types
+sort -o $1.atom_types $1.atom_types

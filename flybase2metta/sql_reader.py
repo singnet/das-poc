@@ -111,7 +111,7 @@ class LazyParser():
     def _open_new_output_file(self):
         if self.current_output_file_number > 1:
             self.current_output_file.close()
-        fname = f"{self.target_dir}/file_{self.current_output_file_number}.metta"
+        fname = f"{self.target_dir}/file_{str(self.current_output_file_number).zfill(3)}.metta"
         self.current_output_file_number += 1
         self.current_output_file = open(fname, "w")
         self._emit_file_header()
@@ -180,12 +180,16 @@ class LazyParser():
 
     def _add_node(self, node_type, node_name):
         # metta
+        node_name = node_name.replace("(", "[")
+        node_name = node_name.replace(")", "]")
         if node_type in TYPED_NAME:
             quoted_node_name = f'"{node_type}:{node_name}"'
+            quoted_canonical_node_name = f'"{node_type} {node_type}:{node_name}"'
         else:
             quoted_node_name = f'"{node_name}"'
+            quoted_canonical_node_name = f'"{node_type} {node_name}"'
         self.current_node_set.add(f"(: {quoted_node_name} {node_type})")
-        return quoted_node_name
+        return quoted_canonical_node_name
 
     def _add_inheritance(self, node1, node2):
         # metta
