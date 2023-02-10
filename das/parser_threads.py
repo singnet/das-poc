@@ -5,18 +5,12 @@ from threading import Thread, Lock
 from das.expression import Expression
 from das.database.mongo_schema import CollectionNames as MongoCollections
 from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
-from das.expression_hasher import ExpressionHasher
 from das.metta_yacc import MettaYacc
 from das.atomese_yacc import AtomeseYacc
 from das.database.db_interface import DBInterface
 from das.database.db_interface import DBInterface, WILDCARD
 from das.logger import logger
-
-# There is a Couchbase limitation for long values (max: 20Mb)
-# So we set the it to ~15Mb, if this max size is reached
-# we create a new key to store the next 15Mb batch and so on.
-# TODO: move this constant to a proper place
-MAX_COUCHBASE_BLOCK_SIZE = 500000
+from das.key_value_file import write_key_value, key_value_generator, key_value_targets_generator
 
 class SharedData():
     def __init__(self):
@@ -80,70 +74,6 @@ class SharedData():
         self.process_ok_count += 1
         self.lock_process_ok_count.release()
         
-def _write_key_value(file, key, value):
-    if isinstance(key, list):
-        key = ExpressionHasher.composite_hash(key)
-    if isinstance(value, list):
-        value = ",".join(value)
-    line = f"{key},{value}"
-    file.write(line)
-    file.write("\n")
-
-def _key_value_generator(input_filename, *, block_size=MAX_COUCHBASE_BLOCK_SIZE, merge_rest=False):
-    last_key = ''
-    last_list = []
-    block_count = 0
-    with open(input_filename, 'r') as fh:
-        for line in fh:
-            line = line.strip()
-            if line == '':
-                continue
-            if merge_rest:
-                v = line.split(",")
-                key = v[0]
-                value = ",".join(v[1:])
-            else:
-                key, value = line.split(",")
-            if last_key == key:
-                last_list.append(value)
-                if len(last_list) >= block_size:
-                    yield last_key, last_list, block_count
-                    block_count += 1
-                    last_list = []
-            else:
-                if last_key != '':
-                    yield last_key, last_list, block_count
-                block_count = 0
-                last_key = key
-                last_list = [value]
-    if last_key != '':
-        yield last_key, last_list, block_count
-
-def _key_value_targets_generator(input_filename, *, block_size=MAX_COUCHBASE_BLOCK_SIZE/4, merge_rest=False):
-    last_key = ''
-    last_list = []
-    block_count = 0
-    with open(input_filename, 'r') as fh:
-        for line in fh:
-            line = line.strip()
-            if line == '':
-                continue
-            key, value, *targets = line.split(",")
-            if last_key == key:
-                last_list.append(tuple([value, tuple(targets)]))
-                if len(last_list) >= block_size:
-                    yield last_key, last_list, block_count
-                    block_count += 1
-                    last_list = []
-            else:
-                if last_key != '':
-                    yield last_key, last_list, block_count
-                block_count = 0
-                last_key = key
-                last_list = [tuple([value, tuple(targets)])]
-    if last_key != '':
-        yield last_key, last_list, block_count
-
 class ParserThread(Thread):
 
     def __init__(self, parser_actions_broker: "ParserActions", use_action_broker_cache: bool = False):
@@ -197,7 +127,7 @@ class FlushNonLinksToDBThread(Thread):
         while self.shared_data.terminals:
             terminal = self.shared_data.terminals.pop()
             bulk_insertion.append(terminal.to_dict())
-            _write_key_value(named_entities, terminal.hash_code, terminal.terminal_name)
+            write_key_value(named_entities, terminal.hash_code, terminal.terminal_name)
         named_entities.close()
         if bulk_insertion:
             mongo_collection = self.db.mongo_db[MongoCollections.NODES]
@@ -224,8 +154,8 @@ class BuildConnectivityThread(Thread):
         for i in range(len(self.shared_data.regular_expressions_list)):
             expression = self.shared_data.regular_expressions_list[i]
             for element in expression.elements:
-                _write_key_value(outgoing, expression.hash_code, element)
-                _write_key_value(incoming, element, expression.hash_code)
+                write_key_value(outgoing, expression.hash_code, element)
+                write_key_value(incoming, element, expression.hash_code)
         outgoing.close()
         incoming.close()
         os.system(f"sort -t , -k 1,1 {outgoing_file_name} > {outgoing_file_name}.sorted")
@@ -285,7 +215,7 @@ class BuildPatternsThread(Thread):
                     keys.append([WILDCARD, WILDCARD, WILDCARD, expression.elements[2]])
                     keys.append([WILDCARD, WILDCARD, WILDCARD, WILDCARD])
             for key in keys:
-                _write_key_value(patterns, key, [expression.hash_code, *expression.elements])
+                write_key_value(patterns, key, [expression.hash_code, *expression.elements])
         patterns.close()
         os.system(f"sort -t , -k 1,1 {file_name} > {file_name}.sorted")
         os.rename(f"{file_name}.sorted", file_name)
@@ -306,11 +236,11 @@ class BuildTypeTemplatesThread(Thread):
         template = open(file_name, "w")
         for i in range(len(self.shared_data.regular_expressions_list)):
             expression = self.shared_data.regular_expressions_list[i]
-            _write_key_value(
+            write_key_value(
                 template,
                 expression.composite_type_hash, 
                 [expression.hash_code, *expression.elements])
-            _write_key_value(
+            write_key_value(
                 template,
                 expression.named_type_hash,
                 [expression.hash_code, *expression.elements])
@@ -391,7 +321,7 @@ class PopulateCouchbaseCollectionThread(Thread):
         logger().info(f"Couchbase collection uploader thread {self.name} (TID {self.native_id}) started. " + \
             f"Uploading {self.collection_name}")
         stopwatch_start = time.perf_counter()
-        generator = _key_value_targets_generator if self.use_targets else _key_value_generator
+        generator = key_value_targets_generator if self.use_targets else key_value_generator
         for key, value, block_count in generator(file_name, merge_rest=self.merge_rest):
             assert not (block_count > 0 and self.update)
             if block_count == 0:

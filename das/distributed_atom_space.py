@@ -36,6 +36,7 @@ class DistributedAtomSpace:
         self.db = None
         logger().info(f"New Distributed Atom Space. Database name: {self.database_name}")
         self._setup_database()
+        self.pattern_black_list = []
 
     def _setup_database(self):
         hostname = os.environ.get('DAS_MONGODB_HOSTNAME')
@@ -317,6 +318,7 @@ class DistributedAtomSpace:
         for file_name in knowledge_base_file_list:
             logger().info(f"Knowledge base file: {file_name}")
         shared_data = SharedData()
+        shared_data.pattern_black_list = self.pattern_black_list
 
         parser_threads = [
             ParserThread(KnowledgeBaseFile(self.db, file_name, shared_data))
@@ -352,6 +354,7 @@ class DistributedAtomSpace:
             * Among typedefs, any terminal types (e.g. '(: "my_node_name" my_type)') appear
               after all actual type definitions (e.g. '(: Concept Type)')
             * No "(" or ")" in atom names
+            * Flat type hierarchy (i.e. all types inherit from Type)
 
         A typycal canonical file have all type definition expressions, followed by terminal
         type definition followed by the expressions. Something like:
@@ -375,7 +378,8 @@ class DistributedAtomSpace:
         knowledge_base_file_list = self._get_file_list(source)
         for file_name in knowledge_base_file_list:
             logger().info(f"Knowledge base file: {file_name}")
-        canonical_parser = CanonicalParser()
+        canonical_parser = CanonicalParser(self.db, False)
+        canonical_parser.pattern_black_list = self.pattern_black_list
         for file_name in knowledge_base_file_list:
             canonical_parser.parse(file_name)
         #canonical_parser.populate_indexes()
