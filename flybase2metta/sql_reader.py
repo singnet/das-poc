@@ -4,7 +4,8 @@ import os, shutil
 from enum import Enum, auto
 import sqlparse
 
-SQL_LINES_PER_CHUNK = 3000000
+#SQL_LINES_PER_CHUNK = 3000000
+SQL_LINES_PER_CHUNK = 3000000000
 SQL_FILE = '/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql'
 OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
 SCHEMA_ONLY = False
@@ -13,13 +14,14 @@ SHOW_PROGRESS = True
 class AtomTypes(str, Enum):
     CONCEPT = "Concept"
     PREDICATE = "Predicate"
+    SCHEMA = "Schema"
     NUMBER = "Number"
     VERBATIM = "Verbatim"
     INHERITANCE = "Inheritance"
     EVALUATION = "Evaluation"
     LIST = "List"
 
-TYPED_NAME = [AtomTypes.CONCEPT, AtomTypes.PREDICATE]
+TYPED_NAME = [AtomTypes.CONCEPT, AtomTypes.PREDICATE, AtomTypes.SCHEMA]
 
 class State(int, Enum):
     WAIT_KNOWN_COMMAND = auto()
@@ -201,6 +203,11 @@ class LazyParser():
         if predicate and node1 and node2:
             self.current_link_list.append(f"({AtomTypes.EVALUATION} {predicate} ({AtomTypes.LIST} {node1} {node2}))")
 
+    def _add_execution(self, schema, node1, node2):
+        # metta
+        if predicate and node1 and node2:
+            self.current_link_list.append(f"({AtomTypes.SCHEMA} {schema} {node1} {node2})")
+
     def _add_value_node(self, field_type, value):
         if value == "\\N":
             return None
@@ -249,8 +256,8 @@ class LazyParser():
                 value_node = self._add_value_node(ftype, value)
                 if not value_node:
                     continue
-                predicate_node = self._add_node(AtomTypes.PREDICATE, _compose_name(table_short_name, name))
-                self._add_evaluation(predicate_node, pkey_node, value_node)
+                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(table_short_name, name))
+                self._add_execution(schema_node, pkey_node, value_node)
 
     def _primary_key(self, first_line, second_line):
         line = first_line.split()
