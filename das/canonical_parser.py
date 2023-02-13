@@ -12,6 +12,8 @@ class State(str, Enum):
     READING_TERMINALS = auto()
     READING_EXPRESSIONS = auto()
 
+HINT_FILE_SIZE = None
+
 class CanonicalParser:
 
     def __init__(self, db, allow_duplicates):
@@ -293,9 +295,20 @@ class CanonicalParser:
         
     def parse(self, path):
         logger().info(f"Parsing {path}")
+        logger().info(f"Parsing types")
         self.current_state = State.READING_TYPES
+        if HINT_FILE_SIZE is not None:
+            progress_count = 1
+            progress_bound = HINT_FILE_SIZE // 100
         with open(path, "r") as file:
             for line in file:
+                if HINT_FILE_SIZE is not None:
+                    if progress_count >= progress_bound:
+                        percent = ("{0:.0f}").format(100 * (self.current_line_count / float(HINT_FILE_SIZE)))
+                        logger().info(f"Parsed {self.current_line_count}/{HINT_FILE_SIZE} ({percent}%)")
+                        progress_count = 1
+                    else:
+                        progress_count += 1
                 self.current_line = line.strip()
                 self.current_line_count += 1
                 expression = self.current_line.split()
@@ -303,6 +316,7 @@ class CanonicalParser:
                     self._check(expression[0] == "(:")
                     if expression[1].startswith("\""):
                         self.current_state = State.READING_TERMINALS
+                        logger().info(f"Parsing terminals")
                     else:
                         self._check(len(expression) == 3)
                         type_name = expression[1]
@@ -316,6 +330,7 @@ class CanonicalParser:
                     else:
                         self.current_state = State.READING_EXPRESSIONS
                         self._flush_terminals()
+                        logger().info(f"Parsing expressions")
                 if self.current_state == State.READING_EXPRESSIONS:
                     self._check(expression[0] != "(:")
                     self._check(self.current_line.startswith("("))
