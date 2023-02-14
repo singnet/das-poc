@@ -18,7 +18,16 @@ OUTPUT_DIR = "/tmp/hedra"
 SCHEMA_ONLY = False
 SHOW_PROGRESS = True
 #SHOW_PROGRESS = False
-FILE_SIZE = 1778012
+FILE_SIZE = 0
+
+def _file_line_count(file_name):
+    with open(file_name) as f:
+        for i, _ in enumerate(f):
+            pass
+    return i + 1
+
+if SHOW_PROGRESS:
+    FILE_SIZE = _file_line_count(SQL_FILE)
 
 class AtomTypes(str, Enum):
     CONCEPT = "Concept"
