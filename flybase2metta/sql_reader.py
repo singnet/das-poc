@@ -2,14 +2,23 @@ from simple_ddl_parser import parse_from_file, DDLParser
 from pathlib import Path
 import os, shutil
 from enum import Enum, auto
+from flybase2metta.precomputed_tables import PrecomputedTables
 import sqlparse
 
-#SQL_LINES_PER_CHUNK = 3000000
-SQL_LINES_PER_CHUNK = 3000000000
-SQL_FILE = '/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql'
-OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
+#SQL_LINES_PER_CHUNK = 3000000000
+SQL_LINES_PER_CHUNK = 3000000
+#SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql"
+#SQL_FILE = "/tmp/cut.sql"
+SQL_FILE = "/tmp/hedra/genes.sql"
+#PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/precomputed/FB2022_05"
+PRECOMPUTED_DIR = "/tmp/tsv"
+#OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
+#OUTPUT_DIR = "/tmp/cut"
+OUTPUT_DIR = "/tmp/hedra"
 SCHEMA_ONLY = False
 SHOW_PROGRESS = True
+#SHOW_PROGRESS = False
+FILE_SIZE = 1778012
 
 class AtomTypes(str, Enum):
     CONCEPT = "Concept"
@@ -51,9 +60,9 @@ class LazyParser():
         base_name = sql_file_name.split("/")[-1].split(".")[0]
         self.target_dir = f"/{OUTPUT_DIR}/{base_name}"
         self.current_output_file = None
-        self.error_file_name = f"/{OUTPUT_DIR}/{base_name}_errors.txt"
+        self.error_file_name = f"{OUTPUT_DIR}/{base_name}_errors.txt"
         self.error_file = None
-        self.schema_file_name = f"/{OUTPUT_DIR}/{base_name}_schema.txt"
+        self.schema_file_name = f"{OUTPUT_DIR}/{base_name}_schema.txt"
         self.schema_file = None
         self.errors = False
         self.current_table_node = None
@@ -118,7 +127,7 @@ class LazyParser():
         self.current_output_file = open(fname, "w")
         self._emit_file_header()
 
-    def _checkpoint(self):
+    def _checkpoint(self, create_new):
         if SCHEMA_ONLY:
             return
         for metta_string in self.current_node_set:
@@ -129,7 +138,8 @@ class LazyParser():
             self.current_output_file.write("\n")
         self.current_node_set = set()
         self.current_link_list = []
-        self._open_new_output_file()
+        if create_new:
+            self._open_new_output_file()
 
     def _setup(self):
         self._open_new_output_file()
@@ -182,6 +192,7 @@ class LazyParser():
 
     def _add_node(self, node_type, node_name):
         # metta
+        #print(f"add_node {node_type} {node_name}")
         node_name = node_name.replace("(", "[")
         node_name = node_name.replace(")", "]")
         if node_type in TYPED_NAME:
@@ -195,17 +206,20 @@ class LazyParser():
 
     def _add_inheritance(self, node1, node2):
         # metta
+        #print(f"add_inheritance {node1} {node2}")
         if node1 and node2:
             self.current_link_list.append(f"({AtomTypes.INHERITANCE} {node1} {node2})")
 
     def _add_evaluation(self, predicate, node1, node2):
         # metta
+        #print(f"add_evaluation {predicate} {node1} {node2}")
         if predicate and node1 and node2:
             self.current_link_list.append(f"({AtomTypes.EVALUATION} {predicate} ({AtomTypes.LIST} {node1} {node2}))")
 
     def _add_execution(self, schema, node1, node2):
         # metta
-        if predicate and node1 and node2:
+        #print(f"add_execution {schema} {node1} {node2}")
+        if schema and node1 and node2:
             self.current_link_list.append(f"({AtomTypes.SCHEMA} {schema} {node1} {node2})")
 
     def _add_value_node(self, field_type, value):
@@ -261,7 +275,7 @@ class LazyParser():
 
     def _primary_key(self, first_line, second_line):
         line = first_line.split()
-        table = line[3]
+        table = line[2] if line[2] != "ONLY" else line[3]
         line = second_line.split()
         field = line[-1][1:-2]
         assert not self.table_schema[table]['primary_key']
@@ -270,7 +284,7 @@ class LazyParser():
 
     def _foreign_key(self, first_line, second_line):
         line = first_line.split()
-        table = line[3]
+        table = line[2] if line[2] != "ONLY" else line[3]
         line = second_line.split()
         field = line[5][1:-1]
         reference = line[7].split("(")
@@ -290,7 +304,7 @@ class LazyParser():
         FOREIGN_KEY = " FOREIGN KEY "
         text = ""
         self.line_count = 0
-        file_size = 557414268
+        file_size = FILE_SIZE
 
         state = State.WAIT_KNOWN_COMMAND
         with open(self.sql_file_name, 'r') as file:
@@ -329,7 +343,7 @@ class LazyParser():
         text = ""
         self.line_count = 0
         chunk_count = 0
-        file_size = 557414268
+        file_size = FILE_SIZE
 
         for key,table in self.table_schema.items():
             if not table['primary_key']:
@@ -344,7 +358,7 @@ class LazyParser():
                 self.line_count += 1
                 chunk_count += 1
                 if chunk_count == SQL_LINES_PER_CHUNK:
-                    self._checkpoint()
+                    self._checkpoint(True)
                     chunk_count = 0
                 if SHOW_PROGRESS:
                     self._print_progress_bar(self.line_count, file_size, length=50)
@@ -362,6 +376,7 @@ class LazyParser():
                     print(f"Invalid state {state}")
                     assert False
                 line = file.readline()
+            self._checkpoint(False)
 
     def parse(self):
         self._setup()
@@ -387,6 +402,7 @@ def main():
     #    print(statement)
     #print("---------------")
 
+    #precomputed = PrecomputedTables(PRECOMPUTED_DIR)
     parser = LazyParser(SQL_FILE)
     parser.parse()
 
