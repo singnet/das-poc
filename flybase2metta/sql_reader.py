@@ -483,6 +483,7 @@ class LazyParser():
         self._setup()
         self._parse_step_1()
         if self.precomputed:
+            self.precomputed.set_sql_tables(self.table_schema)
             self._parse_step_2()
             self.precomputed_mapping_file.write(self.precomputed.mappings_str())
         self._parse_step_3()
