@@ -2,6 +2,15 @@ import os
 import glob
 import csv
 
+HINTS = {
+    "FBal": "gene.allele",
+    "FBgn": "gene.gene",
+    "FBig": "public.interaction",
+    "FBsn": "public.strain",
+    "FBst": "public.stock",
+    "FBtc": "public.cell_line",
+}
+
 class Table:
 
     def __init__(self, name):
@@ -9,7 +18,6 @@ class Table:
         self.rows = []
         self.values = {}
         self.name = name
-        self.covers = {}
         self.covered_by = {}
         self.mapped_fields = set()
         self.unmapped_fields = set()
@@ -37,15 +45,15 @@ class Table:
         for key in self.values.keys():
             print(f"{key}: {self.values[key]}")
 
+    def get_relevant_sql_tables(self):
+        return set([sql_table for sql_table, _ in self.mapping.values()])
+
     def check_field_value(self, sql_table, sql_field, value):
         for key, values in self.values.items():
             if key in self.unmapped_fields and value in values:
                 tag = tuple([key, value])
                 sql_tag = tuple([sql_table, sql_field])
                 self.covered_by[key][value].add(sql_tag)
-                if sql_tag not in self.covers:
-                    self.covers[sql_tag] = set()
-                self.covers[sql_tag].add(tag)
                 if all(sql_tag in s for s in self.covered_by[key].values()):
                     self.unmapped_fields.remove(key)
                     self.mapped_fields.add(key)
@@ -63,6 +71,7 @@ class PrecomputedTables:
         self.mapped_tables = {}
         self.field_values = {}
         self.sql_primary_key = {}
+        self.sql_tables = None
         os.chdir(dir_name)
         for file_name in glob.glob("*.tsv"):
             #print(file_name)
@@ -89,7 +98,13 @@ class PrecomputedTables:
                 output.append(f"\t{key} -> {sql_table} {sql_field}")
             for key in table.unmapped_fields:
                 output.append(f"\t{key} -> ???")
-        return "\n".join(output)
+        return "\n".join(output) + "\n"
+
+    def set_sql_tables(self, tables):
+        for key, value in HINTS.items():
+            for table in sql_tables.values():
+                print(table)
+                return
 
     def _add_row(self, file_name, row):
         self.unmapped_tables[file_name].add_row(row)
@@ -130,3 +145,8 @@ class PrecomputedTables:
         for key in finished:
             self.mapped_tables[key] = self.unmapped_tables.pop(key)
         
+    def get_relevant_sql_tables(self):
+        answer = set()
+        for table in self.all_tables:
+            answer = answer.union(table.get_relevant_sql_tables())
+        return answer
