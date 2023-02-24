@@ -1,32 +1,33 @@
 from simple_ddl_parser import parse_from_file, DDLParser
 from pathlib import Path
 import os, shutil
+import subprocess
 from enum import Enum, auto
 from flybase2metta.precomputed_tables import PrecomputedTables
 import sqlparse
 
-#SQL_LINES_PER_CHUNK = 3000000000
-SQL_LINES_PER_CHUNK = 3000000
-#SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql"
+SQL_LINES_PER_CHUNK = 3000000000
+#SQL_LINES_PER_CHUNK = 3000000
+SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql"
 #SQL_FILE = "/tmp/cut.sql"
-SQL_FILE = "/tmp/hedra/genes.sql"
-#PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/precomputed/FB2022_05"
-PRECOMPUTED_DIR = "/tmp/tsv"
+#SQL_FILE = "/tmp/hedra/genes.sql"
+#PRECOMPUTED_DIR = None
+PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/precomputed/FB2022_05"
+#PRECOMPUTED_DIR = "/tmp/tsv"
 #OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
+OUTPUT_DIR = "/tmp/flybase"
 #OUTPUT_DIR = "/tmp/cut"
-OUTPUT_DIR = "/tmp/hedra"
+#OUTPUT_DIR = "/tmp/hedra"
 SCHEMA_ONLY = False
 SHOW_PROGRESS = True
-#SHOW_PROGRESS = False
 FILE_SIZE = 0
 
 def _file_line_count(file_name):
-    with open(file_name) as f:
-        for i, _ in enumerate(f):
-            pass
-    return i + 1
+    output = subprocess.run(["wc", "-l", file_name], stdout=subprocess.PIPE)
+    return int(output.stdout.split()[0])
 
 if SHOW_PROGRESS:
+    print("Checking SQL file size...")
     FILE_SIZE = _file_line_count(SQL_FILE)
 
 class AtomTypes(str, Enum):
@@ -40,6 +41,14 @@ class AtomTypes(str, Enum):
     LIST = "List"
 
 TYPED_NAME = [AtomTypes.CONCEPT, AtomTypes.PREDICATE, AtomTypes.SCHEMA]
+
+CREATE_TABLE_PREFIX = "CREATE TABLE "
+CREATE_TABLE_SUFFIX = ");"
+ADD_CONSTRAINT_PREFIX = "ADD CONSTRAINT "
+PRIMARY_KEY = " PRIMARY KEY "
+FOREIGN_KEY = " FOREIGN KEY "
+COPY_PREFIX = "COPY "
+COPY_SUFFIX = "\."
 
 class State(int, Enum):
     WAIT_KNOWN_COMMAND = auto()
@@ -57,11 +66,13 @@ def filter_field(line):
 def _compose_name(name1, name2):
     return f"{name1}_{name2}"
 
+def short_name(long_table_name):
+    return long_table_name.split(".")[1]
+
 class LazyParser():
 
-    def __init__(self, sql_file_name):
+    def __init__(self, sql_file_name, precomputed = None):
         self.sql_file_name = sql_file_name
-        self.parse_step = None
         self.table_schema = {}
         self.current_table = None
         self.current_table_header = None
@@ -72,6 +83,8 @@ class LazyParser():
         self.error_file_name = f"{OUTPUT_DIR}/{base_name}_errors.txt"
         self.error_file = None
         self.schema_file_name = f"{OUTPUT_DIR}/{base_name}_schema.txt"
+        self.precomputed_mapping_file_name = f"{OUTPUT_DIR}/{base_name}_precomputed_tables_mapping.txt"
+        self.precomputed_mapping_file = None
         self.schema_file = None
         self.errors = False
         self.current_table_node = None
@@ -81,6 +94,8 @@ class LazyParser():
         self.current_field_types = {}
         self.discarded_tables = []
         self.line_count = None
+        self.precomputed = precomputed
+        self.relevant_tables = None
 
         Path(self.target_dir).mkdir(parents=True, exist_ok=True)
         for filename in os.listdir(self.target_dir):
@@ -93,20 +108,20 @@ class LazyParser():
             except Exception as e:
                 print(e)
 
-    def _print_progress_bar(self, iteration, total, length=50):
+    def _print_progress_bar(self, iteration, total, length, step, max_step):
         filled_length = int(length * iteration // total)
         previous = int(length * (iteration - 1) // total)
         if iteration == 1 or filled_length > previous or iteration >= total:
             percent = ("{0:.0f}").format(100 * (iteration / float(total)))
             fill='█'
             bar = fill * filled_length + '-' * (length - filled_length)
-            print(f'\r STEP {self.parse_step}/2 Progress: |{bar}| {percent}% complete ({iteration}/{total})', end = '\r')
+            print(f'\r STEP {step}/{max_step} Progress: |{bar}| {percent}% complete ({iteration}/{total})', end = '\r')
             if iteration >= total: 
                 print()
 
-    def _print_table_info(self, table):
-        print(table)
-        table = self.table_schema[table]
+    def _table_info(self, table_name):
+        answer = [table_name]
+        table = self.table_schema[table_name]
         for column in table['columns']:
             prefix = "  "
             suffix = ""
@@ -116,7 +131,8 @@ class LazyParser():
                 prefix = "FK"
                 referenced_table, referenced_field = table['foreign_key'][column['name']]
                 suffix = f"-> {referenced_table} {referenced_field}"
-            print(f"    {prefix} {column['type']} {column['name']} {suffix}")
+            answer.append(f"    {prefix} {column['type']} {column['name']} {suffix}")
+        return "\n".join(answer)
 
     def _error(self, message):
         self.error_file.write(message)
@@ -136,6 +152,27 @@ class LazyParser():
         self.current_output_file = open(fname, "w")
         self._emit_file_header()
 
+    def _emit_precomputed_tables(self, output_file):
+        primary_keys = self.precomputed.sql_primary_key
+        for table in self.precomputed.all_tables:
+            #print(table)
+            for row in table.rows:
+                #print(row)
+                for key1, value1 in zip(table.header, row):
+                    if key1 not in table.mapped_fields:
+                        #print(f"key1: {key1} not in table.mapped_fields")
+                        continue
+                    sql_table1, sql_field1 = table.mapping[key1]
+                    node1 = self._add_value_node(self._get_type(sql_table1, sql_field1), value1)
+                    #print("1:", node1)
+                    for key2, value2 in zip(table.header, row):
+                        if key2 != key1:
+                            sql_table2, sql_field2 = table.mapping[key2] if key2 in table.mapping else (None, None)
+                            node2 = self._add_value_node(self._get_type(sql_table2, sql_field2), value2)
+                            #print("2:", node2)
+                            schema = self._add_node(AtomTypes.SCHEMA, key2)
+                            self._add_execution(schema, node1, node2)
+
     def _checkpoint(self, create_new):
         if SCHEMA_ONLY:
             return
@@ -154,11 +191,15 @@ class LazyParser():
         self._open_new_output_file()
         self.error_file = open(self.error_file_name, "w")
         self.schema_file = open(self.schema_file_name, "w")
+        if self.precomputed:
+            self.precomputed_mapping_file = open(self.precomputed_mapping_file_name, "w")
 
     def _tear_down(self):
         self.current_output_file.close()
         self.error_file.close()
         self.schema_file.close()
+        if self.precomputed:
+            self.precomputed_mapping_file.close()
 
     def _create_table(self, text):
         parsed = DDLParser(text).run()
@@ -172,12 +213,13 @@ class LazyParser():
         parsed[0]['types'] = [column['type'] for column in parsed[0]['columns']]
         for column in parsed[0]['columns']:
             self.all_types.add(f"{column['type']} {column['size']}")
-        self.schema_file.write(text)
-        self.schema_file.write("\n\n")
+        #self.schema_file.write(text)
+        #self.schema_file.write("\n\n")
 
     def _start_copy(self, line):
         self.current_table = line.split(" ")[1]
-        if SCHEMA_ONLY or self.current_table in self.discarded_tables:
+        if SCHEMA_ONLY or self.current_table in self.discarded_tables or\
+           (self.relevant_tables is not None and self.current_table not in self.relevant_tables):
             return False
         columns = line.split("(")[1].split(")")[0].split(",")
         columns = [s.strip() for s in columns]
@@ -192,12 +234,13 @@ class LazyParser():
             self.current_field_types[name] = ctype
         return True
 
-    def _get_type(self, field):
-        table = self.table_schema[self.current_table]
-        for name, ctype in zip(table['fields'], table['types']):
-            if name == field:
-                return ctype
-        assert False
+    def _get_type(self, table_name, field):
+        if table_name is not None:
+            table = self.table_schema[table_name]
+            for name, ctype in zip(table['fields'], table['types']):
+                if name == field:
+                    return ctype
+        return "text"
 
     def _add_node(self, node_type, node_name):
         # metta
@@ -245,11 +288,24 @@ class LazyParser():
         else:
             assert False
 
-    def _new_row(self, line):
+    def _new_row_precomputed(self, line):
         if SCHEMA_ONLY:
             return
         table = self.table_schema[self.current_table]
-        table_short_name = self.current_table.split(".")[1]
+        fkeys = table['foreign_keys']
+        data = line.split("\t")
+        if len(self.current_table_header) != len(data):
+            self._error(f"Invalid row at line {self.line_count} Table: {self.current_table} Header: {self.current_table_header} Raw line: <{line}>")
+            return
+        for name, value in zip(self.current_table_header, data):
+            if (not non_mapped_column(name)) and (name not in fkeys):
+                self.precomputed.check_field_value(self.current_table, name, value)
+
+    def _new_row(self, line):
+        if SCHEMA_ONLY or (self.relevant_tables is not None and self.current_table not in self.relevant_tables):
+            return
+        table = self.table_schema[self.current_table]
+        table_short_name = short_name(self.current_table)
         pkey = table['primary_key']
         fkeys = table['foreign_keys']
         assert pkey,f"self.current_table = {self.current_table} pkey = {pkey} \n{table}"
@@ -290,6 +346,8 @@ class LazyParser():
         assert not self.table_schema[table]['primary_key']
         assert field in self.table_schema[table]['fields']
         self.table_schema[table]['primary_key'] = field
+        if self.precomputed:
+            self.precomputed.set_sql_primary_key(table, field)
 
     def _foreign_key(self, first_line, second_line):
         line = first_line.split()
@@ -306,11 +364,6 @@ class LazyParser():
 
     def _parse_step_1(self):
 
-        CREATE_TABLE_PREFIX = "CREATE TABLE "
-        CREATE_TABLE_SUFFIX = ");"
-        ADD_CONSTRAINT_PREFIX = "ADD CONSTRAINT "
-        PRIMARY_KEY = " PRIMARY KEY "
-        FOREIGN_KEY = " FOREIGN KEY "
         text = ""
         self.line_count = 0
         file_size = FILE_SIZE
@@ -322,7 +375,7 @@ class LazyParser():
             while line:
                 self.line_count += 1
                 if SHOW_PROGRESS:
-                    self._print_progress_bar(self.line_count, file_size, length=50)
+                    self._print_progress_bar(self.line_count, file_size, 50, 1, 3 if self.precomputed else 2)
                 line = line.replace('\n', '').strip()
                 if state == State.WAIT_KNOWN_COMMAND:
                     if line.startswith(CREATE_TABLE_PREFIX):
@@ -347,17 +400,56 @@ class LazyParser():
 
     def _parse_step_2(self):
 
-        COPY_PREFIX = "COPY "
-        COPY_SUFFIX = "\."
         text = ""
         self.line_count = 0
-        chunk_count = 0
         file_size = FILE_SIZE
 
         for key,table in self.table_schema.items():
             if not table['primary_key']:
                 self.discarded_tables.append(key)
                 self._error(f"Discarded table {key}. No PRIMARY KEY defined.")
+                
+        state = State.WAIT_KNOWN_COMMAND
+        with open(self.sql_file_name, 'r') as file:
+            line = file.readline()
+            while line:
+                self.line_count += 1
+                if SHOW_PROGRESS:
+                    self._print_progress_bar(self.line_count, file_size, 50, 2, 3)
+                if self.precomputed.all_tables_mapped():
+                    continue
+                line = line.replace('\n', '').strip()
+                if state == State.WAIT_KNOWN_COMMAND:
+                    if line.startswith(COPY_PREFIX):
+                        if self._start_copy(line):
+                            state = State.READING_COPY
+                elif state == State.READING_COPY:
+                    if line.startswith(COPY_SUFFIX):
+                        state = State.WAIT_KNOWN_COMMAND
+                    else:
+                        self._new_row_precomputed(line)
+                else:
+                    print(f"Invalid state {state}")
+                    assert False
+                line = file.readline()
+            self._emit_precomputed_tables(self.current_output_file)
+            self.current_node_set = set()
+            self.current_link_list = []
+            self._checkpoint(True)
+        self.relevant_tables = self.precomputed.get_relevant_sql_tables()
+
+    def _parse_step_3(self):
+
+        text = ""
+        self.line_count = 0
+        chunk_count = 0
+        file_size = FILE_SIZE
+
+        if not self.precomputed:
+            for key,table in self.table_schema.items():
+                if not table['primary_key']:
+                    self.discarded_tables.append(key)
+                    self._error(f"Discarded table {key}. No PRIMARY KEY defined.")
                 
         state = State.WAIT_KNOWN_COMMAND
         #self.table_node = self._add_node(AtomTypes.CONCEPT, "SQLTable")
@@ -370,7 +462,7 @@ class LazyParser():
                     self._checkpoint(True)
                     chunk_count = 0
                 if SHOW_PROGRESS:
-                    self._print_progress_bar(self.line_count, file_size, length=50)
+                    self._print_progress_bar(self.line_count, file_size, 50, 3 if self.precomputed else 2, 3 if self.precomputed else 2)
                 line = line.replace('\n', '').strip()
                 if state == State.WAIT_KNOWN_COMMAND:
                     if line.startswith(COPY_PREFIX):
@@ -389,41 +481,25 @@ class LazyParser():
 
     def parse(self):
         self._setup()
-        self.parse_step = 1
         self._parse_step_1()
-        self.parse_step = 2
-        self._parse_step_2()
+        if self.precomputed:
+            self._parse_step_2()
+            self.precomputed_mapping_file.write(self.precomputed.mappings_str())
+        self._parse_step_3()
+        for table in self.table_schema:
+            if self.relevant_tables is None or table in self.relevant_tables:
+                self.schema_file.write(self._table_info(table))
+                self.schema_file.write("\n\n")
         if self.errors:
             print(f"Errors occured while processing this SQL file. See them in {self.error_file_name}")
         self._tear_down()
 
 def main():
-    #schema = parse_from_file(SQL_FILE)
-    #print(schema)
-
-    #with open(SQL_FILE, 'r') as file:
-    #    sql_string = file.read().replace('\n', '')
-    #statements = sqlparse.split(sql_string)
-    #print("---------------")
-    #for statement in statements:
-    #    #print(sqlparse.format(statement, reindent=True, keyword_case='upper'))
-    #    print(type(statement))
-    #    print(statement)
-    #print("---------------")
-
-    #precomputed = PrecomputedTables(PRECOMPUTED_DIR)
-    parser = LazyParser(SQL_FILE)
+    precomputed = PrecomputedTables(PRECOMPUTED_DIR) if PRECOMPUTED_DIR else None
+    parser = LazyParser(SQL_FILE, precomputed)
     parser.parse()
-
-    #for t in sorted(parser.all_types):
-    #    print(t)
-
-    #parser._print_table_info("gene.gene")
-    #print("")
-    #parser._print_table_info("gene.allele")
-
-    #for key in parser.table_schema:
-    #    print(key)
+    if precomputed:
+        pass
 
 if __name__ == "__main__":
     main()
