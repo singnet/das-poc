@@ -2,15 +2,6 @@ import os
 import glob
 import csv
 
-HINTS = {
-    "FBal": "gene.allele",
-    "FBgn": "gene.gene",
-    "FBig": "public.interaction",
-    "FBsn": "public.strain",
-    "FBst": "public.stock",
-    "FBtc": "public.cell_line",
-}
-
 class Table:
 
     def __init__(self, name):
@@ -100,12 +91,6 @@ class PrecomputedTables:
                 output.append(f"\t{key} -> ???")
         return "\n".join(output) + "\n"
 
-    def set_sql_tables(self, tables):
-        for key, value in HINTS.items():
-            for table in sql_tables.values():
-                print(table)
-                return
-
     def _add_row(self, file_name, row):
         self.unmapped_tables[file_name].add_row(row)
 
@@ -141,10 +126,10 @@ class PrecomputedTables:
         for key, table in self.unmapped_tables.items():
             table.check_field_value(sql_table, sql_field, value)
             if table.all_fields_mapped():
-                finished.append[key]
+                finished.append(key)
         for key in finished:
             self.mapped_tables[key] = self.unmapped_tables.pop(key)
-        
+
     def get_relevant_sql_tables(self):
         answer = set()
         for table in self.all_tables:
