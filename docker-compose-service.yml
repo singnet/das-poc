@@ -19,6 +19,7 @@ services:
       - ./das:/opt/snet/das
       - ./tests:/opt/snet/tests
       - ./data:/opt/snet/data
+      - /tmp:/tmp
       - couchbasesetup:/opt/couchbase_setup
     links:
       - mongo
