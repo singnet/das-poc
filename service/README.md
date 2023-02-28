@@ -21,7 +21,7 @@ After `create` returns, you have a new empty DAS named `my_knowledge_base` creat
 Our DAS is empty, meaning that it has 0 nodes and 0 links. You can confirm this by calling:
 
 ```
-$ /scripts/das-cli.sh --das-key zkgftedbgvlwstjivhte count
+$ ./scripts/das-cli.sh --das-key zkgftedbgvlwstjivhte count
 (0, 0)
 ```
 
