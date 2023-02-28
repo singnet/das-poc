@@ -91,7 +91,11 @@ class KnowledgeBaseLoader(Thread):
     def run(self):
         #TODO: make this block thread-safe
         temp_dir = tempfile.mkdtemp()
-        os.system(f"wget -P {temp_dir} {self.url}")
+        if self.url.startswith("file:///"):
+            self.url = self.url[7:]
+            os.system(f"cp -f {self.url} {temp_dir}")
+        else:
+            os.system(f"wget -P {temp_dir} {self.url}")
         if self.url.endswith(".tgz"):
             os.system(f"tar -xzf {temp_dir}/*.tgz -C {temp_dir}")
         elif self.url.endswith(".tar"):
@@ -181,9 +185,8 @@ class ServiceDefinition(pb2_grpc.ServiceDefinitionServicer):
     def check_das_status(self, request, context):
         with self.locked_scope:
             key = request.key
-            check = self._check_das_key(key)
-            if check:
-                return check
+            if key not in self.atom_spaces:
+                return self._error("Invalid DAS key")
             das_status = self.atom_space_status[key]
             return self._success(das_status)
 
