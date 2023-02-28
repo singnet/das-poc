@@ -15,13 +15,13 @@ class Table:
         self.mapping = {}
 
     def set_header(self, header):
-        self.header = header
-        for key in header:
+        self.header = [h.strip() for h in header]
+        for key in self.header:
             assert key
             self.values[key] = set()
             self.covered_by[key] = {}
             self.unmapped_fields.add(key)
-        assert len(self.unmapped_fields) == len(header)
+        assert len(self.unmapped_fields) == len(self.header)
 
     def add_row(self, row):
         assert len(self.header) == len(row)
@@ -60,16 +60,53 @@ class PrecomputedTables:
         self.all_tables = []
         self.unmapped_tables = {}
         self.mapped_tables = {}
-        self.field_values = {}
         self.sql_primary_key = {}
         self.sql_tables = None
+        self.preloaded_mapping = False
         os.chdir(dir_name)
+        #if os.path.exists(f"{dir_name}/mapping.txt"):
+        #    with open(f"{dir_name}/mapping.txt", "r") as f:
+        #        for line in f:
+        #            line = line.strip("\n")
+        #            if not line.startswith("\t"):
+        #                fname = line
+        #            else:
+        #                line = line.strip("\t")
+        #                n = line.find(" ->")
+        #                pre = line[:n]
+        #                pos = line[n+4:]
+        #                if pos == "???":
+        #                    continue
+        #                table, field = tuple(pos.split())
+        #                print("\t".join([fname, pre, table, field]))
         for file_name in glob.glob("*.tsv"):
             #print(file_name)
             table = Table(file_name)
             self.unmapped_tables[file_name] = table
             self.all_tables.append(table)
             self._process_tsv(file_name)
+        if os.path.exists(f"{dir_name}/mapping.txt"):
+            self.preloaded_mapping = True
+            mappings = {}
+            with open(f"{dir_name}/mapping.txt", "r") as f:
+                for line in f:
+                    line = line.strip("\n").split("\t")
+                    fname, column, referenced_table, referenced_column = tuple(line)
+                    if fname not in mappings:
+                        mappings[fname] = []
+                    mappings[fname].append(tuple([column, referenced_table, referenced_column]))
+            finished = []
+            for key, table in self.unmapped_tables.items():
+                if key not in mappings:
+                    continue
+                for column, referenced_table, referenced_colum in mappings[key]:
+                    table.unmapped_fields.remove(column)
+                    table.mapped_fields.add(column)
+                    table.mapping[column] = tuple([referenced_table, referenced_column])
+                if table.all_fields_mapped():
+                    finished.append(key)
+            for key in finished:
+                self.mapped_tables[key] = self.unmapped_tables.pop(key)
 
     def mappings_str(self):
         output = []
@@ -119,7 +156,7 @@ class PrecomputedTables:
         self.sql_primary_key[sql_table] = field
 
     def all_tables_mapped(self):
-        return len(self.unmapped_tables) == 0
+        return self.preloaded_mapping or len(self.unmapped_tables) == 0
 
     def check_field_value(self, sql_table, sql_field, value):
         finished = []
