@@ -378,8 +378,9 @@ class DistributedAtomSpace:
         knowledge_base_file_list = self._get_file_list(source)
         for file_name in knowledge_base_file_list:
             logger().info(f"Knowledge base file: {file_name}")
-        canonical_parser = CanonicalParser(self.db, False)
+        canonical_parser = CanonicalParser(self.db, True)
         canonical_parser.pattern_black_list = self.pattern_black_list
         for file_name in knowledge_base_file_list:
             canonical_parser.parse(file_name)
-        #canonical_parser.populate_indexes()
+        canonical_parser.populate_indexes()
+        logger().info(f"Finished loading canonical knowledge base")
