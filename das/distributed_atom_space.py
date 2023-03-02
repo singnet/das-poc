@@ -15,6 +15,7 @@ from couchbase.management.collections import CollectionSpec as CouchbaseCollecti
 from enum import Enum, auto
 from das.parser_actions import KnowledgeBaseFile, MultiThreadParsing
 from das.database.couch_mongo_db import CouchMongoDB
+from das.database.mongo_schema import CollectionNames as MongoCollections
 from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
 from das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread, BuildConnectivityThread, \
     BuildPatternsThread, BuildTypeTemplatesThread, PopulateMongoDBLinksThread, PopulateCouchbaseCollectionThread
@@ -62,6 +63,24 @@ class DistributedAtomSpace:
         self.db = CouchMongoDB(self.couch_db, self.mongo_db)
         self.db.prefetch()
 
+    def _log_mongodb_counts(self):
+        tags = [
+            MongoCollections.ATOM_TYPES, 
+            MongoCollections.NODES, 
+            MongoCollections.LINKS_ARITY_1, 
+            MongoCollections.LINKS_ARITY_2, 
+            MongoCollections.LINKS_ARITY_N]
+        names = [
+            "types",
+            "nodes",
+            "links with arity == 1",
+            "links with arity == 2",
+            "links with arity >= 3"]
+        for tag, name in zip(tags, names):
+            mongo_collection = self.db.mongo_db[tag]
+            count = mongo_collection.count_documents({})
+            logger().info(f"Number of {name} in MongoDB: {count}")
+            
     def _get_file_list(self, source):
         """
         Build a list of file names according to the passed parameters.
@@ -334,6 +353,8 @@ class DistributedAtomSpace:
             thread.join()
         assert shared_data.parse_ok_count == len(parser_threads)
         self._process_parsed_data(shared_data, False)
+        logger().info(f"Finished loading knowledge base")
+        self._log_mongodb_counts()
 
     def load_canonical_knowledge_base(self, source):
         """
@@ -378,8 +399,11 @@ class DistributedAtomSpace:
         knowledge_base_file_list = self._get_file_list(source)
         for file_name in knowledge_base_file_list:
             logger().info(f"Knowledge base file: {file_name}")
-        canonical_parser = CanonicalParser(self.db, False)
+        canonical_parser = CanonicalParser(self.db, True)
         canonical_parser.pattern_black_list = self.pattern_black_list
         for file_name in knowledge_base_file_list:
             canonical_parser.parse(file_name)
-        #canonical_parser.populate_indexes()
+        canonical_parser.populate_indexes()
+        logger().info(f"Finished loading canonical knowledge base")
+        self._log_mongodb_counts()
+

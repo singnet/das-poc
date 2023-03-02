@@ -15,8 +15,8 @@ def write_key_value(file, key, value):
     if isinstance(key, list):
         key = ExpressionHasher.composite_hash(key)
     if isinstance(value, list):
-        value = ",".join(value)
-    line = f"{key},{value}"
+        value = "\t".join(value)
+    line = f"{key}\t{value}"
     file.write(line)
     file.write("\n")
 
@@ -30,11 +30,11 @@ def key_value_generator(input_filename, *, block_size=MAX_COUCHBASE_BLOCK_SIZE, 
             if line == '':
                 continue
             if merge_rest:
-                v = line.split(",")
+                v = line.split("\t")
                 key = v[0]
                 value = ",".join(v[1:])
             else:
-                key, value = line.split(",")
+                key, value = line.split("\t")
             if last_key == key:
                 last_list.append(value)
                 if len(last_list) >= block_size:
@@ -59,7 +59,7 @@ def key_value_targets_generator(input_filename, *, block_size=MAX_COUCHBASE_BLOC
             line = line.strip()
             if line == '':
                 continue
-            key, value, *targets = line.split(",")
+            key, value, *targets = line.split("\t")
             if last_key == key:
                 last_list.append(tuple([value, tuple(targets)]))
                 if len(last_list) >= block_size:

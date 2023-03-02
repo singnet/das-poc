@@ -1,5 +1,6 @@
 from enum import Enum, auto
 import datetime
+import subprocess
 from das.logger import logger
 from das.expression_hasher import ExpressionHasher
 from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
@@ -12,12 +13,18 @@ class State(str, Enum):
     READING_TERMINALS = auto()
     READING_EXPRESSIONS = auto()
 
+
+def _file_line_count(file_name):
+    output = subprocess.run(["wc", "-l", file_name], stdout=subprocess.PIPE)
+    return int(output.stdout.split()[0])
+
+EXPRESSIONS_CHUNK_SIZE = 10000000
 HINT_FILE_SIZE = None
 
 class CanonicalParser:
 
     def __init__(self, db, allow_duplicates):
-        self.current_line_count = 1
+        self.current_line_count = None
         self.mongo_typedef = []
         self.mongo_terminal = []
         self.mongo_expression = []
@@ -55,6 +62,11 @@ class CanonicalParser:
             "named_type": stype,
         })
 
+    def _flush_mongo_expressions(self):
+        logger().info(f"Populating MongoDB link tables")
+        self._populate_mongo_links()
+        self.mongo_expression = []
+
     def _add_expression(self, expression, composite_type, toplevel, named_type, composite_type_hash):
         named_type_hash = ExpressionHasher.named_type_hash(named_type)
         id_hash = ExpressionHasher.expression_hash(named_type_hash, expression[1:])
@@ -69,6 +81,9 @@ class CanonicalParser:
         for i in range(1, len(expression)):
             document[f"key_{i - 1}"] = expression[i]
         self.mongo_expression.append(document)
+        if len(self.mongo_expression) >= EXPRESSIONS_CHUNK_SIZE:
+            logger().info(f"Expression chunk size reached.")
+            self._flush_mongo_expressions()
 
     def _mongo_insert_many(self, collection, bulk_insertion):
         try:
@@ -88,8 +103,8 @@ class CanonicalParser:
         with open(self.temporary_file_name[CouchbaseCollections.NAMED_ENTITIES], "w") as named_entities:
             for document in self.mongo_terminal:
                 write_key_value(named_entities, document["_id"], document["name"])
-        self.mongo_typedef = None
-        self.mongo_terminal = None
+        self.mongo_typedef = []
+        self.mongo_terminal = []
         logger().info(f"Terminals flushed")
 
     def _sort_files(self):
@@ -103,48 +118,50 @@ class CanonicalParser:
         incoming = open(self.temporary_file_name[CouchbaseCollections.INCOMING_SET], "w")
         patterns = open(self.temporary_file_name[CouchbaseCollections.PATTERNS], "w")
         template = open(self.temporary_file_name[CouchbaseCollections.TEMPLATES], "w")
-        for expression in self.mongo_expression:
-            elements = [expression[k] for k in expression.keys() if k.startswith("key")]
-            for target in elements:
-                write_key_value(outgoing, expression["_id"], target)
-                write_key_value(incoming, target, expression["_id"])
-            if expression["named_type"] not in self.pattern_black_list:
-                arity = len(elements)
-                type_hash = expression["named_type_hash"]
-                keys = []
-                keys.append([WILDCARD, *elements])
-                if arity == 1:
-                    keys.append([type_hash, WILDCARD])
-                    keys.append([WILDCARD, elements[0]])
-                    keys.append([WILDCARD, WILDCARD])
-                elif arity == 2:
-                    keys.append([type_hash, elements[0], WILDCARD])
-                    keys.append([type_hash, WILDCARD, elements[1]])
-                    keys.append([type_hash, WILDCARD, WILDCARD])
-                    keys.append([WILDCARD, elements[0], elements[1]])
-                    keys.append([WILDCARD, elements[0], WILDCARD])
-                    keys.append([WILDCARD, WILDCARD, elements[1]])
-                    keys.append([WILDCARD, WILDCARD, WILDCARD])
-                elif arity == 3:
-                    keys.append([type_hash, elements[0], elements[1], WILDCARD])
-                    keys.append([type_hash, elements[0], WILDCARD, elements[2]])
-                    keys.append([type_hash, WILDCARD, elements[1], elements[2]])
-                    keys.append([type_hash, elements[0], WILDCARD, WILDCARD])
-                    keys.append([type_hash, WILDCARD, elements[1], WILDCARD])
-                    keys.append([type_hash, WILDCARD, WILDCARD, elements[2]])
-                    keys.append([type_hash, WILDCARD, WILDCARD, WILDCARD])
-                    keys.append([WILDCARD, elements[0], elements[1], elements[2]])
-                    keys.append([WILDCARD, elements[0], elements[1], WILDCARD])
-                    keys.append([WILDCARD, elements[0], WILDCARD, elements[2]])
-                    keys.append([WILDCARD, WILDCARD, elements[1], elements[2]])
-                    keys.append([WILDCARD, elements[0], WILDCARD, WILDCARD])
-                    keys.append([WILDCARD, WILDCARD, elements[1], WILDCARD])
-                    keys.append([WILDCARD, WILDCARD, WILDCARD, elements[2]])
-                    keys.append([WILDCARD, WILDCARD, WILDCARD, WILDCARD])
-            for key in keys:
-                write_key_value(patterns, key, [expression["_id"], *elements])
-            write_key_value(template, expression["composite_type_hash"], [expression["_id"], *elements])
-            write_key_value(template, expression["named_type_hash"], [expression["_id"], *elements])
+        for tag in [MongoCollections.LINKS_ARITY_1, MongoCollections.LINKS_ARITY_2, MongoCollections.LINKS_ARITY_N]:
+            mongo_collection = self.db.mongo_db[tag]
+            for expression in mongo_collection.find():
+                elements = [expression[k] for k in expression.keys() if k.startswith("key")]
+                for target in elements:
+                    write_key_value(outgoing, expression["_id"], target)
+                    write_key_value(incoming, target, expression["_id"])
+                if expression["named_type"] not in self.pattern_black_list:
+                    arity = len(elements)
+                    type_hash = expression["named_type_hash"]
+                    keys = []
+                    keys.append([WILDCARD, *elements])
+                    if arity == 1:
+                        keys.append([type_hash, WILDCARD])
+                        keys.append([WILDCARD, elements[0]])
+                        keys.append([WILDCARD, WILDCARD])
+                    elif arity == 2:
+                        keys.append([type_hash, elements[0], WILDCARD])
+                        keys.append([type_hash, WILDCARD, elements[1]])
+                        keys.append([type_hash, WILDCARD, WILDCARD])
+                        keys.append([WILDCARD, elements[0], elements[1]])
+                        keys.append([WILDCARD, elements[0], WILDCARD])
+                        keys.append([WILDCARD, WILDCARD, elements[1]])
+                        keys.append([WILDCARD, WILDCARD, WILDCARD])
+                    elif arity == 3:
+                        keys.append([type_hash, elements[0], elements[1], WILDCARD])
+                        keys.append([type_hash, elements[0], WILDCARD, elements[2]])
+                        keys.append([type_hash, WILDCARD, elements[1], elements[2]])
+                        keys.append([type_hash, elements[0], WILDCARD, WILDCARD])
+                        keys.append([type_hash, WILDCARD, elements[1], WILDCARD])
+                        keys.append([type_hash, WILDCARD, WILDCARD, elements[2]])
+                        keys.append([type_hash, WILDCARD, WILDCARD, WILDCARD])
+                        keys.append([WILDCARD, elements[0], elements[1], elements[2]])
+                        keys.append([WILDCARD, elements[0], elements[1], WILDCARD])
+                        keys.append([WILDCARD, elements[0], WILDCARD, elements[2]])
+                        keys.append([WILDCARD, WILDCARD, elements[1], elements[2]])
+                        keys.append([WILDCARD, elements[0], WILDCARD, WILDCARD])
+                        keys.append([WILDCARD, WILDCARD, elements[1], WILDCARD])
+                        keys.append([WILDCARD, WILDCARD, WILDCARD, elements[2]])
+                        keys.append([WILDCARD, WILDCARD, WILDCARD, WILDCARD])
+                for key in keys:
+                    write_key_value(patterns, key, [expression["_id"], *elements])
+                write_key_value(template, expression["composite_type_hash"], [expression["_id"], *elements])
+                write_key_value(template, expression["named_type_hash"], [expression["_id"], *elements])
         for file in [outgoing, incoming, patterns, template]:
             file.close()
         self._sort_files()
@@ -213,15 +230,13 @@ class CanonicalParser:
         self._populate_couchbase_table(CouchbaseCollections.TEMPLATES, True, False, False),
         self._populate_couchbase_table(CouchbaseCollections.NAMED_ENTITIES, False, True, False)
 
-    def _flush_expressions(self):
-        logger().info(f"Flushing expressions")
+    def _process_key_value_files(self):
+        logger().info(f"Populating Couchbase")
         logger().info(f"Building key-value files")
         self._build_key_value_files()
-        logger().info(f"Populating MongoDB link tables")
-        self._populate_mongo_links()
-        logger().info(f"Populating Couchbase")
+        logger().info(f"Processing key-value files")
         self._populate_couchbase()
-        logger().info(f"Expressions flushed")
+        logger().info(f"Couchbase is up to date")
 
     def _parse_expression(self, expression):
         slist = []
@@ -293,8 +308,14 @@ class CanonicalParser:
             print(f"({self.current_state.name}) Line #{self.current_line_count}: {self.current_line}")
             assert False
         
+    def populate_indexes(self):
+        self._process_key_value_files()
+
     def parse(self, path):
         logger().info(f"Parsing {path}")
+        logger().info(f"Computing file size")
+        self.current_line_count = 1
+        HINT_FILE_SIZE = _file_line_count(path)
         logger().info(f"Parsing types")
         self.current_state = State.READING_TYPES
         if HINT_FILE_SIZE is not None:
@@ -336,4 +357,5 @@ class CanonicalParser:
                     self._check(self.current_line.startswith("("))
                     self._check(self.current_line.endswith(")"))
                     self._parse_expression(self.current_line)
-        self._flush_expressions()
+        logger().info(f"Finished parsing file.")
+        self._flush_mongo_expressions()

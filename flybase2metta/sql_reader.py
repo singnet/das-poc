@@ -15,8 +15,8 @@ SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql"
 #PRECOMPUTED_DIR = None
 PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/precomputed/FB2022_05"
 #PRECOMPUTED_DIR = "/tmp/tsv"
-#OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
-OUTPUT_DIR = "/tmp/flybase"
+OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
+#OUTPUT_DIR = "/tmp/flybase"
 #OUTPUT_DIR = "/tmp/cut"
 #OUTPUT_DIR = "/tmp/hedra"
 SCHEMA_ONLY = False
@@ -244,6 +244,7 @@ class LazyParser():
         #print(f"add_node {node_type} {node_name}")
         node_name = node_name.replace("(", "[")
         node_name = node_name.replace(")", "]")
+        node_name = node_name.replace('"', "")
         if node_type in TYPED_NAME:
             quoted_node_name = f'"{node_type}:{node_name}"'
             quoted_canonical_node_name = f'"{node_type} {node_type}:{node_name}"'
