@@ -24,7 +24,7 @@ HINT_FILE_SIZE = None
 class CanonicalParser:
 
     def __init__(self, db, allow_duplicates):
-        self.current_line_count = 1
+        self.current_line_count = None
         self.mongo_typedef = []
         self.mongo_terminal = []
         self.mongo_expression = []
@@ -103,8 +103,8 @@ class CanonicalParser:
         with open(self.temporary_file_name[CouchbaseCollections.NAMED_ENTITIES], "w") as named_entities:
             for document in self.mongo_terminal:
                 write_key_value(named_entities, document["_id"], document["name"])
-        self.mongo_typedef = None
-        self.mongo_terminal = None
+        self.mongo_typedef = []
+        self.mongo_terminal = []
         logger().info(f"Terminals flushed")
 
     def _sort_files(self):
@@ -314,6 +314,7 @@ class CanonicalParser:
     def parse(self, path):
         logger().info(f"Parsing {path}")
         logger().info(f"Computing file size")
+        self.current_line_count = 1
         HINT_FILE_SIZE = _file_line_count(path)
         logger().info(f"Parsing types")
         self.current_state = State.READING_TYPES
