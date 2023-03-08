@@ -7,9 +7,11 @@ ADD ./data/bio_atomspace/bio_atomspace.tar.gz /data
 ADD ./data/samples /data/samples
 ADD ./scripts /app/scripts
 ADD ./service /app/service
+ADD ./notebooks /app/notebooks
 
 WORKDIR /app
 
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir notebook
 
 CMD [ "bash" ]
