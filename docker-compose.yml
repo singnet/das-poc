@@ -12,10 +12,13 @@ services:
       - PYTHONPATH=/app
       - TZ=${TZ}
     tty: true
+    ports:
+      - "8887:8887"
     volumes:
       - ./das:/app/das
       - ./tests:/app/tests
       - ./data:/app/data
+      - ./notebooks:/app/notebooks
       - /tmp:/tmp
       - /mnt:/mnt
       - /media:/media
