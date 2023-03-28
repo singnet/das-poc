@@ -396,7 +396,7 @@ class DistributedAtomSpace:
         to MeTTa) by an automated tool.
         """
         logger().info(f"Loading canonical knowledge base")
-        knowledge_base_file_list = self._get_file_list(source)
+        knowledge_base_file_list = sorted(self._get_file_list(source), reverse=True)
         for file_name in knowledge_base_file_list:
             logger().info(f"Knowledge base file: {file_name}")
         canonical_parser = CanonicalParser(self.db, True)
