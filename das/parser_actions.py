@@ -62,7 +62,7 @@ class MultiThreadParsing(ParserActions):
 class KnowledgeBaseFile(MultiThreadParsing):
 
     def __init__(self, db: DBInterface, file_path: str, shared_data: SharedData):
-        self.file_path = file_path
         with open(file_path, "r") as file_handle:
             input_string = file_handle.read()
         super().__init__(db, input_string, shared_data)
+        self.file_path = file_path
