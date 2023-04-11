@@ -96,6 +96,9 @@ class LazyParser():
         self.precomputed = precomputed
         self.relevant_tables = None
         self.expression_chunk_count = 0
+        self.all_precomputed_nodes = set()
+        self.all_precomputed_node_names = set()
+        self.log_precomputed_nodes = None
 
         Path(self.target_dir).mkdir(parents=True, exist_ok=True)
         for filename in os.listdir(self.target_dir):
@@ -153,6 +156,7 @@ class LazyParser():
         self._emit_file_header()
 
     def _emit_precomputed_tables(self, output_file):
+        self.log_precomputed_nodes = True
         for table in self.precomputed.all_tables:
             #print(table)
             for row in table.rows:
@@ -171,16 +175,18 @@ class LazyParser():
                             #print("2:", node2)
                             schema = self._add_node(AtomTypes.SCHEMA, key2)
                             self._add_execution(schema, node1, node2)
+        self.log_precomputed_nodes = False
 
-    def _checkpoint(self, create_new):
+    def _checkpoint(self, create_new, use_precomputed_filter=False):
         if SCHEMA_ONLY:
             return
         for metta_string in self.current_typedef_set:
             self.current_output_file.write(metta_string)
             self.current_output_file.write("\n")
         for metta_string in self.current_node_set:
-            self.current_output_file.write(metta_string)
-            self.current_output_file.write("\n")
+            if not use_precomputed_filter or metta_string in self.all_precomputed_nodes:
+                self.current_output_file.write(metta_string)
+                self.current_output_file.write("\n")
         for metta_string in self.current_link_list:
             self.current_output_file.write(metta_string)
             self.current_output_file.write("\n")
@@ -251,7 +257,11 @@ class LazyParser():
         else:
             quoted_node_name = f'"{node_name}"'
             quoted_canonical_node_name = f'"{node_type} {node_name}"'
-        self.current_node_set.add(f"(: {quoted_node_name} {node_type})")
+        node = f"(: {quoted_node_name} {node_type})"
+        self.current_node_set.add(node)
+        if self.log_precomputed_nodes:
+            self.all_precomputed_nodes.add(node)
+            self.all_precomputed_node_names.add(quoted_canonical_node_name)
         self.current_typedef_set.add(f"(: {node_type} Type)")
         self.expression_chunk_count += 1
         return quoted_canonical_node_name
@@ -332,7 +342,8 @@ class LazyParser():
                 referenced_table, referenced_field = table['foreign_key'][name]
                 predicate_node = self._add_node(AtomTypes.PREDICATE, referenced_table)
                 fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name(referenced_table, value))
-                self._add_evaluation(predicate_node, pkey_node, fkey_node)
+                if pkey_node in self.all_precomputed_node_names or fkey_node in self.all_precomputed_node_names:
+                    self._add_evaluation(predicate_node, pkey_node, fkey_node)
             elif name != pkey:
                 ftype = self.current_field_types.get(name, None)
                 if not ftype:
@@ -341,7 +352,8 @@ class LazyParser():
                 if not value_node:
                     continue
                 schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(table_short_name, name))
-                self._add_execution(schema_node, pkey_node, value_node)
+                if pkey_node in self.all_precomputed_node_names or value_node in self.all_precomputed_node_names:
+                    self._add_execution(schema_node, pkey_node, value_node)
 
     def _primary_key(self, first_line, second_line):
         line = first_line.split()
@@ -437,7 +449,7 @@ class LazyParser():
                         assert False
                 line = file.readline()
             self._emit_precomputed_tables(self.current_output_file)
-            self._checkpoint(True)
+            self._checkpoint(True, use_precomputed_filter=True)
         self.relevant_tables = self.precomputed.get_relevant_sql_tables()
 
     def _parse_step_3(self):
