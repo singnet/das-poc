@@ -20,6 +20,7 @@ def _file_line_count(file_name):
 
 EXPRESSIONS_CHUNK_SIZE = 10000000
 HINT_FILE_SIZE = None
+TMP_DIR = '/mnt/HD10T/nfs_share/work/tmp'
 
 class CanonicalParser:
 
@@ -33,7 +34,7 @@ class CanonicalParser:
         self.db = db
         self.allow_duplicates = allow_duplicates
         self.temporary_file_name = {
-            s.value: f"/tmp/parser_{s.value}.txt" for s in CouchbaseCollections
+            s.value: f"{TMP_DIR}/parser_{s.value}.txt" for s in CouchbaseCollections
         }
         self.pattern_black_list = None
 

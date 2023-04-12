@@ -8,7 +8,7 @@ import sqlparse
 
 #SQL_LINES_PER_CHUNK = 3000000000
 #SQL_LINES_PER_CHUNK = 3000000
-EXPRESSIONS_PER_CHUNK = 10000000
+EXPRESSIONS_PER_CHUNK = 70000000
 SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql"
 #SQL_FILE = "/tmp/cut.sql"
 #SQL_FILE = "/tmp/hedra/genes.sql"
