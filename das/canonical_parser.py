@@ -20,7 +20,8 @@ def _file_line_count(file_name):
 
 EXPRESSIONS_CHUNK_SIZE = 10000000
 HINT_FILE_SIZE = None
-TMP_DIR = '/mnt/HD10T/nfs_share/work/tmp'
+TMP_DIR = '/tmp'
+#TMP_DIR = '/mnt/HD10T/nfs_share/work/tmp'
 
 class CanonicalParser:
 
