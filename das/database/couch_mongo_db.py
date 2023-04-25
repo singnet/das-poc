@@ -8,7 +8,7 @@ from couchbase.exceptions import DocumentNotFoundException
 from pymongo.database import Database
 
 from das.expression_hasher import ExpressionHasher
-from das.database.couchbase_schema import CollectionNames as CouchbaseCollectionNames
+from das.database.key_value_schema import CollectionNames as CouchbaseCollectionNames
 from das.database.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
 
 from .db_interface import DBInterface, WILDCARD, UNORDERED_LINK_TYPES

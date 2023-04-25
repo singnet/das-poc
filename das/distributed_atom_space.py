@@ -8,18 +8,15 @@ import json
 from time import sleep
 from typing import List, Optional, Union, Tuple, Dict
 from pymongo import MongoClient as MongoDBClient
-from couchbase.cluster import Cluster as CouchbaseDB
-from couchbase.auth import PasswordAuthenticator as CouchbasePasswordAuthenticator
-from couchbase.options import LockMode as CouchbaseLockMode
-from couchbase.management.collections import CollectionSpec as CouchbaseCollectionSpec
+from redis import Redis
 from enum import Enum, auto
 from das.parser_actions import KnowledgeBaseFile, MultiThreadParsing
-from das.database.couch_mongo_db import CouchMongoDB
 from das.database.mongo_schema import CollectionNames as MongoCollections
-from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
 from das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread, BuildConnectivityThread, \
-    BuildPatternsThread, BuildTypeTemplatesThread, PopulateMongoDBLinksThread, PopulateCouchbaseCollectionThread
+    BuildPatternsThread, BuildTypeTemplatesThread, PopulateMongoDBLinksThread, PopulateRedisCollectionThread
+from das.database.redis_mongo_db import RedisMongoDB
 from das.logger import logger
+from das.database.key_value_schema import CollectionNames as KeyPrefix
 from das.database.db_interface import WILDCARD
 from das.transaction import Transaction
 from das.canonical_parser import CanonicalParser
@@ -46,21 +43,12 @@ class DistributedAtomSpace:
         password = os.environ.get('DAS_DATABASE_PASSWORD')
         self.mongo_db = MongoDBClient(f'mongodb://{username}:{password}@{hostname}:{port}')[self.database_name]
 
-        hostname = os.environ.get('DAS_COUCHBASE_HOSTNAME')
-        self.couch_db = CouchbaseDB(
-            f'couchbase://{hostname}',
-            authenticator=CouchbasePasswordAuthenticator(username, password),
-            lockmode=CouchbaseLockMode.WAIT).bucket(self.database_name)
+        hostname = os.environ.get('DAS_REDIS_HOSTNAME')
+        port = os.environ.get('DAS_REDIS_PORT')
+        self.redis = Redis(host=hostname, port=port, decode_responses=True)
+        logger().info(f"Ping Redis: {self.redis.ping()}")
 
-        collection_manager = self.couch_db.collections()
-        for entry in CouchbaseCollections:
-            try:
-                collection_manager.create_collection(CouchbaseCollectionSpec(entry.value))
-            except Exception:
-                #TODO: should we provide a warning here?
-                pass
-
-        self.db = CouchMongoDB(self.couch_db, self.mongo_db)
+        self.db = RedisMongoDB(self.redis, self.mongo_db)
         self.db.prefetch()
 
     def _log_mongodb_counts(self):
@@ -155,11 +143,11 @@ class DistributedAtomSpace:
         assert shared_data.build_ok_count == len(file_builder_threads)
 
         file_processor_threads = [
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.OUTGOING_SET, False, False, update),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.INCOMING_SET, False, False, update),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.PATTERNS, True, False, update),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.TEMPLATES, True, False, update),
-            PopulateCouchbaseCollectionThread(self.db, shared_data, CouchbaseCollections.NAMED_ENTITIES, False, True, update)
+            PopulateRedisCollectionThread(self.db, shared_data, KeyPrefix.OUTGOING_SET, False, False, update),
+            PopulateRedisCollectionThread(self.db, shared_data, KeyPrefix.INCOMING_SET, False, False, update),
+            PopulateRedisCollectionThread(self.db, shared_data, KeyPrefix.PATTERNS, True, False, update),
+            PopulateRedisCollectionThread(self.db, shared_data, KeyPrefix.TEMPLATES, True, False, update),
+            PopulateRedisCollectionThread(self.db, shared_data, KeyPrefix.NAMED_ENTITIES, False, True, update)
         ]
         for thread in file_processor_threads:
             thread.start()
@@ -176,10 +164,7 @@ class DistributedAtomSpace:
     def clear_database(self):
         for collection_name in self.mongo_db.collection_names():
             self.mongo_db.drop_collection(collection_name)
-        collection_manager = self.couch_db.collections()
-        for entry in CouchbaseCollections:
-            collection_manager.drop_collection(CouchbaseCollectionSpec(entry.value))
-            collection_manager.create_collection(CouchbaseCollectionSpec(entry.value))
+        self.redis.flushall()
 
     def count_atoms(self) -> Tuple[int, int]:
         return self.db.count_atoms()

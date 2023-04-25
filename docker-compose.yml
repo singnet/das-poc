@@ -7,6 +7,8 @@ services:
       - DAS_MONGODB_HOSTNAME=${DAS_MONGODB_HOSTNAME:-mongo}
       - DAS_MONGODB_PORT=${DAS_MONGODB_PORT:-27017}
       - DAS_COUCHBASE_HOSTNAME=${DAS_COUCHBASE_HOSTNAME:-couchbase}
+      - DAS_REDIS_HOSTNAME=${DAS_REDIS_HOSTNAME:-redis}
+      - DAS_REDIS_PORT=${DAS_REDIS_PORT:-6379}
       - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
       - PYTHONPATH=/app
@@ -24,7 +26,7 @@ services:
       - /media:/media
     links:
       - mongo
-      - couchbase
+      - redis
 
   mongo:
     image: mongo
@@ -40,28 +42,21 @@ services:
       - /mnt:/mnt
     command: mongod --port ${DAS_MONGODB_PORT:-27017}
 
-  couchbase:
-    image: couchbase
-    build:
-        context: .
-        dockerfile: Dockerfile.couchbase
+  redis:
+    image: redis/redis-stack
     environment:
-      - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
-      - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
-      - DAS_COUCHBASE_BUCKET_RAMSIZE=${DAS_COUCHBASE_BUCKET_RAMSIZE:-8192}
-      - COUCHBASE_SETUP_DIR=/opt/couchbase_setup
+      - DAS_REDIS_HOSTNAME=${DAS_REDIS_HOSTNAME:-redis}
+      - DAS_REDIS_PORT=${DAS_REDIS_PORT:-6379}
       - TZ=${TZ}
     ports:
-      - "8091-8095:8091-8095"
-      - "11210:11210"
+      - ${DAS_REDIS_PORT:-6379}:${DAS_REDIS_PORT:-6379}
+      - "8001:8001"
     expose:
-      - "8091"
-      - "8094"
+      - "6379"
+      - "8001"
     volumes:
       - /tmp:/tmp
       - /mnt:/mnt
-      - couchbasedata:/opt/couchbase/var
-      - couchbasesetup:/opt/couchbase_setup
 
 volumes:
   mongodbdata: { }

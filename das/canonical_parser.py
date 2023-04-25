@@ -3,7 +3,7 @@ import datetime
 import subprocess
 from das.logger import logger
 from das.expression_hasher import ExpressionHasher
-from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
+from das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
 from das.database.mongo_schema import CollectionNames as MongoCollections
 from das.key_value_file import write_key_value, key_value_generator, key_value_targets_generator, sort_file
 from das.database.db_interface import WILDCARD
@@ -34,7 +34,7 @@ class CanonicalParser:
         self.db = db
         self.allow_duplicates = allow_duplicates
         self.temporary_file_name = {
-            s.value: f"{TMP_DIR}/parser_{s.value}.txt" for s in CouchbaseCollections
+            s.value: f"{TMP_DIR}/parser_{s.value}.txt" for s in KeyPrefix
         }
         self.pattern_black_list = None
 
@@ -101,7 +101,7 @@ class CanonicalParser:
         if self.mongo_terminal:
             mongo_collection = self.db.mongo_db[MongoCollections.NODES]
             self._mongo_insert_many(mongo_collection, self.mongo_terminal)
-        with open(self.temporary_file_name[CouchbaseCollections.NAMED_ENTITIES], "w") as named_entities:
+        with open(self.temporary_file_name[KeyPrefix.NAMED_ENTITIES], "w") as named_entities:
             for document in self.mongo_terminal:
                 write_key_value(named_entities, document["_id"], document["name"])
         self.mongo_typedef = []
@@ -109,16 +109,16 @@ class CanonicalParser:
         logger().info(f"Terminals flushed")
 
     def _sort_files(self):
-        sort_file(self.temporary_file_name[CouchbaseCollections.OUTGOING_SET])
-        sort_file(self.temporary_file_name[CouchbaseCollections.INCOMING_SET])
-        sort_file(self.temporary_file_name[CouchbaseCollections.PATTERNS])
-        sort_file(self.temporary_file_name[CouchbaseCollections.TEMPLATES])
+        sort_file(self.temporary_file_name[KeyPrefix.OUTGOING_SET])
+        sort_file(self.temporary_file_name[KeyPrefix.INCOMING_SET])
+        sort_file(self.temporary_file_name[KeyPrefix.PATTERNS])
+        sort_file(self.temporary_file_name[KeyPrefix.TEMPLATES])
 
     def _build_key_value_files(self):
-        outgoing = open(self.temporary_file_name[CouchbaseCollections.OUTGOING_SET], "w")
-        incoming = open(self.temporary_file_name[CouchbaseCollections.INCOMING_SET], "w")
-        patterns = open(self.temporary_file_name[CouchbaseCollections.PATTERNS], "w")
-        template = open(self.temporary_file_name[CouchbaseCollections.TEMPLATES], "w")
+        outgoing = open(self.temporary_file_name[KeyPrefix.OUTGOING_SET], "w")
+        incoming = open(self.temporary_file_name[KeyPrefix.INCOMING_SET], "w")
+        patterns = open(self.temporary_file_name[KeyPrefix.PATTERNS], "w")
+        template = open(self.temporary_file_name[KeyPrefix.TEMPLATES], "w")
         for tag in [MongoCollections.LINKS_ARITY_1, MongoCollections.LINKS_ARITY_2, MongoCollections.LINKS_ARITY_N]:
             mongo_collection = self.db.mongo_db[tag]
             for expression in mongo_collection.find():
@@ -190,54 +190,27 @@ class CanonicalParser:
             mongo_collection = self.db.mongo_db[MongoCollections.LINKS_ARITY_N]
             self._mongo_insert_many(mongo_collection, bulk_insertion_N)
 
-    def _populate_couchbase_table(self, collection_name, use_targets, merge_rest, update):
+    def _populate_redis_collection(self, collection_name, use_targets, merge_rest, update):
         file_name = self.temporary_file_name[collection_name]
-        couchbase_collection = self.db.couch_db.collection(collection_name)
         generator = key_value_targets_generator if use_targets else key_value_generator
         for key, value, block_count in generator(file_name, merge_rest=merge_rest):
-            assert not (block_count > 0 and update)
-            if block_count == 0:
-                if update:
-                    outdated = None
-                    try:
-                        outdated = couchbase_collection.get(key)
-                    except Exception:
-                        pass
-                    if outdated is None:
-                        couchbase_collection.upsert(key, list(set(value)), timeout=datetime.timedelta(seconds=100))
-                    else:
-                        converted_outdated = []
-                        for entry in outdated.content:
-                            if isinstance(entry, str):
-                                converted_outdated.append(entry)
-                            else:
-                                handle = entry[0]
-                                targets = entry[1]
-                                converted_outdated.append(tuple([handle, tuple(targets)]))
-                        couchbase_collection.upsert(key, list(set([*converted_outdated, *value])), timeout=datetime.timedelta(seconds=100))
-                else:
-                    couchbase_collection.upsert(key, value, timeout=datetime.timedelta(seconds=100))
-            else:
-                if block_count == 1:
-                    first_block = couchbase_collection.get(key)
-                    couchbase_collection.upsert(f"{key}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
-                couchbase_collection.upsert(key, block_count + 1)
-                couchbase_collection.upsert(f"{key}_{block_count}", value, timeout=datetime.timedelta(seconds=100))
+            assert not block_count == 0
+            self.db.redis.sadd(build_redis_key(collection_name, key), *value)
 
-    def _populate_couchbase(self):
-        self._populate_couchbase_table(CouchbaseCollections.OUTGOING_SET, False, False, False),
-        self._populate_couchbase_table(CouchbaseCollections.INCOMING_SET, False, False, False),
-        self._populate_couchbase_table(CouchbaseCollections.PATTERNS, True, False, False),
-        self._populate_couchbase_table(CouchbaseCollections.TEMPLATES, True, False, False),
-        self._populate_couchbase_table(CouchbaseCollections.NAMED_ENTITIES, False, True, False)
+    def _populate_redis(self):
+        self._populate_redis_collection(KeyPrefix.OUTGOING_SET, False, False, False),
+        self._populate_redis_collection(KeyPrefix.INCOMING_SET, False, False, False),
+        self._populate_redis_collection(KeyPrefix.PATTERNS, True, False, False),
+        self._populate_redis_collection(KeyPrefix.TEMPLATES, True, False, False),
+        self._populate_redis_collection(KeyPrefix.NAMED_ENTITIES, False, True, False)
 
     def _process_key_value_files(self):
-        logger().info(f"Populating Couchbase")
+        logger().info(f"Populating Redis")
         logger().info(f"Building key-value files")
         self._build_key_value_files()
         logger().info(f"Processing key-value files")
-        self._populate_couchbase()
-        logger().info(f"Couchbase is up to date")
+        self._populate_redis()
+        logger().info(f"Redis is up to date")
 
     def _parse_expression(self, expression):
         slist = []

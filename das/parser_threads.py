@@ -4,7 +4,7 @@ import time
 from threading import Thread, Lock
 from das.expression import Expression
 from das.database.mongo_schema import CollectionNames as MongoCollections
-from das.database.couchbase_schema import CollectionNames as CouchbaseCollections
+from das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
 from das.metta_yacc import MettaYacc
 from das.atomese_yacc import AtomeseYacc
 from das.database.db_interface import DBInterface
@@ -35,7 +35,7 @@ class SharedData():
         self.mongo_uploader_ok = False
 
         self.temporary_file_name = {
-            s.value: f"/tmp/parser_{s.value}.txt" for s in CouchbaseCollections
+            s.value: f"/tmp/parser_{s.value}.txt" for s in KeyPrefix
         }
         self.pattern_black_list = []
 
@@ -122,7 +122,7 @@ class FlushNonLinksToDBThread(Thread):
             mongo_collection = self.db.mongo_db[MongoCollections.ATOM_TYPES]
             self._insert_many(mongo_collection, bulk_insertion)
 
-        named_entities = open(self.shared_data.temporary_file_name[CouchbaseCollections.NAMED_ENTITIES], "w")
+        named_entities = open(self.shared_data.temporary_file_name[KeyPrefix.NAMED_ENTITIES], "w")
         bulk_insertion = []
         while self.shared_data.terminals:
             terminal = self.shared_data.terminals.pop()
@@ -144,8 +144,8 @@ class BuildConnectivityThread(Thread):
         self.shared_data = shared_data
 
     def run(self):
-        outgoing_file_name = self.shared_data.temporary_file_name[CouchbaseCollections.OUTGOING_SET]
-        incoming_file_name = self.shared_data.temporary_file_name[CouchbaseCollections.INCOMING_SET]
+        outgoing_file_name = self.shared_data.temporary_file_name[KeyPrefix.OUTGOING_SET]
+        incoming_file_name = self.shared_data.temporary_file_name[KeyPrefix.INCOMING_SET]
         logger().info(f"Temporary file builder thread {self.name} (TID {self.native_id}) started. Building " + \
             f"{outgoing_file_name} and {incoming_file_name}")
         stopwatch_start = time.perf_counter()
@@ -174,7 +174,7 @@ class BuildPatternsThread(Thread):
         self.shared_data = shared_data
 
     def run(self):
-        file_name = self.shared_data.temporary_file_name[CouchbaseCollections.PATTERNS]
+        file_name = self.shared_data.temporary_file_name[KeyPrefix.PATTERNS]
         logger().info(f"Temporary file builder thread {self.name} (TID {self.native_id}) started. " + \
             f"Building {file_name}")
         stopwatch_start = time.perf_counter()
@@ -230,7 +230,7 @@ class BuildTypeTemplatesThread(Thread):
         self.shared_data = shared_data
 
     def run(self):
-        file_name = self.shared_data.temporary_file_name[CouchbaseCollections.TEMPLATES]
+        file_name = self.shared_data.temporary_file_name[KeyPrefix.TEMPLATES]
         logger().info(f"Temporary file builder thread {self.name} (TID {self.native_id}) started. Building {file_name}")
         stopwatch_start = time.perf_counter()
         template = open(file_name, "w")
@@ -296,7 +296,7 @@ class PopulateMongoDBLinksThread(Thread):
         logger().info(f"MongoDB links uploader thread {self.name} (TID {self.native_id}) finished. " + \
             f"{duplicates} hash colisions. {elapsed:.0f} minutes.")
 
-class PopulateCouchbaseCollectionThread(Thread):
+class PopulateRedisCollectionThread(Thread):
     
     def __init__(
         self, 
@@ -317,41 +317,19 @@ class PopulateCouchbaseCollectionThread(Thread):
 
     def run(self):
         file_name = self.shared_data.temporary_file_name[self.collection_name]
-        couchbase_collection = self.db.couch_db.collection(self.collection_name)
-        logger().info(f"Couchbase collection uploader thread {self.name} (TID {self.native_id}) started. " + \
+        logger().info(f"Redis collection uploader thread {self.name} (TID {self.native_id}) started. " + \
             f"Uploading {self.collection_name}")
         stopwatch_start = time.perf_counter()
         generator = key_value_targets_generator if self.use_targets else key_value_generator
         for key, value, block_count in generator(file_name, merge_rest=self.merge_rest):
-            assert not (block_count > 0 and self.update)
-            if block_count == 0:
-                if self.update:
-                    outdated = None
-                    try:
-                        outdated = couchbase_collection.get(key)
-                    except Exception:
-                        pass
-                    if outdated is None:
-                        couchbase_collection.upsert(key, list(set(value)), timeout=datetime.timedelta(seconds=100))
-                    else:
-                        converted_outdated = []
-                        for entry in outdated.content:
-                            if isinstance(entry, str):
-                                converted_outdated.append(entry)
-                            else:
-                                handle = entry[0]
-                                targets = entry[1]
-                                converted_outdated.append(tuple([handle, tuple(targets)]))
-                        couchbase_collection.upsert(key, list(set([*converted_outdated, *value])), timeout=datetime.timedelta(seconds=100))
-                else:
-                    couchbase_collection.upsert(key, value, timeout=datetime.timedelta(seconds=100))
-            else:
-                if block_count == 1:
-                    first_block = couchbase_collection.get(key)
-                    couchbase_collection.upsert(f"{key}_0", first_block.content, timeout=datetime.timedelta(seconds=100))
-                couchbase_collection.upsert(key, block_count + 1)
-                couchbase_collection.upsert(f"{key}_{block_count}", value, timeout=datetime.timedelta(seconds=100))
+            assert block_count == 0
+            print(type(value))
+            print(value)
+            print(file_name)
+            assert isinstance(value, list)
+            assert isinstance(value[0], str)
+            self.db.redis.sadd(build_redis_key(self.collection_name, key), *value)
         elapsed = (time.perf_counter() - stopwatch_start) // 60
         self.shared_data.process_ok()
-        logger().info(f"Couchbase collection uploader thread {self.name} (TID {self.native_id}) finished. " + \
+        logger().info(f"Redis collection uploader thread {self.name} (TID {self.native_id}) finished. " + \
             f"{elapsed:.0f} minutes.")
