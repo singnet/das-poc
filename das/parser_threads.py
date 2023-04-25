@@ -1,6 +1,7 @@
 import os
 import datetime
 import time
+import pickle
 from threading import Thread, Lock
 from das.expression import Expression
 from das.database.mongo_schema import CollectionNames as MongoCollections
@@ -323,12 +324,11 @@ class PopulateRedisCollectionThread(Thread):
         generator = key_value_targets_generator if self.use_targets else key_value_generator
         for key, value, block_count in generator(file_name, merge_rest=self.merge_rest):
             assert block_count == 0
-            print(type(value))
-            print(value)
-            print(file_name)
-            assert isinstance(value, list)
-            assert isinstance(value[0], str)
-            self.db.redis.sadd(build_redis_key(self.collection_name, key), *value)
+            #print(f"file_name = {file_name} type(value) = {type(value)} type(value[0]) = {type(value[0])} value = {value}")
+            if self.use_targets:
+                self.db.redis.sadd(build_redis_key(self.collection_name, key), *[pickle.dumps(v) for v in value])
+            else:
+                self.db.redis.sadd(build_redis_key(self.collection_name, key), *value)
         elapsed = (time.perf_counter() - stopwatch_start) // 60
         self.shared_data.process_ok()
         logger().info(f"Redis collection uploader thread {self.name} (TID {self.native_id}) finished. " + \

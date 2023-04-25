@@ -45,7 +45,7 @@ class DistributedAtomSpace:
 
         hostname = os.environ.get('DAS_REDIS_HOSTNAME')
         port = os.environ.get('DAS_REDIS_PORT')
-        self.redis = Redis(host=hostname, port=port, decode_responses=True)
+        self.redis = Redis(host=hostname, port=port, decode_responses=False)
         logger().info(f"Ping Redis: {self.redis.ping()}")
 
         self.db = RedisMongoDB(self.redis, self.mongo_db)

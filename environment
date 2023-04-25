@@ -1,3 +1,6 @@
+# Redis variables
+export DAS_REDIS_HOSTNAME=redis
+export DAS_REDIS_PORT=6379
 # MongoDB variables
 export DAS_MONGODB_HOSTNAME=mongo
 export DAS_MONGODB_PORT=27017
