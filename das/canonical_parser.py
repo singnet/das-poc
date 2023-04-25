@@ -1,6 +1,7 @@
 from enum import Enum, auto
 import datetime
 import subprocess
+import pickle
 from das.logger import logger
 from das.expression_hasher import ExpressionHasher
 from das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
@@ -20,7 +21,8 @@ def _file_line_count(file_name):
 
 EXPRESSIONS_CHUNK_SIZE = 10000000
 HINT_FILE_SIZE = None
-TMP_DIR = '/mnt/HD10T/nfs_share/work/tmp'
+TMP_DIR = '/tmp'
+#TMP_DIR = '/mnt/HD10T/nfs_share/work/tmp'
 
 class CanonicalParser:
 
@@ -194,8 +196,12 @@ class CanonicalParser:
         file_name = self.temporary_file_name[collection_name]
         generator = key_value_targets_generator if use_targets else key_value_generator
         for key, value, block_count in generator(file_name, merge_rest=merge_rest):
-            assert not block_count == 0
-            self.db.redis.sadd(build_redis_key(collection_name, key), *value)
+            assert block_count == 0
+            if use_targets:
+                self.db.redis.sadd(build_redis_key(collection_name, key), *[pickle.dumps(v) for v in value])
+            else:
+                self.db.redis.sadd(build_redis_key(collection_name, key), *value)
+
 
     def _populate_redis(self):
         self._populate_redis_collection(KeyPrefix.OUTGOING_SET, False, False, False),
