@@ -23,9 +23,6 @@ services:
       - /tmp:/tmp
       - /mnt:/mnt
       - /media:/media
-    links:
-      - mongo
-      - redis
 
   mongo:
     image: mongo
