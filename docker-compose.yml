@@ -14,8 +14,7 @@ services:
       - PYTHONPATH=/app
       - TZ=${TZ}
     tty: true
-    ports:
-      - "8887:8887"
+    network_mode: "host"
     volumes:
       - ./das:/app/das
       - ./tests:/app/tests
@@ -34,8 +33,9 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - MONGO_INITDB_ROOT_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
       - TZ=${TZ}
-    ports:
-      - ${DAS_MONGODB_PORT:-27017}:${DAS_MONGODB_PORT:-27017}
+    network_mode: "host"
+    expose:
+      - "27017"
     volumes:
       - mongodbdata:/data/db
       - /tmp:/tmp
@@ -48,9 +48,7 @@ services:
       - DAS_REDIS_HOSTNAME=${DAS_REDIS_HOSTNAME:-redis}
       - DAS_REDIS_PORT=${DAS_REDIS_PORT:-6379}
       - TZ=${TZ}
-    ports:
-      - ${DAS_REDIS_PORT:-6379}:${DAS_REDIS_PORT:-6379}
-      - "8001:8001"
+    network_mode: "host"
     expose:
       - "6379"
       - "8001"
