@@ -1,5 +1,4 @@
-unset DAS_MONGODB_HOSTNAME
-unset DAS_COUCHBASE_HOSTNAME
+source ./environment
 docker stop `docker ps | grep 'das_app\|das_couchbase\|das_mongo\|das_redis' | cut -d' ' -f1` >& /dev/null
 docker rm `docker ps -a | grep 'das_app\|das_couchbase\|das_mongo\|das_redis' | cut -d' ' -f1` >& /dev/null
 docker volume rm das_couchbasedata >& /dev/null

@@ -1,3 +1,3 @@
 ./empty-docker-up
-docker cp ./scripts/load_das.py `docker ps | grep 'das_app' | cut -d' ' -f1`:/app/scripts
+sleep 5
 docker-compose exec app python3 scripts/load_das.py $2 --knowledge-base $1

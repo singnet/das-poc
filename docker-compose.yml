@@ -31,8 +31,6 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
       - TZ=${TZ}
     network_mode: "host"
-    expose:
-      - "27017"
     volumes:
       - mongodbdata:/data/db
       - /tmp:/tmp
@@ -46,9 +44,6 @@ services:
       - DAS_REDIS_PORT=${DAS_REDIS_PORT:-6379}
       - TZ=${TZ}
     network_mode: "host"
-    expose:
-      - "6379"
-      - "8001"
     volumes:
       - /tmp:/tmp
       - /mnt:/mnt
