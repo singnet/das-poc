@@ -192,10 +192,15 @@ class CanonicalParser:
             self._mongo_insert_many(mongo_collection, bulk_insertion_N)
 
     def _populate_couchbase_table(self, collection_name, use_targets, merge_rest, update):
+        logger().info(f"Populating collection {collection_name}")
         file_name = self.temporary_file_name[collection_name]
         couchbase_collection = self.db.couch_db.collection(collection_name)
         generator = key_value_targets_generator if use_targets else key_value_generator
+        key_count = 0
         for key, value, block_count in generator(file_name, merge_rest=merge_rest):
+            key_count += 1
+            if key_count % 100000 == 0:
+                logger().info(f"Added {key_count} keys")
             assert not (block_count > 0 and update)
             if block_count == 0:
                 if update:
