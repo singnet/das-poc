@@ -1,8 +1,9 @@
 #!/bin/bash
 
-docker stop das_mongo_1
-docker rm das_mongo_1
+docker stop mongo >& /dev/null
+docker rm mongo >& /dev/null
 docker run \
+    --detach \
     --env MONGO_INITDB_ROOT_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin} \
     --env MONGO_INITDB_ROOT_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret} \
     --env TZ=${TZ} \
