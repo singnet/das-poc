@@ -1,7 +1,7 @@
 export DAS_REDIS_HOSTNAME=localhost
-export DAS_REDIS_PORT=6380
+export DAS_REDIS_PORT=7000
 
-export DAS_MONGODB_HOSTNAME=tornado
+export DAS_MONGODB_HOSTNAME=localhost
 export DAS_MONGODB_PORT=27018
 
 export DAS_DATABASE_USERNAME=dbadmin

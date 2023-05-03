@@ -9,6 +9,7 @@ from time import sleep
 from typing import List, Optional, Union, Tuple, Dict
 from pymongo import MongoClient as MongoDBClient
 from redis import Redis
+from redis.cluster import RedisCluster
 from enum import Enum, auto
 from das.parser_actions import KnowledgeBaseFile, MultiThreadParsing
 from das.database.mongo_schema import CollectionNames as MongoCollections
@@ -45,7 +46,8 @@ class DistributedAtomSpace:
 
         hostname = os.environ.get('DAS_REDIS_HOSTNAME')
         port = os.environ.get('DAS_REDIS_PORT')
-        self.redis = Redis(host=hostname, port=port, decode_responses=False)
+        #self.redis = Redis(host=hostname, port=port, decode_responses=False)
+        self.redis = RedisCluster(host=hostname, port=port, decode_responses=False)
         logger().info(f"Ping Redis: {self.redis.ping()}")
 
         self.db = RedisMongoDB(self.redis, self.mongo_db)
