@@ -4,9 +4,6 @@ from typing import List, Dict, Optional, Union, Any, Tuple
 from redis import Redis
 import pickle
 
-from couchbase.bucket import Bucket
-from couchbase.collection import CBCollection as CouchbaseCollection
-from couchbase.exceptions import DocumentNotFoundException
 from pymongo.database import Database
 
 from das.expression_hasher import ExpressionHasher

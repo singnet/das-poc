@@ -46,9 +46,13 @@ class DistributedAtomSpace:
 
         hostname = os.environ.get('DAS_REDIS_HOSTNAME')
         port = os.environ.get('DAS_REDIS_PORT')
-        #self.redis = Redis(host=hostname, port=port, decode_responses=False)
-        self.redis = RedisCluster(host=hostname, port=port, decode_responses=False)
-        logger().info(f"Ping Redis: {self.redis.ping()}")
+        #TODO fix this to use a proper parameter
+        if port == 7000:
+            logger().info(f"Using Redis cluster at port {port}")
+            self.redis = RedisCluster(host=hostname, port=port, decode_responses=False)
+        else:
+            self.redis = Redis(host=hostname, port=port, decode_responses=False)
+            logger().info(f"Using standalone Redis at port {port}")
 
         self.db = RedisMongoDB(self.redis, self.mongo_db)
         self.db.prefetch()

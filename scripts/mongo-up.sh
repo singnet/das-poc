@@ -1,10 +1,12 @@
 #!/bin/bash
 
-docker stop mongo >& /dev/null
-docker rm mongo >& /dev/null
+echo "Starting MongoDB on port $DAS_MONGODB_PORT"
+
+docker stop mongo_$DAS_MONGODB_PORT >& /dev/null
+docker rm mongo_$DAS_MONGODB_PORT >& /dev/null
 docker run \
     --detach \
-    --name mongo \
+    --name mongo_$DAS_MONGODB_PORT \
     --env MONGO_INITDB_ROOT_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin} \
     --env MONGO_INITDB_ROOT_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret} \
     --env TZ=${TZ} \
@@ -13,4 +15,4 @@ docker run \
     --volume /mnt:/mnt \
     --volume mongodbdata:/data/db \
     mongo:latest \
-    mongod --port ${DAS_MONGODB_PORT:-27017}
+    mongod --port $DAS_MONGODB_PORT
