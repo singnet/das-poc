@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source environment_das
-#    --detach \
 docker run \
     --name jupyter-notebook \
     --env DAS_MONGODB_HOSTNAME=${DAS_MONGODB_HOSTNAME:-mongo} \
