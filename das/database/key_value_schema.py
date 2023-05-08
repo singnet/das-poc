@@ -6,3 +6,6 @@ class CollectionNames(str, Enum):
     PATTERNS = 'patterns'
     TEMPLATES = 'templates'
     NAMED_ENTITIES = 'names'
+
+def build_redis_key(prefix, key):
+    return prefix + ":" + key

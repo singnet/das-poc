@@ -7,13 +7,14 @@ services:
       - DAS_MONGODB_HOSTNAME=${DAS_MONGODB_HOSTNAME:-mongo}
       - DAS_MONGODB_PORT=${DAS_MONGODB_PORT:-27017}
       - DAS_COUCHBASE_HOSTNAME=${DAS_COUCHBASE_HOSTNAME:-couchbase}
+      - DAS_REDIS_HOSTNAME=${DAS_REDIS_HOSTNAME:-redis}
+      - DAS_REDIS_PORT=${DAS_REDIS_PORT:-6379}
       - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
       - PYTHONPATH=/app
       - TZ=${TZ}
     tty: true
-    ports:
-      - "8887:8887"
+    network_mode: "host"
     volumes:
       - ./das:/app/das
       - ./tests:/app/tests
@@ -22,9 +23,6 @@ services:
       - /tmp:/tmp
       - /mnt:/mnt
       - /media:/media
-    links:
-      - mongo
-      - couchbase
 
   mongo:
     image: mongo
@@ -32,36 +30,23 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
       - MONGO_INITDB_ROOT_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
       - TZ=${TZ}
-    ports:
-      - ${DAS_MONGODB_PORT:-27017}:${DAS_MONGODB_PORT:-27017}
+    network_mode: "host"
     volumes:
       - mongodbdata:/data/db
       - /tmp:/tmp
       - /mnt:/mnt
     command: mongod --port ${DAS_MONGODB_PORT:-27017}
 
-  couchbase:
-    image: couchbase
-    build:
-        context: .
-        dockerfile: Dockerfile.couchbase
+  redis:
+    image: redis/redis-stack
     environment:
-      - DAS_DATABASE_USERNAME=${DAS_DATABASE_USERNAME:-dbadmin}
-      - DAS_DATABASE_PASSWORD=${DAS_DATABASE_PASSWORD:-dassecret}
-      - DAS_COUCHBASE_BUCKET_RAMSIZE=${DAS_COUCHBASE_BUCKET_RAMSIZE:-8192}
-      - COUCHBASE_SETUP_DIR=/opt/couchbase_setup
+      - DAS_REDIS_HOSTNAME=${DAS_REDIS_HOSTNAME:-redis}
+      - DAS_REDIS_PORT=${DAS_REDIS_PORT:-6379}
       - TZ=${TZ}
-    ports:
-      - "8091-8095:8091-8095"
-      - "11210:11210"
-    expose:
-      - "8091"
-      - "8094"
+    network_mode: "host"
     volumes:
       - /tmp:/tmp
       - /mnt:/mnt
-      - couchbasedata:/opt/couchbase/var
-      - couchbasesetup:/opt/couchbase_setup
 
 volumes:
   mongodbdata: { }

@@ -5,6 +5,8 @@ These scripts run actions related to DAS context (Eg. conversion, loading).
 
 ## Run using docker-compose
 
+https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04
+
 Assuming there is a running console where the current directory is the root of this project:
 
 ```sh
@@ -13,6 +15,7 @@ source environment
 
 # Build and run containers
 docker-compose up -d
+
 
 # Setup Couchbase
 ./scripts/couchbase_test_setup.sh

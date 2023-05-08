@@ -3,14 +3,12 @@ import re
 
 from typing import List
 import pytest
-from couchbase.auth import PasswordAuthenticator
-from couchbase.bucket import Bucket
-from couchbase.cluster import Cluster
 from pymongo import MongoClient as MongoDBClient
+from redis import Redis
 
 from das.database.db_interface import DBInterface
-from das.database.couch_mongo_db import CouchMongoDB
-from das.database.couchbase_schema import CollectionNames as CouchbaseCollectionNames
+from das.database.redis_mongo_db import RedisMongoDB
+from das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
 from das.database.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
 
 @pytest.fixture()
@@ -24,24 +22,15 @@ def mongo_db():
 
 
 @pytest.fixture()
-def couch_db():
-    couchbase_specs = {
-        "hostname": "couchbase",
-        "username": "dbadmin",
-        "password": "dassecret",
-    }
-    cluster = Cluster(
-        f'couchbase://{couchbase_specs["hostname"]}',
-        authenticator=PasswordAuthenticator(
-            couchbase_specs["username"], couchbase_specs["password"]
-        ),
-    )
-    return cluster.bucket("das")
-
+def redis_db():
+    hostname = os.environ.get('DAS_REDIS_HOSTNAME')
+    port = os.environ.get('DAS_REDIS_PORT')
+    redis_db = Redis(host=hostname, port=port, decode_responses=False)
+    return redis_db
 
 @pytest.fixture()
-def db(couch_db, mongo_db):
-    db = CouchMongoDB(couch_db, mongo_db)
+def db(redis_db, mongo_db):
+    db = RedisMongoDB(redis_db, mongo_db)
     db.prefetch()
     return db
 
@@ -72,11 +61,8 @@ def _add_node_names(db, txt):
     return txt
 
 def test_db_creation(db: DBInterface):
-    assert db.couch_db
+    assert db.redis
     assert db.mongo_db
-    assert db.couch_incoming_collection
-    assert db.couch_outgoing_collection
-    assert db.couch_patterns_collection
     assert len(db.node_documents) == 14
     assert len(db.terminal_hash) == 14
     assert len(db.named_type_hash) == 18

@@ -1,6 +1,8 @@
 import os
 from signal import raise_signal
 from typing import List, Dict, Optional, Union, Any, Tuple
+from redis import Redis
+import pickle
 
 from couchbase.bucket import Bucket
 from couchbase.collection import CBCollection as CouchbaseCollection
@@ -8,20 +10,16 @@ from couchbase.exceptions import DocumentNotFoundException
 from pymongo.database import Database
 
 from das.expression_hasher import ExpressionHasher
-from das.database.key_value_schema import CollectionNames as CouchbaseCollectionNames
+from das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
 from das.database.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
 
 from .db_interface import DBInterface, WILDCARD, UNORDERED_LINK_TYPES
 
-class CouchMongoDB(DBInterface):
+class RedisMongoDB(DBInterface):
 
-    def __init__(self, couch_db: Bucket, mongo_db: Database):
-        self.couch_db = couch_db
+    def __init__(self, redis: Redis, mongo_db: Database):
+        self.redis = redis
         self.mongo_db = mongo_db
-        self.couch_incoming_collection = couch_db.collection(CouchbaseCollectionNames.INCOMING_SET)
-        self.couch_outgoing_collection = couch_db.collection(CouchbaseCollectionNames.OUTGOING_SET)
-        self.couch_patterns_collection = couch_db.collection(CouchbaseCollectionNames.PATTERNS)
-        self.couch_templates_collection = couch_db.collection(CouchbaseCollectionNames.TEMPLATES)
         self.mongo_link_collection = {
             '1': self.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_1),
             '2': self.mongo_db.get_collection(MongoCollectionNames.LINKS_ARITY_2),
@@ -43,6 +41,7 @@ class CouchMongoDB(DBInterface):
             self.typedef_mark_hash,
             self.typedef_base_type_hash,
             self.typedef_base_type_hash])
+        self.use_targets = [KeyPrefix.PATTERNS, KeyPrefix.TEMPLATES]
 
     def _get_atom_type_hash(self, atom_type):
         #TODO: implement a proper mongo collection to atom types so instead
@@ -111,17 +110,11 @@ class CouchMongoDB(DBInterface):
                 return document
         return None
 
-    def _retrieve_couchbase_value(self, collection: CouchbaseCollection, key: str) -> List[str]:
-        try:
-            value = collection.get(key)
-        except DocumentNotFoundException as e:
-            return []
-        if isinstance(value.content, list):
-            return value.content
-        answer = []
-        for i in range(value.content):
-            answer.extend(collection.get(key + f'_{i}').content)
-        return answer
+    def _retrieve_key_value(self, prefix: str, key: str) -> List[str]:
+        if prefix in self.use_targets:
+            return [pickle.loads(t) for t in self.redis.smembers(build_redis_key(prefix, key))]
+        else:
+            return [* self.redis.smembers(build_redis_key(prefix, key))]
 
     def _build_named_type_hash_template(self, template: Union[str, List[Any]]) -> List[Any]:
         if isinstance(template, str):
@@ -193,7 +186,7 @@ class CouchMongoDB(DBInterface):
         return link_handle
 
     def get_link_targets(self, link_handle: str) -> List[str]:
-        answer = self._retrieve_couchbase_value(self.couch_outgoing_collection, link_handle)
+        answer = self._retrieve_key_value(KeyPrefix.OUTGOING_SET, link_handle)
         if not answer:
             raise ValueError(f"Invalid handle: {link_handle}")
         return answer[1:]
@@ -221,7 +214,7 @@ class CouchMongoDB(DBInterface):
         if link_type in UNORDERED_LINK_TYPES:
             target_handles = sorted(target_handles)
         pattern_hash = ExpressionHasher.composite_hash([link_type_hash, *target_handles])
-        return self._retrieve_couchbase_value(self.couch_patterns_collection, pattern_hash)
+        return self._retrieve_key_value(KeyPrefix.PATTERNS, pattern_hash)
 
     def get_all_nodes(self, node_type: str, names: bool = False) -> List[str]:
         node_type_hash = self._get_atom_type_hash(node_type)
@@ -244,11 +237,11 @@ class CouchMongoDB(DBInterface):
             template_hash = ExpressionHasher.composite_hash(template)
         except KeyError as exception:
             raise ValueError(f'{exception}\nInvalid type')
-        return self._retrieve_couchbase_value(self.couch_templates_collection, template_hash)
+        return self._retrieve_key_value(KeyPrefix.TEMPLATES, template_hash)
 
     def get_matched_type(self, link_type: str) -> List[str]:
         named_type_hash = self._get_atom_type_hash(link_type)
-        return self._retrieve_couchbase_value(self.couch_templates_collection, named_type_hash)
+        return self._retrieve_key_value(KeyPrefix.TEMPLATES, named_type_hash)
 
     def get_node_name(self, node_handle: str) -> str:
         document = self.node_documents.get(node_handle, None)
