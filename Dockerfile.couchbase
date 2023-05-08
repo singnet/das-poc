@@ -1,4 +1,0 @@
-FROM couchbase
-
-ENV PATH="${PATH}:${COUCHBASE_SETUP_DIR}"
-COPY ./scripts/couchbase_bucket_setup.sh ${COUCHBASE_SETUP_DIR}

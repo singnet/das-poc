@@ -1,9 +1,7 @@
 #!/bin/bash
 
-#    --detach \
-#    --volume /opt/das/data:/data \
 docker run \
-    --name canonical-load \
+    --name load \
     --env DAS_MONGODB_HOSTNAME=${DAS_MONGODB_HOSTNAME:-mongo} \
     --env DAS_MONGODB_PORT=${DAS_MONGODB_PORT:-27017} \
     --env DAS_REDIS_HOSTNAME=${DAS_REDIS_HOSTNAME:-redis} \
@@ -16,6 +14,6 @@ docker run \
     --volume /tmp:/tmp \
     --volume /mnt:/mnt \
     das:latest \
-    python3 scripts/load_das.py --canonical --knowledge-base $1
+    python3 scripts/load_das.py --knowledge-base $1
 
-docker rm canonical-load >& /dev/null
+docker rm load >& /dev/null

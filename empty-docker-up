@@ -1,7 +1,6 @@
 source ./environment
-docker stop `docker ps | grep 'das_app\|das_couchbase\|das_mongo\|das_redis' | cut -d' ' -f1` >& /dev/null
-docker rm `docker ps -a | grep 'das_app\|das_couchbase\|das_mongo\|das_redis' | cut -d' ' -f1` >& /dev/null
-docker volume rm das_couchbasedata >& /dev/null
-docker volume rm das_mongodbdata >& /dev/null
-docker-compose up -d
-#./scripts/couchbase_test_setup.sh
+docker stop mongo_27018
+docker rm mongo_27018
+docker volume rm mongodbdata
+./scripts/mongo-up.sh
+./scripts/redis-up.sh

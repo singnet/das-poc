@@ -1,4 +1,2 @@
 ./empty-docker-up
-docker cp ./scripts/load_das.py `docker ps | grep 'das_app' | cut -d' ' -f1`:/app/scripts
-docker cp ./das/canonical_parser.py `docker ps | grep 'das_app' | cut -d' ' -f1`:/app/das
 docker-compose exec app python3 scripts/load_das.py --canonical --knowledge-base $1
