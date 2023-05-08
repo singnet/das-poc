@@ -1,6 +1,0 @@
-source ./environment
-docker stop mongo_27018
-docker rm mongo_27018
-docker volume rm mongodbdata
-./scripts/mongo-up.sh
-./scripts/redis-up.sh

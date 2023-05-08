@@ -1,5 +1,6 @@
-source environment
-./empty-docker-up 
+#!/bin/bash
+
+./scripts/empty-db-up.sh
 ./scripts/load.sh /data/samples/animals.metta
 
 docker run \

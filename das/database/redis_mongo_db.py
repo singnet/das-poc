@@ -12,6 +12,35 @@ from das.database.mongo_schema import CollectionNames as MongoCollectionNames, F
 
 from .db_interface import DBInterface, WILDCARD, UNORDERED_LINK_TYPES
 
+USE_CACHED_NODES = False
+
+class NodeDocuments():
+
+    def __init__(self, collection):
+        self.mongo_collection = collection
+        self.cached_nodes = {}
+        self.count = 0
+
+    def add(self, node_id, document):
+        if USE_CACHED_NODES:
+            self.cached_nodes[node_id] = document
+        self.count += 1
+
+    def get(self, handle, default_value):
+        if USE_CACHED_NODES:
+            return self.cached_nodes.get(handle, default_value)
+        else:
+            mongo_filter = {MongoFieldNames.ID_HASH: handle}
+            node = self.mongo_collection.find_one(mongo_filter)
+            return node if node else default_value
+
+    def size(self):
+        return self.count
+
+    def values(self):
+        for document in self.cached_nodes.values() if USE_CACHED_NODES else self.mongo_collection.find():
+            yield document
+
 class RedisMongoDB(DBInterface):
 
     def __init__(self, redis: Redis, mongo_db: Database):
@@ -65,12 +94,12 @@ class RedisMongoDB(DBInterface):
         self.symbol_hash = {}
         self.terminal_hash = {}
         self.parent_type = {}
-        self.node_documents = {}
+        self.node_documents = NodeDocuments(self.mongo_nodes_collection)
         for document in self.mongo_nodes_collection.find():
             node_id = document[MongoFieldNames.ID_HASH]
             node_type = document[MongoFieldNames.TYPE_NAME]
             node_name = document[MongoFieldNames.NODE_NAME]
-            self.node_documents[node_id] = document
+            self.node_documents.add(node_id, document)
             self.terminal_hash[(node_type, node_name)] = node_id
         for document in self.mongo_types_collection.find():
             hash_id = document[MongoFieldNames.ID_HASH]
@@ -89,7 +118,9 @@ class RedisMongoDB(DBInterface):
 
     def _retrieve_mongo_document(self, handle: str, arity=-1) -> dict:
         mongo_filter = {MongoFieldNames.ID_HASH: handle}
-        if arity > 0:
+        if arity >= 0:
+            if arity == 0:
+                collection = self.mongo_nodes_collection
             if arity == 2:
                 collection = self.mongo_link_collection['2']
             elif arity == 1:
@@ -97,9 +128,6 @@ class RedisMongoDB(DBInterface):
             else:
                 collection = self.mongo_link_collection['N']
             return collection.find_one(mongo_filter)
-        document = self.node_documents.get(handle, None)
-        if document:
-            return document
         # The order of keys in search is important. Greater to smallest probability of proper arity
         for collection in [self.mongo_link_collection[key] for key in ['2', '1', 'N']]:
             document = collection.find_one(mongo_filter)

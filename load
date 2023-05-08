@@ -1,2 +1,0 @@
-./empty-docker-up
-docker-compose exec app python3 scripts/load_das.py $2 --knowledge-base $1
