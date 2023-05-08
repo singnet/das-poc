@@ -7,6 +7,7 @@ from das.expression_hasher import ExpressionHasher
 from das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
 from das.database.mongo_schema import CollectionNames as MongoCollections
 from das.key_value_file import write_key_value, key_value_generator, key_value_targets_generator, sort_file
+import das.key_value_file
 from das.database.db_interface import WILDCARD
 
 class State(str, Enum):
@@ -21,8 +22,8 @@ def _file_line_count(file_name):
 
 EXPRESSIONS_CHUNK_SIZE = 10000000
 HINT_FILE_SIZE = None
-#TMP_DIR = '/tmp'
-TMP_DIR = '/mnt/HD10T/nfs_share/work/tmp'
+TMP_DIR = '/tmp'
+#TMP_DIR = '/mnt/HD10T/nfs_share/work/tmp'
 
 class CanonicalParser:
 
@@ -193,15 +194,22 @@ class CanonicalParser:
             self._mongo_insert_many(mongo_collection, bulk_insertion_N)
 
     def _populate_redis_collection(self, collection_name, use_targets, merge_rest, update):
+        logger().info(f"Populating collection {collection_name}")
         file_name = self.temporary_file_name[collection_name]
         generator = key_value_targets_generator if use_targets else key_value_generator
-        for key, value, block_count in generator(file_name, merge_rest=merge_rest):
-            assert block_count == 0
-            if use_targets:
-                self.db.redis.sadd(build_redis_key(collection_name, key), *[pickle.dumps(v) for v in value])
-            else:
-                self.db.redis.sadd(build_redis_key(collection_name, key), *value)
-
+        key_count = 0
+        for key, value, block_count in generator(file_name, block_size=100000, merge_rest=merge_rest):
+            key_count += 1
+            if key_count % 100000 == 0:
+                logger().info(f"Added {key_count} keys (line count = {das.key_value_file.KEY_VALUE_LINE_COUNTER})")
+            try:
+                if use_targets:
+                    self.db.redis.sadd(build_redis_key(collection_name, key), *[pickle.dumps(v) for v in value])
+                else:
+                    self.db.redis.sadd(build_redis_key(collection_name, key), *value)
+            except:
+                logger().error(f"Error in key-value file {collection_name} on line {das.key_value_file.KEY_VALUE_LINE_COUNTER}")
+                assert False
 
     def _populate_redis(self):
         self._populate_redis_collection(KeyPrefix.OUTGOING_SET, False, False, False),

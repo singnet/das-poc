@@ -18,8 +18,11 @@ def key_value_generator(input_filename, *, block_size=None, merge_rest=False):
     last_key = ''
     last_list = []
     block_count = 0
+    global KEY_VALUE_LINE_COUNTER
+    KEY_VALUE_LINE_COUNTER = 0
     with open(input_filename, 'r') as fh:
         for line in fh:
+            KEY_VALUE_LINE_COUNTER += 1
             line = line.strip()
             if line == '':
                 continue
@@ -47,9 +50,12 @@ def key_value_generator(input_filename, *, block_size=None, merge_rest=False):
 def key_value_targets_generator(input_filename, *, block_size=None, merge_rest=False):
     last_key = ''
     last_list = []
+    global KEY_VALUE_LINE_COUNTER
+    KEY_VALUE_LINE_COUNTER = 0
     block_count = 0
     with open(input_filename, 'r') as fh:
         for line in fh:
+            KEY_VALUE_LINE_COUNTER += 1
             line = line.strip()
             if line == '':
                 continue
