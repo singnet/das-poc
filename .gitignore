@@ -134,3 +134,5 @@ dmypy.json
 
 **/*.metta
 nogit/*
+das/parser.out
+das/parsetab.py
