@@ -42,17 +42,18 @@ class DistributedAtomSpace:
         port = os.environ.get('DAS_MONGODB_PORT')
         username = os.environ.get('DAS_DATABASE_USERNAME')
         password = os.environ.get('DAS_DATABASE_PASSWORD')
+        logger().info(f"Connecting to MongoDB at port {port}")
         self.mongo_db = MongoDBClient(f'mongodb://{username}:{password}@{hostname}:{port}')[self.database_name]
 
         hostname = os.environ.get('DAS_REDIS_HOSTNAME')
         port = os.environ.get('DAS_REDIS_PORT')
         #TODO fix this to use a proper parameter
         if port == "7000":
-            logger().info(f"Using Redis cluster at port {port}")
+            logger().info(f"Connecting to Redis cluster at port {port}")
             self.redis = RedisCluster(host=hostname, port=port, decode_responses=False)
         else:
             self.redis = Redis(host=hostname, port=port, decode_responses=False)
-            logger().info(f"Using standalone Redis at port {port}")
+            logger().info(f"Connecting to standalone Redis at port {port}")
 
         self.db = RedisMongoDB(self.redis, self.mongo_db)
         self.db.prefetch()
@@ -279,6 +280,9 @@ class DistributedAtomSpace:
             return self._to_json(db_answer)
         else:
             raise ValueError(f"Invalid output format: '{output_format}'")
+
+    def get_link_targets(self, link_handle: str):
+        return self.db.get_link_targets(link_handle)
 
     def query(self,
         query: LogicalExpression,

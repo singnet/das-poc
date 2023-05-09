@@ -210,7 +210,8 @@ class RedisMongoDB(DBInterface):
         answer = self._retrieve_key_value(KeyPrefix.OUTGOING_SET, link_handle)
         if not answer:
             raise ValueError(f"Invalid handle: {link_handle}")
-        return answer[1:]
+        #return answer[1:]
+        return [h.decode() for h in answer]
 
     def is_ordered(self, link_handle: str) -> bool:
         document = self._retrieve_mongo_document(link_handle)
