@@ -281,19 +281,8 @@ class DistributedAtomSpace:
         else:
             raise ValueError(f"Invalid output format: '{output_format}'")
 
-    def get_link_targets(self,
-            link_handle: str,
-            output_format: QueryOutputFormat = QueryOutputFormat.HANDLE) -> Union[List[str], List[Dict]]:
-
-        db_answer = self.db.get_link_targets(link_handle)
-        if output_format == QueryOutputFormat.HANDLE:
-            return self._to_handle_list(db_answer)
-        elif output_format == QueryOutputFormat.ATOM_INFO:
-            return self._to_link_dict_list(db_answer)
-        elif output_format == QueryOutputFormat.JSON:
-            return self._to_json(db_answer)
-        else:
-            raise ValueError(f"Invalid output format: '{output_format}'")
+    def get_link_targets(self, link_handle: str):
+        return self.db.get_link_targets(link_handle)
 
     def query(self,
         query: LogicalExpression,
