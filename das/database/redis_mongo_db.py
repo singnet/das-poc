@@ -13,6 +13,7 @@ from das.database.mongo_schema import CollectionNames as MongoCollectionNames, F
 from .db_interface import DBInterface, WILDCARD, UNORDERED_LINK_TYPES
 
 USE_CACHED_NODES = False
+USE_CACHED_LINK_TYPES = True
 
 class NodeDocuments():
 
@@ -64,6 +65,7 @@ class RedisMongoDB(DBInterface):
         self.parent_type = None
         self.node_documents = None
         self.terminal_hash = None
+        self.link_type_hash = None
         self.typedef_mark_hash = ExpressionHasher._compute_hash(":")
         self.typedef_base_type_hash = ExpressionHasher._compute_hash("Type")
         self.typedef_composite_type_hash = ExpressionHasher.composite_hash([
@@ -89,6 +91,7 @@ class RedisMongoDB(DBInterface):
         self.symbol_hash = {}
         self.parent_type = {}
         self.terminal_hash = {}
+        self.link_type_hash = {}
         self.node_documents = NodeDocuments(self.mongo_nodes_collection)
         if USE_CACHED_NODES:
             for document in self.mongo_nodes_collection.find():
@@ -98,6 +101,10 @@ class RedisMongoDB(DBInterface):
                 self.node_documents.add(node_id, document)
         else:
             self.node_documents.count = self.mongo_nodes_collection.count_documents({})
+        if USE_CACHED_LINK_TYPES:
+            for tag in ["1", "2", "N"]:
+                for document in self.mongo_link_collection[tag].find():
+                    self.link_type_hash[document[MongoFieldNames.ID_HASH]] = document[MongoFieldNames.TYPE_NAME]
         for document in self.mongo_types_collection.find():
             hash_id = document[MongoFieldNames.ID_HASH]
             named_type = document[MongoFieldNames.TYPE_NAME]
@@ -299,6 +306,13 @@ class RedisMongoDB(DBInterface):
 
     def get_atom_as_deep_representation(self, handle: str, arity=-1) -> str:
         return self._build_deep_representation(handle, arity)
+
+    def get_link_type(self, link_handle: str) -> str:
+        if USE_CACHED_LINK_TYPES:
+            return self.link_type_hash[link_handle]
+        else:
+            document = self.get_atom_as_dict(link_handle)
+            return document["type"]
 
     def count_atoms(self) -> Tuple[int, int]:
         node_count = self.mongo_nodes_collection.estimated_document_count()

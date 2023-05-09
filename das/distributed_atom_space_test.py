@@ -137,7 +137,6 @@ def _test_get_link_targets():
                  [(inheritance, v) for v in all_inheritances]
 
     for link_type, targets in test_links:
-        print(link_type, targets)
         link_handle = das.get_link(link_type, targets)
         answer = das.get_link_targets(link_handle)
         assert len(answer) == len(targets)
@@ -147,7 +146,15 @@ def _test_get_link_targets():
         else:
             for n1, n2 in zip(answer, targets):
                 assert n1 == n2
-    assert False
+
+def test_get_link_type():
+    test_links = [(similarity, list(v)) for v in all_similarities] + \
+                 [(inheritance, v) for v in all_inheritances]
+
+    for link_type, targets in test_links:
+        link_handle = das.get_link(link_type, targets)
+        answer = das.get_link_type(link_handle)
+        assert answer == link_type
 
 def test_get_links_with_link_templates():
     link_handles = das.get_links(link_type=similarity, target_types=[concept, concept])
