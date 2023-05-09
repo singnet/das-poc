@@ -64,7 +64,6 @@ def test_db_creation(db: DBInterface):
     assert db.redis
     assert db.mongo_db
     assert db.node_documents.size() == 14
-    assert len(db.terminal_hash) == 14
     assert len(db.named_type_hash) == 18
     assert len(db.named_type_hash_reverse) == 18
     assert len(db.named_types) == 18
