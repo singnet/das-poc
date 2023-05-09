@@ -70,7 +70,7 @@ def test_db_creation(db: DBInterface):
     assert len(db.symbol_hash) == 18
     assert len(db.parent_type) == 18
 
-def _test_node_exists(db: DBInterface):
+def test_node_exists(db: DBInterface):
     assert db.node_exists('Concept', 'human')
     assert db.node_exists('Concept', 'monkey')
     assert db.node_exists('Concept', 'chimp')

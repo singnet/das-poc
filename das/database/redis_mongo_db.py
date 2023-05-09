@@ -114,17 +114,16 @@ class RedisMongoDB(DBInterface):
             self.symbol_hash[named_type] = hash_id
 
     def _retrieve_mongo_document(self, handle: str, arity=-1) -> dict:
-        mongo_filter = {MongoFieldNames.ID_HASH: handle}
+        mongo_filter = {"_id": handle}
         if arity >= 0:
             if arity == 0:
-                collection = self.mongo_nodes_collection
-            if arity == 2:
-                collection = self.mongo_link_collection['2']
+                return self.mongo_nodes_collection.find_one(mongo_filter)
+            elif arity == 2:
+                return self.mongo_link_collection['2'].find_one(mongo_filter)
             elif arity == 1:
-                collection = self.mongo_link_collection['1']
+                return self.mongo_link_collection['1'].find_one(mongo_filter)
             else:
-                collection = self.mongo_link_collection['N']
-            return collection.find_one(mongo_filter)
+                return self.mongo_link_collection['N'].find_one(mongo_filter)
         # The order of keys in search is important. Greater to smallest probability of proper arity
         for collection in [self.mongo_link_collection[key] for key in ['2', '1', 'N']]:
             document = collection.find_one(mongo_filter)
@@ -192,7 +191,7 @@ class RedisMongoDB(DBInterface):
     def node_exists(self, node_type: str, node_name: str) -> bool:
         node_handle = ExpressionHasher.terminal_hash(node_type, node_name)
         # TODO: use a specific query to nodes table
-        document = self._retrieve_mongo_document(node_handle)
+        document = self._retrieve_mongo_document(node_handle, 0)
         return document is not None
 
     def link_exists(self, link_type: str, target_handles: List[str]) -> bool:
