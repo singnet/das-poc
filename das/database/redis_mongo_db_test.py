@@ -64,14 +64,13 @@ def test_db_creation(db: DBInterface):
     assert db.redis
     assert db.mongo_db
     assert db.node_documents.size() == 14
-    assert len(db.terminal_hash) == 14
     assert len(db.named_type_hash) == 18
     assert len(db.named_type_hash_reverse) == 18
     assert len(db.named_types) == 18
     assert len(db.symbol_hash) == 18
     assert len(db.parent_type) == 18
 
-def _test_node_exists(db: DBInterface):
+def test_node_exists(db: DBInterface):
     assert db.node_exists('Concept', 'human')
     assert db.node_exists('Concept', 'monkey')
     assert db.node_exists('Concept', 'chimp')

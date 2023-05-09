@@ -47,7 +47,7 @@ class DistributedAtomSpace:
         hostname = os.environ.get('DAS_REDIS_HOSTNAME')
         port = os.environ.get('DAS_REDIS_PORT')
         #TODO fix this to use a proper parameter
-        if port == 7000:
+        if port == "7000":
             logger().info(f"Using Redis cluster at port {port}")
             self.redis = RedisCluster(host=hostname, port=port, decode_responses=False)
         else:

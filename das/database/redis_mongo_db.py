@@ -35,7 +35,10 @@ class NodeDocuments():
             return node if node else default_value
 
     def size(self):
-        return self.count
+        if USE_CACHED_NODES:
+            return len(self.cached_nodes)
+        else:
+            return self.count
 
     def values(self):
         for document in self.cached_nodes.values() if USE_CACHED_NODES else self.mongo_collection.find():
@@ -58,9 +61,9 @@ class RedisMongoDB(DBInterface):
         self.named_type_hash_reverse = None
         self.named_types = None
         self.symbol_hash = None
-        self.terminal_hash = None
         self.parent_type = None
         self.node_documents = None
+        self.terminal_hash = None
         self.typedef_mark_hash = ExpressionHasher._compute_hash(":")
         self.typedef_base_type_hash = ExpressionHasher._compute_hash("Type")
         self.typedef_composite_type_hash = ExpressionHasher.composite_hash([
@@ -79,28 +82,22 @@ class RedisMongoDB(DBInterface):
             self.named_type_hash_reverse[named_type_hash] = atom_type
         return named_type_hash
 
-    def _get_node_handle(self, node_type, node_name):
-        composite_name = (node_type, node_name)
-        node_handle = self.terminal_hash.get(composite_name, None)
-        if node_handle is None:
-            node_handle = ExpressionHasher.terminal_hash(node_type, node_name)
-            self.terminal_hash[composite_name] = node_handle
-        return node_handle
-
     def prefetch(self) -> None:
         self.named_type_hash = {}
         self.named_type_hash_reverse = {}
         self.named_types = {}
         self.symbol_hash = {}
-        self.terminal_hash = {}
         self.parent_type = {}
+        self.terminal_hash = {}
         self.node_documents = NodeDocuments(self.mongo_nodes_collection)
-        for document in self.mongo_nodes_collection.find():
-            node_id = document[MongoFieldNames.ID_HASH]
-            node_type = document[MongoFieldNames.TYPE_NAME]
-            node_name = document[MongoFieldNames.NODE_NAME]
-            self.node_documents.add(node_id, document)
-            self.terminal_hash[(node_type, node_name)] = node_id
+        if USE_CACHED_NODES:
+            for document in self.mongo_nodes_collection.find():
+                node_id = document[MongoFieldNames.ID_HASH]
+                node_type = document[MongoFieldNames.TYPE_NAME]
+                node_name = document[MongoFieldNames.NODE_NAME]
+                self.node_documents.add(node_id, document)
+        else:
+            self.node_documents.count = self.mongo_nodes_collection.count_documents({})
         for document in self.mongo_types_collection.find():
             hash_id = document[MongoFieldNames.ID_HASH]
             named_type = document[MongoFieldNames.TYPE_NAME]
@@ -117,17 +114,16 @@ class RedisMongoDB(DBInterface):
             self.symbol_hash[named_type] = hash_id
 
     def _retrieve_mongo_document(self, handle: str, arity=-1) -> dict:
-        mongo_filter = {MongoFieldNames.ID_HASH: handle}
+        mongo_filter = {"_id": handle}
         if arity >= 0:
             if arity == 0:
-                collection = self.mongo_nodes_collection
-            if arity == 2:
-                collection = self.mongo_link_collection['2']
+                return self.mongo_nodes_collection.find_one(mongo_filter)
+            elif arity == 2:
+                return self.mongo_link_collection['2'].find_one(mongo_filter)
             elif arity == 1:
-                collection = self.mongo_link_collection['1']
+                return self.mongo_link_collection['1'].find_one(mongo_filter)
             else:
-                collection = self.mongo_link_collection['N']
-            return collection.find_one(mongo_filter)
+                return self.mongo_link_collection['N'].find_one(mongo_filter)
         # The order of keys in search is important. Greater to smallest probability of proper arity
         for collection in [self.mongo_link_collection[key] for key in ['2', '1', 'N']]:
             document = collection.find_one(mongo_filter)
@@ -193,9 +189,9 @@ class RedisMongoDB(DBInterface):
     # DB interface methods
 
     def node_exists(self, node_type: str, node_name: str) -> bool:
-        node_handle = self._get_node_handle(node_type, node_name)
+        node_handle = ExpressionHasher.terminal_hash(node_type, node_name)
         # TODO: use a specific query to nodes table
-        document = self._retrieve_mongo_document(node_handle)
+        document = self._retrieve_mongo_document(node_handle, 0)
         return document is not None
 
     def link_exists(self, link_type: str, target_handles: List[str]) -> bool:
@@ -204,7 +200,7 @@ class RedisMongoDB(DBInterface):
         return document is not None
 
     def get_node_handle(self, node_type: str, node_name: str) -> str:
-        return self._get_node_handle(node_type, node_name)
+        return ExpressionHasher.terminal_hash(node_type, node_name)
 
     def get_link_handle(self, link_type: str, target_handles: List[str]) -> str:
         link_handle = ExpressionHasher.expression_hash(self._get_atom_type_hash(link_type), target_handles)
