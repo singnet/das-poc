@@ -287,6 +287,9 @@ class DistributedAtomSpace:
     def get_link_type(self, link_handle: str) -> str:
         return self.db.get_link_type(link_handle)
 
+    def get_node_name(self, node_handle: str) -> str:
+        return self.db.get_node_name(node_handle)
+
     def query(self,
         query: LogicalExpression,
         output_format: QueryOutputFormat = QueryOutputFormat.HANDLE) -> str:

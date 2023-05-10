@@ -273,10 +273,10 @@ class RedisMongoDB(DBInterface):
         return self._retrieve_key_value(KeyPrefix.TEMPLATES, named_type_hash)
 
     def get_node_name(self, node_handle: str) -> str:
-        document = self.node_documents.get(node_handle, None)
-        if not document:
-            raise ValueError(f'Invalid node handle: {node_handle}')
-        return document[MongoFieldNames.NODE_NAME]
+        answer = self._retrieve_key_value(KeyPrefix.NAMED_ENTITIES, node_handle)
+        if not answer:
+            raise ValueError(f"Invalid handle: {node_handle}")
+        return answer[0].decode()
 
     def get_matched_node_name(self, node_type: str, substring: str) -> str: 
         node_type_hash = self._get_atom_type_hash(node_type)
