@@ -132,7 +132,7 @@ def test_get_link():
     assert link["type"] == similarity
     assert link["template"] == template_similarity
 
-def _test_get_link_targets():
+def test_get_link_targets():
     test_links = [(similarity, list(v)) for v in all_similarities] + \
                  [(inheritance, v) for v in all_inheritances]
 
@@ -155,6 +155,39 @@ def test_get_link_type():
         link_handle = das.get_link(link_type, targets)
         answer = das.get_link_type(link_handle)
         assert answer == link_type
+
+def test_get_node_type():
+    for node in all_nodes:
+        node_type = das.get_node_type(node)
+        assert node_type == concept
+
+def test_get_node_name():
+    
+    test_nodes = [
+        (animal, "animal"),
+        (mammal, "mammal"),
+        (reptile, "reptile"),
+        (plant, "plant"),
+        (human, "human"),
+        (monkey, "monkey"),
+        (chimp, "chimp"),
+        (earthworm, "earthworm"),
+        (snake, "snake"),
+        (triceratops, "triceratops"),
+        (rhino, "rhino"),
+        (vine, "vine"),
+        (ent, "ent"),
+        (dinosaur, "dinosaur")
+    ]
+
+    for node_handle, node_name in test_nodes:
+        name = das.get_node_name(node_handle)
+        assert name == node_name
+    for link_handle in das.get_links(link_type=similarity, target_types=[concept, concept]):
+        with pytest.raises(ValueError):
+            name = das.get_node_name(link_handle)
+    with pytest.raises(ValueError):
+        name = das.get_node_name("blah")
 
 def test_get_links_with_link_templates():
     link_handles = das.get_links(link_type=similarity, target_types=[concept, concept])
