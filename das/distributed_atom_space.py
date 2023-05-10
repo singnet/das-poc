@@ -281,11 +281,14 @@ class DistributedAtomSpace:
         else:
             raise ValueError(f"Invalid output format: '{output_format}'")
 
+    def get_link_type(self, link_handle: str) -> str:
+        return self.db.get_link_type(link_handle)
+
     def get_link_targets(self, link_handle: str) -> List[str]:
         return self.db.get_link_targets(link_handle)
 
-    def get_link_type(self, link_handle: str) -> str:
-        return self.db.get_link_type(link_handle)
+    def get_node_type(self, node_handle: str) -> str:
+        return self.db.get_node_type(node_handle)
 
     def get_node_name(self, node_handle: str) -> str:
         return self.db.get_node_name(node_handle)

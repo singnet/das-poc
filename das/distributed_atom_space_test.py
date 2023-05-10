@@ -156,6 +156,11 @@ def test_get_link_type():
         answer = das.get_link_type(link_handle)
         assert answer == link_type
 
+def test_get_node_type():
+    for node in all_nodes:
+        node_type = das.get_node_type(node)
+        assert node_type == concept
+
 def test_get_node_name():
     
     test_nodes = [

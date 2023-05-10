@@ -14,6 +14,7 @@ from .db_interface import DBInterface, WILDCARD, UNORDERED_LINK_TYPES
 
 USE_CACHED_NODES = False
 USE_CACHED_LINK_TYPES = True
+USE_CACHED_NODE_TYPES = True
 
 class NodeDocuments():
 
@@ -65,7 +66,8 @@ class RedisMongoDB(DBInterface):
         self.parent_type = None
         self.node_documents = None
         self.terminal_hash = None
-        self.link_type_hash = None
+        self.link_type_cache = None
+        self.node_type_cache = None
         self.typedef_mark_hash = ExpressionHasher._compute_hash(":")
         self.typedef_base_type_hash = ExpressionHasher._compute_hash("Type")
         self.typedef_composite_type_hash = ExpressionHasher.composite_hash([
@@ -91,7 +93,8 @@ class RedisMongoDB(DBInterface):
         self.symbol_hash = {}
         self.parent_type = {}
         self.terminal_hash = {}
-        self.link_type_hash = {}
+        self.link_type_cache = {}
+        self.node_type_cache = {}
         self.node_documents = NodeDocuments(self.mongo_nodes_collection)
         if USE_CACHED_NODES:
             for document in self.mongo_nodes_collection.find():
@@ -104,7 +107,10 @@ class RedisMongoDB(DBInterface):
         if USE_CACHED_LINK_TYPES:
             for tag in ["1", "2", "N"]:
                 for document in self.mongo_link_collection[tag].find():
-                    self.link_type_hash[document[MongoFieldNames.ID_HASH]] = document[MongoFieldNames.TYPE_NAME]
+                    self.link_type_cache[document[MongoFieldNames.ID_HASH]] = document[MongoFieldNames.TYPE_NAME]
+        if USE_CACHED_NODE_TYPES:
+            for document in self.mongo_nodes_collection.find():
+                self.node_type_cache[document[MongoFieldNames.ID_HASH]] = document[MongoFieldNames.TYPE_NAME]
         for document in self.mongo_types_collection.find():
             hash_id = document[MongoFieldNames.ID_HASH]
             named_type = document[MongoFieldNames.TYPE_NAME]
@@ -309,9 +315,16 @@ class RedisMongoDB(DBInterface):
 
     def get_link_type(self, link_handle: str) -> str:
         if USE_CACHED_LINK_TYPES:
-            return self.link_type_hash[link_handle]
+            return self.link_type_cache[link_handle]
         else:
             document = self.get_atom_as_dict(link_handle)
+            return document["type"]
+
+    def get_node_type(self, node_handle: str) -> str:
+        if USE_CACHED_NODE_TYPES:
+            return self.node_type_cache[node_handle]
+        else:
+            document = self.get_atom_as_dict(node_handle)
             return document["type"]
 
     def count_atoms(self) -> Tuple[int, int]:
