@@ -45,15 +45,28 @@ class Table:
                 tag = tuple([key, value])
                 sql_tag = tuple([sql_table, sql_field])
                 self.covered_by[key][value].add(sql_tag)
-                count = 0
-                for s in self.covered_by[key].values():
-                    if sql_tag in s:
-                        count += 1
-                #if all(sql_tag in s for s in self.covered_by[key].values()):
-                if count >= 0.9 * len(self.covered_by[key].values()):
+                if all(sql_tag in s for s in self.covered_by[key].values()):
                     self.unmapped_fields.remove(key)
                     self.mapped_fields.add(key)
                     self.mapping[key] = sql_tag
+
+    def check_near_match(self):
+        for key in self.unmapped_fields:
+            tag_count = {}
+            max_count = 0
+            max_tag = None
+            for value in self.covered_by[key]:
+                for sql_tag in self.covered_by[key][value]:
+                    if sql_tag not in tag_count:
+                        tag_count[sql_tag] = 0
+                    tag_count[sql_tag] += 1
+                    if tag_count[sql_tag] > max_count:
+                        max_count = tag_count[sql_tag]
+                        max_tag = sql_tag
+            if max_count >= (0.9 * len(self.values[key])):
+                self.unmapped_fields.remove(key)
+                self.mapped_fields.add(key)
+                self.mapping[key] = max_tag
 
     def all_fields_mapped(self):
         return len(self.unmapped_fields) == 0
@@ -178,3 +191,13 @@ class PrecomputedTables:
         for table in self.all_tables:
             answer = answer.union(table.get_relevant_sql_tables())
         return answer
+
+    def check_nearly_matched_tables(self):
+        finished = []
+        for key, table in self.unmapped_tables.items():
+            table.check_near_match()
+            if table.all_fields_mapped():
+                finished.append(key)
+        for key in finished:
+            self.mapped_tables[key] = self.unmapped_tables.pop(key)
+

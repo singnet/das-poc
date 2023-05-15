@@ -3,21 +3,25 @@ from pathlib import Path
 import os, shutil
 import subprocess
 from enum import Enum, auto
-from flybase2metta.precomputed_tables import PrecomputedTables
+from precomputed_tables import PrecomputedTables
 import sqlparse
 
 #SQL_LINES_PER_CHUNK = 3000000000
 #SQL_LINES_PER_CHUNK = 3000000
-EXPRESSIONS_PER_CHUNK = 70000000
-SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/auto_download/2023_02/FB2023_02.sql"
+#EXPRESSIONS_PER_CHUNK = 70000000
+EXPRESSIONS_PER_CHUNK = 150000000
+SQL_FILE = "/opt/das/data/flybase/2023_02/FB2023_02.sql"
+#SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/auto_download/2023_02/FB2023_02.sql"
 #SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql"
 #SQL_FILE = "/tmp/cut.sql"
 #SQL_FILE = "/tmp/hedra/genes.sql"
 #PRECOMPUTED_DIR = None
-PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/auto_download/2023_02/precomputed"
+PRECOMPUTED_DIR = "/opt/das/data/flybase/2023_02/precomputed"
+#PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/auto_download/2023_02/precomputed"
 #PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/precomputed/FB2022_05"
 #PRECOMPUTED_DIR = "/tmp/tsv"
-OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
+OUTPUT_DIR = "/opt/das/data/flybase_metta"
+#OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
 #OUTPUT_DIR = "/tmp/flybase"
 #OUTPUT_DIR = "/tmp/cut"
 #OUTPUT_DIR = "/tmp/hedra"
@@ -450,6 +454,7 @@ class LazyParser():
                         print(f"Invalid state {state}")
                         assert False
                 line = file.readline()
+            self.precomputed.check_nearly_matched_tables()
             self._emit_precomputed_tables(self.current_output_file)
             self._checkpoint(True, use_precomputed_filter=True)
         self.relevant_tables = self.precomputed.get_relevant_sql_tables()
