@@ -161,6 +161,28 @@ class LazyParser():
         self.current_output_file = open(fname, "w")
         self._emit_file_header()
 
+    #def _emit_precomputed_tables(self, output_file):
+    #    self.log_precomputed_nodes = True
+    #    for table in self.precomputed.all_tables:
+    #        #print(table)
+    #        for row in table.rows:
+    #            #print(row)
+    #            for key1, value1 in zip(table.header, row):
+    #                if key1 not in table.mapped_fields:
+    #                    #print(f"key1: {key1} not in table.mapped_fields")
+    #                    continue
+    #                sql_table1, sql_field1 = table.mapping[key1]
+    #                node1 = self._add_value_node(short_name(sql_table1), self._get_type(sql_table1, sql_field1), value1)
+    #                #print("1:", node1)
+    #                for key2, value2 in zip(table.header, row):
+    #                    if key2 != key1:
+    #                        sql_table2, sql_field2 = table.mapping[key2] if key2 in table.mapping else (None, None)
+    #                        node2 = self._add_value_node(short_name(sql_table2), self._get_type(sql_table2, sql_field2), value2)
+    #                        #print("2:", node2)
+    #                        schema = self._add_node(AtomTypes.SCHEMA, key2)
+    #                        self._add_execution(schema, node1, node2)
+    #    self.log_precomputed_nodes = False
+
     def _emit_precomputed_tables(self, output_file):
         self.log_precomputed_nodes = True
         for table in self.precomputed.all_tables:
@@ -180,6 +202,13 @@ class LazyParser():
                             node2 = self._add_value_node(short_name(sql_table2), self._get_type(sql_table2, sql_field2), value2)
                             #print("2:", node2)
                             schema = self._add_node(AtomTypes.SCHEMA, key2)
+                            self._add_execution(schema, node1, node2)
+                for key1, value1 in zip(table.header, row):
+                    for key2, value2 in zip(table.header, row):
+                        if key2 != key1:
+                            schema = self._add_node(AtomTypes.SCHEMA, f"{table.name}.{key2}")
+                            node1 = self._add_node(AtomTypes.VERBATIM, value1)
+                            node2 = self._add_node(AtomTypes.VERBATIM, value2)
                             self._add_execution(schema, node1, node2)
         self.log_precomputed_nodes = False
 
@@ -251,9 +280,7 @@ class LazyParser():
                         return ctype
         return "text"
 
-    def _add_node(self, node_type, node_name):
-        # metta
-        #print(f"add_node {node_type} {node_name}")
+    def _build_node(self, node_type, node_name):
         node_name = node_name.replace("(", "[")
         node_name = node_name.replace(")", "]")
         node_name = node_name.replace('"', "")
@@ -263,13 +290,21 @@ class LazyParser():
         else:
             quoted_node_name = f'"{node_name}"'
             quoted_canonical_node_name = f'"{node_type} {node_name}"'
-        node = f"(: {quoted_node_name} {node_type})"
+        return tuple([quoted_canonical_node_name, f"(: {quoted_node_name} {node_type})"])
+
+    def _add_node_to_internal_sets(self, quoted_canonical_node_name, node):
         self.current_node_set.add(node)
         if self.log_precomputed_nodes:
             self.all_precomputed_nodes.add(node)
             self.all_precomputed_node_names.add(quoted_canonical_node_name)
         self.current_typedef_set.add(f"(: {node_type} Type)")
         self.expression_chunk_count += 1
+
+    def _add_node(self, node_type, node_name):
+        # metta
+        #print(f"add_node {node_type} {node_name}")
+        quoted_canonical_node_name, node = self._build_node(node_type, node_name)
+        self._add_node_to_internal_sets(quoted_canonical_node_name, node)
         return quoted_canonical_node_name
 
     def _add_inheritance(self, node1, node2):
@@ -338,28 +373,35 @@ class LazyParser():
         pkey_node = None
         for name, value in zip(self.current_table_header, data):
             if name == pkey:
-                pkey_node = self._add_node(table_short_name, value)
+                pkey_node_name, pkey_node = self._build_node(table_short_name, value)
                 break
         assert pkey_node is not None
+        relevant_row = False
         for name, value in zip(self.current_table_header, data):
             if non_mapped_column(name):
                 continue
             if name in fkeys:
                 referenced_table, referenced_field = table['foreign_key'][name]
                 predicate_node = self._add_node(AtomTypes.PREDICATE, referenced_table)
-                fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name(referenced_table, value))
+                fkey_node_name, fkey_node = self._build_node(AtomTypes.CONCEPT, _compose_name(referenced_table, value))
                 if pkey_node in self.all_precomputed_node_names or fkey_node in self.all_precomputed_node_names:
+                    self._add_node_to_internal_sets(fkey_node_name, fkey_node)
                     self._add_evaluation(predicate_node, pkey_node, fkey_node)
+                    relevant_row = True
             elif name != pkey:
                 ftype = self.current_field_types.get(name, None)
                 if not ftype:
                     continue
-                value_node = self._add_value_node(table_short_name, ftype, value)
+                value_node_name, value_node = self._build_value_node(table_short_name, ftype, value)
                 if not value_node:
                     continue
-                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(table_short_name, name))
                 if pkey_node in self.all_precomputed_node_names or value_node in self.all_precomputed_node_names:
+                    schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(table_short_name, name))
+                    self._add_node_to_internal_sets(value_node_name, value_node)
                     self._add_execution(schema_node, pkey_node, value_node)
+                    relevant_row = True
+        if relevant_row:
+            self._add_node_to_internal_sets(pkey_node_name, pkey_node)
 
     def _primary_key(self, first_line, second_line):
         line = first_line.split()
@@ -454,7 +496,7 @@ class LazyParser():
                         print(f"Invalid state {state}")
                         assert False
                 line = file.readline()
-            self.precomputed.check_nearly_matched_tables()
+            #self.precomputed.check_nearly_matched_tables()
             self._emit_precomputed_tables(self.current_output_file)
             self._checkpoint(True, use_precomputed_filter=True)
         self.relevant_tables = self.precomputed.get_relevant_sql_tables()
