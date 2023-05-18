@@ -25,9 +25,14 @@ OUTPUT_DIR = "/opt/das/data/flybase_metta"
 #OUTPUT_DIR = "/tmp/flybase"
 #OUTPUT_DIR = "/tmp/cut"
 #OUTPUT_DIR = "/tmp/hedra"
-SCHEMA_ONLY = False
 SHOW_PROGRESS = True
 FILE_SIZE = 0
+
+SCHEMA_ONLY = False
+SKIP_PRECOMPUTED_MATCH_BUILD = True
+USE_PRECOMPUTED_NEAR_MATCHES = False
+PRINT_PRECOMPUTED_NEAR_MATCHES = False
+SKIP_STEP_3 = False
 
 def _file_line_count(file_name):
     output = subprocess.run(["wc", "-l", file_name], stdout=subprocess.PIPE)
@@ -297,6 +302,7 @@ class LazyParser():
         if self.log_precomputed_nodes:
             self.all_precomputed_nodes.add(node)
             self.all_precomputed_node_names.add(quoted_canonical_node_name)
+        node_type = quoted_canonical_node_name.strip('"').split()[0]
         self.current_typedef_set.add(f"(: {node_type} Type)")
         self.expression_chunk_count += 1
 
@@ -328,18 +334,30 @@ class LazyParser():
             self.current_link_list.append(f"({AtomTypes.SCHEMA} {schema} {node1} {node2})")
         self.expression_chunk_count += 1
 
-    def _add_value_node(self, table_short_name, field_type, value):
+    def _add_value_node(self, table_short_name, field_type, value, build_only=False):
         if value == "\\N":
             return None
         if field_type == "pk":
             assert table_short_name is not None
-            return self._add_node(table_short_name, value)
+            if build_only:
+                return self._build_node(table_short_name, value)
+            else:
+                return self._add_node(table_short_name, value)
         elif field_type == "boolean":
-            return self._add_node(AtomTypes.CONCEPT, "True" if value.lower() == "t" else "False")
+            if build_only:
+                return self._build_node(AtomTypes.CONCEPT, "True" if value.lower() == "t" else "False")
+            else:
+                return self._add_node(AtomTypes.CONCEPT, "True" if value.lower() == "t" else "False")
         elif field_type in ["bigint", "integer", "smallint", "double precision"]:
-            return self._add_node(AtomTypes.NUMBER, value)
+            if build_only:
+                return self._build_node(AtomTypes.NUMBER, value)
+            else:
+                return self._add_node(AtomTypes.NUMBER, value)
         elif "character" in field_type or field_type in ["date", "text"]:
-            return self._add_node(AtomTypes.VERBATIM, value)
+            if build_only:
+                return self._build_node(AtomTypes.VERBATIM, value)
+            else:
+                return self._add_node(AtomTypes.VERBATIM, value)
         elif field_type in ["jsonb"]:
             return None
         else:
@@ -392,7 +410,7 @@ class LazyParser():
                 ftype = self.current_field_types.get(name, None)
                 if not ftype:
                     continue
-                value_node_name, value_node = self._build_value_node(table_short_name, ftype, value)
+                value_node_name, value_node = self._add_value_node(table_short_name, ftype, value, build_only=True)
                 if not value_node:
                     continue
                 if pkey_node in self.all_precomputed_node_names or value_node in self.all_precomputed_node_names:
@@ -490,13 +508,16 @@ class LazyParser():
                     elif state == State.READING_COPY:
                         if line.startswith(COPY_SUFFIX):
                             state = State.WAIT_KNOWN_COMMAND
-                        else:
+                        elif not SKIP_PRECOMPUTED_MATCH_BUILD:
                             self._new_row_precomputed(line)
                     else:
                         print(f"Invalid state {state}")
                         assert False
                 line = file.readline()
-            #self.precomputed.check_nearly_matched_tables()
+            if USE_PRECOMPUTED_NEAR_MATCHES:
+                self.precomputed.check_nearly_matched_tables()
+            if PRINT_PRECOMPUTED_NEAR_MATCHES:
+                self.precomputed.print_matched_tables()
             self._emit_precomputed_tables(self.current_output_file)
             self._checkpoint(True, use_precomputed_filter=True)
         self.relevant_tables = self.precomputed.get_relevant_sql_tables()
@@ -552,7 +573,8 @@ class LazyParser():
                 f.write(self._table_info(table))
                 f.write("\n\n")
         f.close()
-        self._parse_step_3()
+        if not SKIP_STEP_3:
+            self._parse_step_3()
         if self.errors:
             print(f"Errors occured while processing this SQL file. See them in {self.error_file_name}")
         self._tear_down()

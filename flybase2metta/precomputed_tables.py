@@ -61,6 +61,19 @@ class Table:
                     self.mapped_fields.add(key)
                     self.mapping[key] = sql_tag
 
+    def print_near_match(self):
+        for key in self.unmapped_fields:
+            tag_count = {}
+            for value in self.covered_by[key]:
+                for sql_tag in self.covered_by[key][value]:
+                    if sql_tag not in tag_count:
+                        tag_count[sql_tag] = 0
+                    tag_count[sql_tag] += 1
+            for tag in tag_count:
+                if (tag_count[tag] / len(self.values[key])) >= 0.8:
+                    table, field = tag
+                    print(f"{(tag_count[tag] / len(self.values[key]))};{self.name};{key};{table};{field}")
+
     def check_near_match(self):
         finished = []
         for key in self.unmapped_fields:
@@ -321,6 +334,12 @@ class PrecomputedTables:
             answer = answer.union(table.get_relevant_sql_tables())
         return answer
 
+    def print_matched_tables(self):
+        for table in self.mapped_tables.values():
+            table.print_near_match()
+        for table in self.unmapped_tables.values():
+            table.print_near_match()
+
     def check_nearly_matched_tables(self):
         finished = []
         for key, table in self.unmapped_tables.items():
@@ -329,4 +348,3 @@ class PrecomputedTables:
                 finished.append(key)
         for key in finished:
             self.mapped_tables[key] = self.unmapped_tables.pop(key)
-
