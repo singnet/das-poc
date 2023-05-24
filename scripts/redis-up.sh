@@ -4,12 +4,12 @@ if [ -z "$1" ]
 then
     PORT=${DAS_REDIS_PORT:-6379}
     CLUSTER_ENABLED="no"
-    CONFIG_FILE="/tmp/redis_$PORT.conf"
 else
     PORT=$1
     CLUSTER_ENABLED="yes"
 fi
 
+CONFIG_FILE="/tmp/redis_$PORT.conf"
 cp ./redis.conf $CONFIG_FILE
 echo "cluster-enabled $CLUSTER_ENABLED" >> $CONFIG_FILE
 echo "port $PORT" >> $CONFIG_FILE
