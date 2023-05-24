@@ -3,25 +3,36 @@ from pathlib import Path
 import os, shutil
 import subprocess
 from enum import Enum, auto
-from flybase2metta.precomputed_tables import PrecomputedTables
+from precomputed_tables import PrecomputedTables
 import sqlparse
 
 #SQL_LINES_PER_CHUNK = 3000000000
 #SQL_LINES_PER_CHUNK = 3000000
-EXPRESSIONS_PER_CHUNK = 70000000
-SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql"
+#EXPRESSIONS_PER_CHUNK = 70000000
+EXPRESSIONS_PER_CHUNK = 150000000
+SQL_FILE = "/opt/das/data/flybase/2023_02/FB2023_02.sql"
+#SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/auto_download/2023_02/FB2023_02.sql"
+#SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql"
 #SQL_FILE = "/tmp/cut.sql"
 #SQL_FILE = "/tmp/hedra/genes.sql"
 #PRECOMPUTED_DIR = None
-PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/precomputed/FB2022_05"
+PRECOMPUTED_DIR = "/opt/das/data/flybase/2023_02/precomputed"
+#PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/auto_download/2023_02/precomputed"
+#PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/precomputed/FB2022_05"
 #PRECOMPUTED_DIR = "/tmp/tsv"
-OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
+OUTPUT_DIR = "/opt/das/data/flybase_metta"
+#OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
 #OUTPUT_DIR = "/tmp/flybase"
 #OUTPUT_DIR = "/tmp/cut"
 #OUTPUT_DIR = "/tmp/hedra"
-SCHEMA_ONLY = False
 SHOW_PROGRESS = True
 FILE_SIZE = 0
+
+SCHEMA_ONLY = False
+SKIP_PRECOMPUTED_MATCH_BUILD = True
+USE_PRECOMPUTED_NEAR_MATCHES = False
+PRINT_PRECOMPUTED_NEAR_MATCHES = False
+SKIP_SQL_JOIN = False
 
 def _file_line_count(file_name):
     output = subprocess.run(["wc", "-l", file_name], stdout=subprocess.PIPE)
@@ -39,6 +50,7 @@ class AtomTypes(str, Enum):
     VERBATIM = "Verbatim"
     INHERITANCE = "Inheritance"
     EVALUATION = "Evaluation"
+    EXECUTION = "Execution"
     LIST = "List"
 
 TYPED_NAME = [AtomTypes.CONCEPT, AtomTypes.PREDICATE, AtomTypes.SCHEMA]
@@ -155,9 +167,33 @@ class LazyParser():
         self.current_output_file = open(fname, "w")
         self._emit_file_header()
 
+    #def _emit_precomputed_tables(self, output_file):
+    #    self.log_precomputed_nodes = True
+    #    for table in self.precomputed.all_tables:
+    #        #print(table)
+    #        for row in table.rows:
+    #            #print(row)
+    #            for key1, value1 in zip(table.header, row):
+    #                if key1 not in table.mapped_fields:
+    #                    #print(f"key1: {key1} not in table.mapped_fields")
+    #                    continue
+    #                sql_table1, sql_field1 = table.mapping[key1]
+    #                node1 = self._add_value_node(short_name(sql_table1), self._get_type(sql_table1, sql_field1), value1)
+    #                #print("1:", node1)
+    #                for key2, value2 in zip(table.header, row):
+    #                    if key2 != key1:
+    #                        sql_table2, sql_field2 = table.mapping[key2] if key2 in table.mapping else (None, None)
+    #                        node2 = self._add_value_node(short_name(sql_table2), self._get_type(sql_table2, sql_field2), value2)
+    #                        #print("2:", node2)
+    #                        schema = self._add_node(AtomTypes.SCHEMA, key2)
+    #                        self._add_execution(schema, node1, node2)
+    #    self.log_precomputed_nodes = False
+
     def _emit_precomputed_tables(self, output_file):
         self.log_precomputed_nodes = True
+        table_count = 0
         for table in self.precomputed.all_tables:
+            self._print_progress_bar(table_count, len(self.precomputed.all_tables), 50, 3, 4)
             #print(table)
             for row in table.rows:
                 #print(row)
@@ -175,6 +211,15 @@ class LazyParser():
                             #print("2:", node2)
                             schema = self._add_node(AtomTypes.SCHEMA, key2)
                             self._add_execution(schema, node1, node2)
+                for key1, value1 in zip(table.header, row):
+                    for key2, value2 in zip(table.header, row):
+                        if key2 != key1:
+                            schema = self._add_node(AtomTypes.SCHEMA, f"{table.name}.{key2}")
+                            node1 = self._add_node(AtomTypes.VERBATIM, value1)
+                            node2 = self._add_node(AtomTypes.VERBATIM, value2)
+                            self._add_execution(schema, node1, node2)
+            table_count += 1
+            self._print_progress_bar(table_count, len(self.precomputed.all_tables), 50, 3, 4)
         self.log_precomputed_nodes = False
 
     def _checkpoint(self, create_new, use_precomputed_filter=False):
@@ -245,9 +290,7 @@ class LazyParser():
                         return ctype
         return "text"
 
-    def _add_node(self, node_type, node_name):
-        # metta
-        #print(f"add_node {node_type} {node_name}")
+    def _build_node(self, node_type, node_name):
         node_name = node_name.replace("(", "[")
         node_name = node_name.replace(")", "]")
         node_name = node_name.replace('"', "")
@@ -257,13 +300,22 @@ class LazyParser():
         else:
             quoted_node_name = f'"{node_name}"'
             quoted_canonical_node_name = f'"{node_type} {node_name}"'
-        node = f"(: {quoted_node_name} {node_type})"
+        return tuple([quoted_canonical_node_name, f"(: {quoted_node_name} {node_type})"])
+
+    def _add_node_to_internal_sets(self, quoted_canonical_node_name, node):
         self.current_node_set.add(node)
         if self.log_precomputed_nodes:
             self.all_precomputed_nodes.add(node)
             self.all_precomputed_node_names.add(quoted_canonical_node_name)
+        node_type = quoted_canonical_node_name.strip('"').split()[0]
         self.current_typedef_set.add(f"(: {node_type} Type)")
         self.expression_chunk_count += 1
+
+    def _add_node(self, node_type, node_name):
+        # metta
+        #print(f"add_node {node_type} {node_name}")
+        quoted_canonical_node_name, node = self._build_node(node_type, node_name)
+        self._add_node_to_internal_sets(quoted_canonical_node_name, node)
         return quoted_canonical_node_name
 
     def _add_inheritance(self, node1, node2):
@@ -284,21 +336,33 @@ class LazyParser():
         # metta
         #print(f"add_execution {schema} {node1} {node2}")
         if schema and node1 and node2:
-            self.current_link_list.append(f"({AtomTypes.SCHEMA} {schema} {node1} {node2})")
+            self.current_link_list.append(f"({AtomTypes.EXECUTION} {schema} {node1} {node2})")
         self.expression_chunk_count += 1
 
-    def _add_value_node(self, table_short_name, field_type, value):
+    def _add_value_node(self, table_short_name, field_type, value, build_only=False):
         if value == "\\N":
             return None
         if field_type == "pk":
             assert table_short_name is not None
-            return self._add_node(table_short_name, value)
+            if build_only:
+                return self._build_node(table_short_name, value)
+            else:
+                return self._add_node(table_short_name, value)
         elif field_type == "boolean":
-            return self._add_node(AtomTypes.CONCEPT, "True" if value.lower() == "t" else "False")
+            if build_only:
+                return self._build_node(AtomTypes.CONCEPT, "True" if value.lower() == "t" else "False")
+            else:
+                return self._add_node(AtomTypes.CONCEPT, "True" if value.lower() == "t" else "False")
         elif field_type in ["bigint", "integer", "smallint", "double precision"]:
-            return self._add_node(AtomTypes.NUMBER, value)
+            if build_only:
+                return self._build_node(AtomTypes.NUMBER, value)
+            else:
+                return self._add_node(AtomTypes.NUMBER, value)
         elif "character" in field_type or field_type in ["date", "text"]:
-            return self._add_node(AtomTypes.VERBATIM, value)
+            if build_only:
+                return self._build_node(AtomTypes.VERBATIM, value)
+            else:
+                return self._add_node(AtomTypes.VERBATIM, value)
         elif field_type in ["jsonb"]:
             return None
         else:
@@ -329,6 +393,20 @@ class LazyParser():
         if len(self.current_table_header) != len(data):
             self._error(f"Invalid row at line {self.line_count} Table: {self.current_table} Header: {self.current_table_header} Raw line: <{line}>")
             return
+        relevant_row = False
+        for name, value in zip(self.current_table_header, data):
+            for precomputed_table in self.precomputed.all_tables:
+                for key in precomputed_table.mapping:
+                    sql_table, sql_field = precomputed_table.mapping[key]
+                    if sql_table == self.current_table and sql_field == name and value in precomputed_table.values[key]:
+                        relevant_row = True
+                        break
+                if relevant_row:
+                    break
+            if relevant_row:
+                break
+        if not relevant_row:
+            return
         pkey_node = None
         for name, value in zip(self.current_table_header, data):
             if name == pkey:
@@ -342,8 +420,7 @@ class LazyParser():
                 referenced_table, referenced_field = table['foreign_key'][name]
                 predicate_node = self._add_node(AtomTypes.PREDICATE, referenced_table)
                 fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name(referenced_table, value))
-                if pkey_node in self.all_precomputed_node_names or fkey_node in self.all_precomputed_node_names:
-                    self._add_evaluation(predicate_node, pkey_node, fkey_node)
+                self._add_evaluation(predicate_node, pkey_node, fkey_node)
             elif name != pkey:
                 ftype = self.current_field_types.get(name, None)
                 if not ftype:
@@ -352,8 +429,7 @@ class LazyParser():
                 if not value_node:
                     continue
                 schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(table_short_name, name))
-                if pkey_node in self.all_precomputed_node_names or value_node in self.all_precomputed_node_names:
-                    self._add_execution(schema_node, pkey_node, value_node)
+                self._add_execution(schema_node, pkey_node, value_node)
 
     def _primary_key(self, first_line, second_line):
         line = first_line.split()
@@ -392,7 +468,7 @@ class LazyParser():
             while line:
                 self.line_count += 1
                 if SHOW_PROGRESS:
-                    self._print_progress_bar(self.line_count, file_size, 50, 1, 3 if self.precomputed else 2)
+                    self._print_progress_bar(self.line_count, file_size, 50, 1, 4 if self.precomputed else 2)
                 line = line.replace('\n', '').strip()
                 if state == State.WAIT_KNOWN_COMMAND:
                     if line.startswith(CREATE_TABLE_PREFIX):
@@ -432,7 +508,7 @@ class LazyParser():
             while line:
                 self.line_count += 1
                 if SHOW_PROGRESS:
-                    self._print_progress_bar(self.line_count, file_size, 50, 2, 3)
+                    self._print_progress_bar(self.line_count, file_size, 50, 2, 4)
                 if not self.precomputed.all_tables_mapped():
                     line = line.replace('\n', '').strip()
                     if state == State.WAIT_KNOWN_COMMAND:
@@ -442,12 +518,16 @@ class LazyParser():
                     elif state == State.READING_COPY:
                         if line.startswith(COPY_SUFFIX):
                             state = State.WAIT_KNOWN_COMMAND
-                        else:
+                        elif not SKIP_PRECOMPUTED_MATCH_BUILD:
                             self._new_row_precomputed(line)
                     else:
                         print(f"Invalid state {state}")
                         assert False
                 line = file.readline()
+            if USE_PRECOMPUTED_NEAR_MATCHES:
+                self.precomputed.check_nearly_matched_tables()
+            if PRINT_PRECOMPUTED_NEAR_MATCHES:
+                self.precomputed.print_matched_tables()
             self._emit_precomputed_tables(self.current_output_file)
             self._checkpoint(True, use_precomputed_filter=True)
         self.relevant_tables = self.precomputed.get_relevant_sql_tables()
@@ -472,7 +552,7 @@ class LazyParser():
                 if self.expression_chunk_count >= EXPRESSIONS_PER_CHUNK:
                     self._checkpoint(True)
                 if SHOW_PROGRESS:
-                    self._print_progress_bar(self.line_count, file_size, 50, 3 if self.precomputed else 2, 3 if self.precomputed else 2)
+                    self._print_progress_bar(self.line_count, file_size, 50, 4 if self.precomputed else 2, 4 if self.precomputed else 2)
                 line = line.replace('\n', '').strip()
                 if state == State.WAIT_KNOWN_COMMAND:
                     if line.startswith(COPY_PREFIX):
@@ -482,7 +562,8 @@ class LazyParser():
                     if line.startswith(COPY_SUFFIX):
                         state = State.WAIT_KNOWN_COMMAND
                     else:
-                        self._new_row(line)
+                        if not SKIP_SQL_JOIN:
+                            self._new_row(line)
                 else:
                     print(f"Invalid state {state}")
                     assert False
