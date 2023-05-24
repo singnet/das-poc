@@ -4,6 +4,8 @@ import csv
 import json
 import re
 
+SKIP_FULL_TABLE_COVERAGE_CHECK = True
+
 class Table:
 
     def __init__(self, name):
@@ -56,10 +58,11 @@ class Table:
                 tag = tuple([key, value])
                 sql_tag = tuple([sql_table, sql_field])
                 self.covered_by[key][value].add(sql_tag)
-                if all(sql_tag in s for s in self.covered_by[key].values()):
-                    self.unmapped_fields.remove(key)
-                    self.mapped_fields.add(key)
-                    self.mapping[key] = sql_tag
+                if not SKIP_FULL_TABLE_COVERAGE_CHECK:
+                    if all(sql_tag in s for s in self.covered_by[key].values()):
+                        self.unmapped_fields.remove(key)
+                        self.mapped_fields.add(key)
+                        self.mapping[key] = sql_tag
 
     def print_near_match(self):
         for key in self.unmapped_fields:
@@ -348,3 +351,11 @@ class PrecomputedTables:
                 finished.append(key)
         for key in finished:
             self.mapped_tables[key] = self.unmapped_tables.pop(key)
+
+    def get_table(self, table_name):
+        if table_name in self.mapped_tables:
+            return self.mapped_tables[table_name]
+        elif table_name in self.unmapped_tables:
+            return self.unmapped_tables[table_name]
+        else:
+            return None
