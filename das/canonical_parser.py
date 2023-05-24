@@ -24,6 +24,8 @@ EXPRESSIONS_CHUNK_SIZE = 10000000
 HINT_FILE_SIZE = None
 TMP_DIR = '/tmp'
 #TMP_DIR = '/mnt/HD10T/nfs_share/work/tmp'
+SKIP_KEY_VALUE_FILES_GENERATION = False
+SKIP_PARSER = SKIP_KEY_VALUE_FILES_GENERATION or False
 
 class CanonicalParser:
 
@@ -220,8 +222,9 @@ class CanonicalParser:
 
     def _process_key_value_files(self):
         logger().info(f"Populating Redis")
-        logger().info(f"Building key-value files")
-        self._build_key_value_files()
+        if not SKIP_KEY_VALUE_FILES_GENERATION:
+            logger().info(f"Building key-value files")
+            self._build_key_value_files()
         logger().info(f"Processing key-value files")
         self._populate_redis()
         logger().info(f"Redis is up to date")
@@ -301,6 +304,9 @@ class CanonicalParser:
 
     def parse(self, path):
         logger().info(f"Parsing {path}")
+        if SKIP_PARSER:
+            logger().info(f"Skipping parser")
+            return
         logger().info(f"Computing file size")
         self.current_line_count = 1
         HINT_FILE_SIZE = _file_line_count(path)
