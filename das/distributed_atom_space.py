@@ -42,21 +42,23 @@ class DistributedAtomSpace:
         port = os.environ.get('DAS_MONGODB_PORT')
         username = os.environ.get('DAS_DATABASE_USERNAME')
         password = os.environ.get('DAS_DATABASE_PASSWORD')
-        logger().info(f"Connecting to MongoDB at port {port}")
+        logger().info(f"Connecting to MongoDB at {hostname}:{port}")
         self.mongo_db = MongoDBClient(f'mongodb://{username}:{password}@{hostname}:{port}')[self.database_name]
 
         hostname = os.environ.get('DAS_REDIS_HOSTNAME')
         port = os.environ.get('DAS_REDIS_PORT')
         #TODO fix this to use a proper parameter
         if port == "7000":
-            logger().info(f"Connecting to Redis cluster at port {port}")
+            logger().info(f"Connecting to Redis cluster at {hostname}:{port}")
             self.redis = RedisCluster(host=hostname, port=port, decode_responses=False)
         else:
             self.redis = Redis(host=hostname, port=port, decode_responses=False)
-            logger().info(f"Connecting to standalone Redis at port {port}")
+            logger().info(f"Connecting to standalone Redis at {hostname}:{port}")
 
         self.db = RedisMongoDB(self.redis, self.mongo_db)
+        logger().info(f"Prefetching data")
         self.db.prefetch()
+        logger().info(f"Database setup finished")
 
     def _log_mongodb_counts(self):
         tags = [
