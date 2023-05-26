@@ -12,7 +12,7 @@ from das.database.mongo_schema import CollectionNames as MongoCollectionNames, F
 
 from .db_interface import DBInterface, WILDCARD, UNORDERED_LINK_TYPES
 
-USE_CACHED_NODES = False
+USE_CACHED_NODES = True
 USE_CACHED_LINK_TYPES = True
 USE_CACHED_NODE_TYPES = True
 
