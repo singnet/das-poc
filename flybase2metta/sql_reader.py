@@ -45,16 +45,14 @@ if SHOW_PROGRESS:
 
 class AtomTypes(str, Enum):
     CONCEPT = "Concept"
-    PREDICATE = "Predicate"
     SCHEMA = "Schema"
     NUMBER = "Number"
     VERBATIM = "Verbatim"
     INHERITANCE = "Inheritance"
-    EVALUATION = "Evaluation"
     EXECUTION = "Execution"
     LIST = "List"
 
-TYPED_NAME = [AtomTypes.CONCEPT, AtomTypes.PREDICATE, AtomTypes.SCHEMA]
+TYPED_NAME = [AtomTypes.CONCEPT, AtomTypes.SCHEMA]
 
 CREATE_TABLE_PREFIX = "CREATE TABLE "
 CREATE_TABLE_SUFFIX = ");"
@@ -77,8 +75,8 @@ def filter_field(line):
         "timestamp" in line or \
         "CONSTRAINT" in line
 
-def _compose_name(name1, name2):
-    return f"{name1}_{name2}"
+def _compose_name(str_list):
+    return "_".join(str_list)
 
 def short_name(long_table_name):
     return long_table_name.split(".")[1] if long_table_name is not None else None
@@ -169,28 +167,6 @@ class LazyParser():
         self.current_output_file = open(fname, "w")
         self._emit_file_header()
 
-    #def _emit_precomputed_tables(self, output_file):
-    #    self.log_precomputed_nodes = True
-    #    for table in self.precomputed.all_tables:
-    #        #print(table)
-    #        for row in table.rows:
-    #            #print(row)
-    #            for key1, value1 in zip(table.header, row):
-    #                if key1 not in table.mapped_fields:
-    #                    #print(f"key1: {key1} not in table.mapped_fields")
-    #                    continue
-    #                sql_table1, sql_field1 = table.mapping[key1]
-    #                node1 = self._add_value_node(short_name(sql_table1), self._get_type(sql_table1, sql_field1), value1)
-    #                #print("1:", node1)
-    #                for key2, value2 in zip(table.header, row):
-    #                    if key2 != key1:
-    #                        sql_table2, sql_field2 = table.mapping[key2] if key2 in table.mapping else (None, None)
-    #                        node2 = self._add_value_node(short_name(sql_table2), self._get_type(sql_table2, sql_field2), value2)
-    #                        #print("2:", node2)
-    #                        schema = self._add_node(AtomTypes.SCHEMA, key2)
-    #                        self._add_execution(schema, node1, node2)
-    #    self.log_precomputed_nodes = False
-
     def _emit_precomputed_tables(self, output_file):
         self.log_precomputed_nodes = True
         table_count = 0
@@ -211,12 +187,12 @@ class LazyParser():
                             sql_table2, sql_field2 = table.mapping[key2] if key2 in table.mapping else (None, None)
                             node2 = self._add_value_node(short_name(sql_table2), self._get_type(sql_table2, sql_field2), value2)
                             #print("2:", node2)
-                            schema = self._add_node(AtomTypes.SCHEMA, key2)
+                            schema = self._add_node(AtomTypes.SCHEMA, _compose_name(["preref", table.name, key2]))
                             self._add_execution(schema, node1, node2)
                 for key1, value1 in zip(table.header, row):
                     for key2, value2 in zip(table.header, row):
                         if key2 != key1:
-                            schema = self._add_node(AtomTypes.SCHEMA, f"{table.name}.{key2}")
+                            schema = self._add_node(AtomTypes.SCHEMA, _compose_name(["pre", table.name, key2]))
                             node1 = self._add_node(AtomTypes.VERBATIM, value1)
                             node2 = self._add_node(AtomTypes.VERBATIM, value2)
                             self._add_execution(schema, node1, node2)
@@ -327,12 +303,12 @@ class LazyParser():
             self.current_link_list.append(f"({AtomTypes.INHERITANCE} {node1} {node2})")
         self.expression_chunk_count += 1
 
-    def _add_evaluation(self, predicate, node1, node2):
-        # metta
-        #print(f"add_evaluation {predicate} {node1} {node2}")
-        if predicate and node1 and node2:
-            self.current_link_list.append(f"({AtomTypes.EVALUATION} {predicate} ({AtomTypes.LIST} {node1} {node2}))")
-        self.expression_chunk_count += 1
+    #def _add_evaluation(self, predicate, node1, node2):
+    #    # metta
+    #    #print(f"add_evaluation {predicate} {node1} {node2}")
+    #    if predicate and node1 and node2:
+    #        self.current_link_list.append(f"({AtomTypes.EVALUATION} {predicate} ({AtomTypes.LIST} {node1} {node2}))")
+    #    self.expression_chunk_count += 1
 
     def _add_execution(self, schema, node1, node2):
         # metta
@@ -408,9 +384,9 @@ class LazyParser():
                 continue
             if name in fkeys:
                 referenced_table, referenced_field = table['foreign_key'][name]
-                predicate_node = self._add_node(AtomTypes.PREDICATE, referenced_table)
-                fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name(referenced_table, value))
-                self._add_evaluation(predicate_node, pkey_node, fkey_node)
+                schema_node = self._add_node(AtomTypes.SCHEMA, referenced_table)
+                fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name(["fwfk", referenced_table, value]))
+                self._add_execution(schema_node, pkey_node, fkey_node)
             elif name != pkey:
                 ftype = self.current_field_types.get(name, None)
                 if not ftype:
@@ -418,7 +394,7 @@ class LazyParser():
                 value_node = self._add_value_node(table_short_name, ftype, value)
                 if not value_node:
                     continue
-                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(table_short_name, name))
+                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(["fw", table_short_name, name]))
                 self._add_execution(schema_node, pkey_node, value_node)
 
     def _new_row(self, line):
@@ -462,9 +438,9 @@ class LazyParser():
                     if referenced_table not in self.relevant_fkeys:
                         self.relevant_fkeys[referenced_table] = set()
                     self.relevant_fkeys[referenced_table].add(value)
-                predicate_node = self._add_node(AtomTypes.PREDICATE, referenced_table)
-                fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name(referenced_table, value))
-                self._add_evaluation(predicate_node, pkey_node, fkey_node)
+                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(["sqlfk", referenced_table]))
+                fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name([referenced_table, value]))
+                self._add_execution(schema_node, pkey_node, fkey_node)
             elif name != pkey:
                 ftype = self.current_field_types.get(name, None)
                 if not ftype:
@@ -472,7 +448,7 @@ class LazyParser():
                 value_node = self._add_value_node(table_short_name, ftype, value)
                 if not value_node:
                     continue
-                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(table_short_name, name))
+                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(["sql", table_short_name, name]))
                 self._add_execution(schema_node, pkey_node, value_node)
 
     def _primary_key(self, first_line, second_line):

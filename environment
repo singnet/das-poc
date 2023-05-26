@@ -1,9 +1,6 @@
-# Redis variables
-export DAS_REDIS_HOSTNAME=localhost
-export DAS_REDIS_PORT=6380
-# MongoDB variables
+export DAS_REDIS_HOSTNAME=45.32.140.218
+export DAS_REDIS_PORT=7000
 export DAS_MONGODB_HOSTNAME=149.28.201.61
 export DAS_MONGODB_PORT=27018
-# Change the following values when running on a public instance
 export DAS_DATABASE_USERNAME=dbadmin
 export DAS_DATABASE_PASSWORD=dassecret
