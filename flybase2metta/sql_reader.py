@@ -107,9 +107,9 @@ class LazyParser():
         self.precomputed = precomputed
         self.relevant_tables = None
         self.expression_chunk_count = 0
-        self.all_precomputed_nodes = set()
-        self.all_precomputed_node_names = set()
-        self.log_precomputed_nodes = None
+        #self.all_precomputed_nodes = set()
+        #self.all_precomputed_node_names = set()
+        #self.log_precomputed_nodes = None
         self.relevant_fkeys = {}
 
         Path(self.target_dir).mkdir(parents=True, exist_ok=True)
@@ -168,7 +168,7 @@ class LazyParser():
         self._emit_file_header()
 
     def _emit_precomputed_tables(self, output_file):
-        self.log_precomputed_nodes = True
+        #self.log_precomputed_nodes = True
         table_count = 0
         for table in self.precomputed.all_tables:
             self._print_progress_bar(table_count, len(self.precomputed.all_tables), 50, 3, 5)
@@ -198,18 +198,19 @@ class LazyParser():
                             self._add_execution(schema, node1, node2)
             table_count += 1
             self._print_progress_bar(table_count, len(self.precomputed.all_tables), 50, 3, 5)
-        self.log_precomputed_nodes = False
+        #self.log_precomputed_nodes = False
 
-    def _checkpoint(self, create_new, use_precomputed_filter=False):
+    #def _checkpoint(self, create_new, use_precomputed_filter=False):
+    def _checkpoint(self, create_new):
         if SCHEMA_ONLY:
             return
         for metta_string in self.current_typedef_set:
             self.current_output_file.write(metta_string)
             self.current_output_file.write("\n")
         for metta_string in self.current_node_set:
-            if not use_precomputed_filter or metta_string in self.all_precomputed_nodes:
-                self.current_output_file.write(metta_string)
-                self.current_output_file.write("\n")
+            #if not use_precomputed_filter or metta_string in self.all_precomputed_nodes:
+            self.current_output_file.write(metta_string)
+            self.current_output_file.write("\n")
         for metta_string in self.current_link_list:
             self.current_output_file.write(metta_string)
             self.current_output_file.write("\n")
@@ -282,9 +283,9 @@ class LazyParser():
 
     def _add_node_to_internal_sets(self, quoted_canonical_node_name, node):
         self.current_node_set.add(node)
-        if self.log_precomputed_nodes:
-            self.all_precomputed_nodes.add(node)
-            self.all_precomputed_node_names.add(quoted_canonical_node_name)
+        #if self.log_precomputed_nodes:
+        #    self.all_precomputed_nodes.add(node)
+        #    self.all_precomputed_node_names.add(quoted_canonical_node_name)
         node_type = quoted_canonical_node_name.strip('"').split()[0]
         self.current_typedef_set.add(f"(: {node_type} Type)")
         self.expression_chunk_count += 1
@@ -323,22 +324,22 @@ class LazyParser():
         if field_type == "pk":
             assert table_short_name is not None
             if build_only:
-                return self._build_node(table_short_name, value)
+                return self._add_node(table_short_name, value)
             else:
                 return self._add_node(table_short_name, value)
         elif field_type == "boolean":
             if build_only:
-                return self._build_node(AtomTypes.CONCEPT, "True" if value.lower() == "t" else "False")
+                return self._add_node(AtomTypes.CONCEPT, "True" if value.lower() == "t" else "False")
             else:
                 return self._add_node(AtomTypes.CONCEPT, "True" if value.lower() == "t" else "False")
         elif field_type in ["bigint", "integer", "smallint", "double precision"]:
             if build_only:
-                return self._build_node(AtomTypes.NUMBER, value)
+                return self._add_node(AtomTypes.NUMBER, value)
             else:
                 return self._add_node(AtomTypes.NUMBER, value)
         elif "character" in field_type or field_type in ["date", "text"]:
             if build_only:
-                return self._build_node(AtomTypes.VERBATIM, value)
+                return self._add_node(AtomTypes.VERBATIM, value)
             else:
                 return self._add_node(AtomTypes.VERBATIM, value)
         elif field_type in ["jsonb"]:
@@ -385,7 +386,7 @@ class LazyParser():
             if name in fkeys:
                 referenced_table, referenced_field = table['foreign_key'][name]
                 schema_node = self._add_node(AtomTypes.SCHEMA, referenced_table)
-                fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name(["fwfk", referenced_table, value]))
+                fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name(["sqlfk", referenced_table, value]))
                 self._add_execution(schema_node, pkey_node, fkey_node)
             elif name != pkey:
                 ftype = self.current_field_types.get(name, None)
@@ -394,7 +395,7 @@ class LazyParser():
                 value_node = self._add_value_node(table_short_name, ftype, value)
                 if not value_node:
                     continue
-                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(["fw", table_short_name, name]))
+                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(["sql", table_short_name, name]))
                 self._add_execution(schema_node, pkey_node, value_node)
 
     def _new_row(self, line):
@@ -525,31 +526,35 @@ class LazyParser():
         state = State.WAIT_KNOWN_COMMAND
         with open(self.sql_file_name, 'r') as file:
             line = file.readline()
-            while line:
-                self.line_count += 1
-                if SHOW_PROGRESS:
-                    self._print_progress_bar(self.line_count, file_size, 50, 2, 5)
-                if not self.precomputed.all_tables_mapped():
-                    line = line.replace('\n', '').strip()
-                    if state == State.WAIT_KNOWN_COMMAND:
-                        if line.startswith(COPY_PREFIX):
-                            if self._start_copy(line):
-                                state = State.READING_COPY
-                    elif state == State.READING_COPY:
-                        if line.startswith(COPY_SUFFIX):
-                            state = State.WAIT_KNOWN_COMMAND
-                        elif not SKIP_PRECOMPUTED_MATCH_BUILD:
-                            self._new_row_precomputed(line)
-                    else:
-                        print(f"Invalid state {state}")
-                        assert False
-                line = file.readline()
+            if SKIP_PRECOMPUTED_MATCH_BUILD:
+                self._print_progress_bar(file_size, file_size, 50, 2, 5)
+            else:
+                while line:
+                    self.line_count += 1
+                    if SHOW_PROGRESS:
+                        self._print_progress_bar(self.line_count, file_size, 50, 2, 5)
+                    if not self.precomputed.all_tables_mapped():
+                        line = line.replace('\n', '').strip()
+                        if state == State.WAIT_KNOWN_COMMAND:
+                            if line.startswith(COPY_PREFIX):
+                                if self._start_copy(line):
+                                    state = State.READING_COPY
+                        elif state == State.READING_COPY:
+                            if line.startswith(COPY_SUFFIX):
+                                state = State.WAIT_KNOWN_COMMAND
+                            else:
+                                self._new_row_precomputed(line)
+                        else:
+                            print(f"Invalid state {state}")
+                            assert False
+                    line = file.readline()
             if USE_PRECOMPUTED_NEAR_MATCHES:
                 self.precomputed.check_nearly_matched_tables()
             if PRINT_PRECOMPUTED_NEAR_MATCHES:
                 self.precomputed.print_matched_tables()
             self._emit_precomputed_tables(self.current_output_file)
-            self._checkpoint(True, use_precomputed_filter=True)
+            #self._checkpoint(True, use_precomputed_filter=True)
+            self._checkpoint(True)
         self.relevant_tables = self.precomputed.get_relevant_sql_tables()
 
     def _parse_step_3(self):
