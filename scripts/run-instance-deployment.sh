@@ -32,3 +32,5 @@ case `hostname` in
         ./scripts/redis-up.sh 7000
     ;;
 esac
+sleep 1
+docker ps
