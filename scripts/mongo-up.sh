@@ -2,9 +2,10 @@
 
 echo "Starting MongoDB on port $DAS_MONGODB_PORT"
 
-docker stop mongo_$DAS_MONGODB_PORT >& /dev/null
-docker rm mongo_$DAS_MONGODB_PORT >& /dev/null
-docker volume rm mongodbdata >& /dev/null
+docker stop mongo_$DAS_MONGODB_PORT
+docker rm mongo_$DAS_MONGODB_PORT
+docker volume rm mongodbdata
+sleep 1
 docker run \
     --detach \
     --name mongo_$DAS_MONGODB_PORT \
