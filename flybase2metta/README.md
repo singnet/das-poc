@@ -80,4 +80,4 @@ Each row of each table become a set of Execution links linking all values taken 
 
 Mapped fields determine which rows of which tables will also be translated from the SQL file. Basically, every row in every table whose values have been "mentioned" in some of the precomputed tables is fully imported according to the schema below.
 
-![precomputed](sql.jpg)
+![sql](sql.png)
