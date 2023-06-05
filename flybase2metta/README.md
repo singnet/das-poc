@@ -17,7 +17,7 @@ $ cd flybase2metta
 $ ./fetch_flybase_release.sh 2023_02 /tmp/flybase
 ```
 
-After a copuple of minutes you have the last released SQL file with all the FlyBase and a set of files with the precomputed tables.
+After a couple of minutes you have the last released SQL file with all the FlyBase and a set of files with the precomputed tables.
 
 ```
 $ ls /tmp/flybase/2023_02
@@ -43,7 +43,7 @@ You need to `gunzip` all files before proceeding.
 
 FlyBase data is a huge SQL file and a set of TSV, JSON, etc files. Before using them to feed a Distributed Atom Space we need to convert them to MeTTa. There's a Python script `sql_reader.py` to do this.
 
-You need to edit the script and change a couple of global variables in its begining.
+You need to edit the script and change a couple of global variables.
 
 ```
 SQL_FILE = "/tmp/flybase/2023_02/FB2023_02.sql"
@@ -71,3 +71,9 @@ Run the script by calling:
 $ python3 sql_reader.py
 ```
 
+## Mapping FlyBase data into nodes and links
+
+The precomputed tables define which information will be translated to MeTTa and later imported into the Distributed Atom Space. All precomputed tables are imported as illustrated below.
+Each row of each table become a set of Execution links linking all values taken 2-2.
+
+![precomputed](precomputed.jpg)
