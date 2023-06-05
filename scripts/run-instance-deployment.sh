@@ -20,7 +20,7 @@ case `hostname` in
     redis1)
         echo "REDIS1"
         ./scripts/redis-clear-cluster-containers.sh
-        sleep 1
+        sleep 10
         ./scripts/redis-up.sh 7000
         sleep 1
         docker ps
@@ -30,7 +30,7 @@ case `hostname` in
     redis*)
         echo "REDIS"
         ./scripts/redis-clear-cluster-containers.sh
-        sleep 1
+        sleep 10
         ./scripts/redis-up.sh 7000
     ;;
 esac
