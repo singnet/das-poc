@@ -554,7 +554,7 @@ class LazyParser():
                 self.precomputed.print_matched_tables()
             self._emit_precomputed_tables(self.current_output_file)
             #self._checkpoint(True, use_precomputed_filter=True)
-            self._checkpoint(True)
+            #self._checkpoint(True)
         self.relevant_tables = self.precomputed.get_relevant_sql_tables()
 
     def _parse_step_3(self):
@@ -574,8 +574,8 @@ class LazyParser():
             line = file.readline()
             while line:
                 self.line_count += 1
-                if self.expression_chunk_count >= EXPRESSIONS_PER_CHUNK:
-                    self._checkpoint(True)
+                #if self.expression_chunk_count >= EXPRESSIONS_PER_CHUNK:
+                #    self._checkpoint(True)
                 if SHOW_PROGRESS:
                     self._print_progress_bar(self.line_count, file_size, 50, 4, 5)
                 line = line.replace('\n', '').strip()
@@ -593,7 +593,7 @@ class LazyParser():
                     print(f"Invalid state {state}")
                     assert False
                 line = file.readline()
-            self._checkpoint(False)
+            #self._checkpoint(False)
 
     def _parse_step_4(self):
 
@@ -612,8 +612,8 @@ class LazyParser():
             line = file.readline()
             while line:
                 self.line_count += 1
-                if self.expression_chunk_count >= EXPRESSIONS_PER_CHUNK:
-                    self._checkpoint(True)
+                #if self.expression_chunk_count >= EXPRESSIONS_PER_CHUNK:
+                #    self._checkpoint(True)
                 if SHOW_PROGRESS:
                     self._print_progress_bar(self.line_count, file_size, 50, 5, 5)
                 line = line.replace('\n', '').strip()
@@ -631,7 +631,7 @@ class LazyParser():
                     print(f"Invalid state {state}")
                     assert False
                 line = file.readline()
-            self._checkpoint(False)
+            #self._checkpoint(False)
 
     def parse(self):
         self._setup()
@@ -652,6 +652,7 @@ class LazyParser():
             self._parse_step_4()
         if self.errors:
             print(f"Errors occured while processing this SQL file. See them in {self.error_file_name}")
+        self._checkpoint(False)
         self._tear_down()
 
 def main():

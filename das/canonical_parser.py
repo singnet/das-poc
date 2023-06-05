@@ -2,6 +2,7 @@ from enum import Enum, auto
 import datetime
 import subprocess
 import pickle
+import sys
 from das.logger import logger
 from das.expression_hasher import ExpressionHasher
 from das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
@@ -91,7 +92,10 @@ class CanonicalParser:
             logger().info(f"Expression chunk size reached.")
             self._flush_mongo_expressions()
 
-    def _mongo_insert_many(self, collection, bulk_insertion):
+    def _mongo_insert_many(self, collection, bulk_insertion_raw):
+        bulk_insertion = [d for d in bulk_insertion_raw if ("name" not in d) or sys.getsizeof(d["name"]) < 16000000]
+        if len(bulk_insertion_raw) != len(bulk_insertion):
+            logger().error(f"Striped {len(bulk_insertion_raw) - len(bulk_insertion)} too large documents")
         try:
             collection.insert_many(bulk_insertion, ordered=False)
         except Exception as e:
