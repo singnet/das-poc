@@ -1,0 +1,65 @@
+ncRNA_genes	sequence	public.feature	residues
+ncRNA_genes	gene_locusTag	public.dbxref	accession
+ncRNA_genes	gene_geneId	gene.gene	uniquename
+ncRNA_genes	symbol	public.feature	name
+ncRNA_genes	gene_symbol	gene.gene	name
+ncRNA_genes	primaryId	public.feature	uniquename
+ncRNA_genes_synonyms	symbol1	public.synonym	name
+ncRNA_genes_synonyms	symbol2	public.synonym	name
+ncRNA_genes_related_sequences	sequenceId	public.feature	uniquename
+ncRNA_genes_related_sequences	primaryId	public.feature	uniquename
+ncRNA_genes_gene_synonyms	symbol1	public.synonym	name
+ncRNA_genes_gene_synonyms	symbol2	public.synonym	name
+ncRNA_genes_publications	primaryId	public.feature	uniquename
+ncRNA_genes_genome_locations	chromosome	public.feature	name
+ncRNA_genes_genome_locations	assembly	public.synonym	name
+ncRNA_genes_genome_locations	strand	public.feature	uniquename
+ncRNA_genes_genome_locations	primaryId	public.feature	uniquename
+ncRNA_genes_genome_locations	startPosition	public.featureloc	fmax
+ncRNA_genes_genome_locations	endPosition	public.featureloc	fmax
+allele_genetic_interactions_fb_2023_02.tsv	FBrf#	public.pub	uniquename
+allele_genetic_interactions_fb_2023_02.tsv	allele_FBal#	gene.allele	fbal_id
+allele_genetic_interactions_fb_2023_02.tsv	allele_symbol	public.feature	name
+allele_genetic_interactions_fb_2023_02.tsv	interaction	public.featureprop	value
+fbrf_pmid_pmcid_doi_fb_2023_02.tsv	pmid_added	public.pubprop	value
+fbrf_pmid_pmcid_doi_fb_2023_02.tsv	FBrf	public.pub	uniquename
+fbrf_pmid_pmcid_doi_fb_2023_02.tsv	miniref	public.pub	miniref
+fbrf_pmid_pmcid_doi_fb_2023_02.tsv	PMCID	public.dbxref	accession
+fbrf_pmid_pmcid_doi_fb_2023_02.tsv	pub_type	public.cvterm	name
+fbrf_pmid_pmcid_doi_fb_2023_02.tsv	DOI	public.dbxref	accession
+fbrf_pmid_pmcid_doi_fb_2023_02.tsv	PMID	public.dbxref	accession
+gene_genetic_interactions_fb_2023_02.tsv	Starting_gene(s)_symbol	gene.gene	name
+gene_genetic_interactions_fb_2023_02.tsv	Interacting_gene(s)_FBgn	gene.gene	uniquename
+gene_genetic_interactions_fb_2023_02.tsv	Starting_gene(s)_FBgn	gene.gene	uniquename
+gene_genetic_interactions_fb_2023_02.tsv	Interacting_gene(s)_symbol	gene.gene	name
+gene_genetic_interactions_fb_2023_02.tsv	Publication_FBrf	public.pub	uniquename
+gene_genetic_interactions_fb_2023_02.tsv	Interaction_type	public.cvterm	name
+dmel_gene_sequence_ontology_annotations_fb_2023_02.tsv	gene_primary_id	gene.gene	uniquename
+dmel_gene_sequence_ontology_annotations_fb_2023_02.tsv	so_term_name	public.cvterm	name
+dmel_gene_sequence_ontology_annotations_fb_2023_02.tsv	gene_symbol	gene.gene	name
+dmel_human_orthologs_disease_fb_2023_02.tsv	Dmel_gene_ID	gene.gene	uniquename
+dmel_human_orthologs_disease_fb_2023_02.tsv	Human_gene_symbol	public.synonym	name
+dmel_human_orthologs_disease_fb_2023_02.tsv	Dmel_gene_symbol	gene.gene	name
+fbgn_fbtr_fbpp_expanded_fb_2023_02.tsv	organism	public.organism	abbreviation
+fbgn_fbtr_fbpp_expanded_fb_2023_02.tsv	gene_symbol	gene.gene	name
+fbgn_fbtr_fbpp_expanded_fb_2023_02.tsv	transcript_ID	public.dbxref	accession
+fbgn_fbtr_fbpp_expanded_fb_2023_02.tsv	gene_type	public.cvterm	name
+fbgn_fbtr_fbpp_expanded_fb_2023_02.tsv	polypeptide_symbol	public.feature	name
+fbgn_fbtr_fbpp_expanded_fb_2023_02.tsv	transcript_type	public.cvterm	name
+fbgn_fbtr_fbpp_expanded_fb_2023_02.tsv	annotation_ID	public.dbxref	accession
+fbgn_fbtr_fbpp_expanded_fb_2023_02.tsv	polypeptide_ID	public.feature	uniquename
+fbgn_fbtr_fbpp_expanded_fb_2023_02.tsv	gene_ID	gene.gene	uniquename
+fbgn_fbtr_fbpp_expanded_fb_2023_02.tsv	gene_fullname	public.synonym	name
+fbgn_fbtr_fbpp_expanded_fb_2023_02.tsv	transcript_symbol	public.feature	name
+disease_model_annotations_fb_2023_02.tsv	Allele used in model (symbol)	public.feature	name
+disease_model_annotations_fb_2023_02.tsv	DO term	public.cvterm	name
+disease_model_annotations_fb_2023_02.tsv	Allele used in model (FBal ID)	public.feature	uniquename
+disease_model_annotations_fb_2023_02.tsv	Reference (FBrf ID)	public.pub	uniquename
+disease_model_annotations_fb_2023_02.tsv	DO qualifier	public.cvterm	name
+disease_model_annotations_fb_2023_02.tsv	FBgn ID	gene.gene	uniquename
+disease_model_annotations_fb_2023_02.tsv	Based on orthology with (symbol)	public.synonym	name
+disease_model_annotations_fb_2023_02.tsv	Gene symbol	gene.gene	name
+gene_map_table_fb_2023_02.tsv	recombination_loc	public.featureprop	value
+gene_map_table_fb_2023_02.tsv	organism_abbreviation	public.organism	abbreviation
+gene_map_table_fb_2023_02.tsv	cytogenetic_loc	public.featureprop	value
+gene_map_table_fb_2023_02.tsv	primary_FBid	gene.gene	uniquename
