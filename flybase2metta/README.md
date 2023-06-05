@@ -8,7 +8,7 @@ See the [FlyBase site](https://flybase.org/) for information on the actual data.
 
 There's a script `fetch_flybase_release.sh` to fetch a specific release of FlyBase. It can't recognize the most recent release automatically so if you want to download the most recent release you must first go to the site and find out the release tag. A release tag is a string like `2022_06` which the year and the month of the release.
 
-The script downloads a (huge) SQL file with all FlyBase tables and their entries and a given set of CSVs, TSVs etc (we use the term `precomputed` to refer to these files) generated automatically by scripts in the FlyBase host whenever a new release is made public. See [this link](https://wiki.flybase.org/wiki/FlyBase:Downloads_Overview) for a detauiled description of such files, and [this link](ihttps://github.com/FlyBase/harvdev-bulk-reports#GoCDPipeline) for information about the scripts used to generate them.
+The script downloads a (huge) SQL file with all FlyBase tables and their entries and a given set of CSVs, TSVs etc (we use the term `precomputed` to refer to these files) generated automatically by scripts in the FlyBase host whenever a new release is made public. See [this link](https://wiki.flybase.org/wiki/FlyBase:Downloads_Overview) for a detailed description of such files, and [this link](https://github.com/FlyBase/harvdev-bulk-reports#GoCDPipeline) for information about the scripts used to generate them.
 
 The script expects two arguments: the release tag and a target directory where data will be downloaded to.
 
