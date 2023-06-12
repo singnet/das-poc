@@ -100,9 +100,6 @@ class LazyParser():
         self.precomputed = precomputed
         self.relevant_tables = None
         self.expression_chunk_count = 0
-        #self.all_precomputed_nodes = set()
-        #self.all_precomputed_node_names = set()
-        #self.log_precomputed_nodes = None
         self.relevant_fkeys = {}
 
         Path(self.target_dir).mkdir(parents=True, exist_ok=True)
@@ -161,7 +158,6 @@ class LazyParser():
         self._emit_file_header()
 
     def _emit_precomputed_tables(self, output_file):
-        #self.log_precomputed_nodes = True
         table_count = 0
         for table in self.precomputed.all_tables:
             self._print_progress_bar(table_count, len(self.precomputed.all_tables), 50, 3, 5)
@@ -191,9 +187,7 @@ class LazyParser():
                             self._add_execution(schema, node1, node2)
             table_count += 1
             self._print_progress_bar(table_count, len(self.precomputed.all_tables), 50, 3, 5)
-        #self.log_precomputed_nodes = False
 
-    #def _checkpoint(self, create_new, use_precomputed_filter=False):
     def _checkpoint(self, create_new):
         if SCHEMA_ONLY:
             return
@@ -201,7 +195,6 @@ class LazyParser():
             self.current_output_file.write(metta_string)
             self.current_output_file.write("\n")
         for metta_string in self.current_node_set:
-            #if not use_precomputed_filter or metta_string in self.all_precomputed_nodes:
             self.current_output_file.write(metta_string)
             self.current_output_file.write("\n")
         for metta_string in self.current_link_list:
@@ -276,9 +269,6 @@ class LazyParser():
 
     def _add_node_to_internal_sets(self, quoted_canonical_node_name, node):
         self.current_node_set.add(node)
-        #if self.log_precomputed_nodes:
-        #    self.all_precomputed_nodes.add(node)
-        #    self.all_precomputed_node_names.add(quoted_canonical_node_name)
         node_type = quoted_canonical_node_name.strip('"').split()[0]
         self.current_typedef_set.add(f"(: {node_type} Type)")
         self.expression_chunk_count += 1
@@ -546,7 +536,6 @@ class LazyParser():
             if PRINT_PRECOMPUTED_NEAR_MATCHES:
                 self.precomputed.print_matched_tables()
             self._emit_precomputed_tables(self.current_output_file)
-            #self._checkpoint(True, use_precomputed_filter=True)
             #self._checkpoint(True)
         self.relevant_tables = self.precomputed.get_relevant_sql_tables()
 
