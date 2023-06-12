@@ -93,9 +93,15 @@ class CanonicalParser:
             self._flush_mongo_expressions()
 
     def _mongo_insert_many(self, collection, bulk_insertion_raw):
-        bulk_insertion = [d for d in bulk_insertion_raw if ("name" not in d) or sys.getsizeof(d["name"]) < 16000000]
-        if len(bulk_insertion_raw) != len(bulk_insertion):
-            logger().error(f"Striped {len(bulk_insertion_raw) - len(bulk_insertion)} too large documents")
+        all_ids = set()
+        bulk_insertion_no_duplicates = []
+        for d in bulk_insertion_raw:
+            if d["_id"] not in all_ids:
+                all_ids.add(d["_id"])
+                bulk_insertion_no_duplicates.append(d)
+        bulk_insertion = [d for d in bulk_insertion_no_duplicates if ("name" not in d) or sys.getsizeof(d["name"]) < 16000000]
+        if len(bulk_insertion_no_duplicates) != len(bulk_insertion):
+            logger().error(f"Striped {len(bulk_insertion_no_duplicates) - len(bulk_insertion)} too large documents")
         try:
             collection.insert_many(bulk_insertion, ordered=False)
         except Exception as e:
