@@ -19,18 +19,22 @@ case `hostname` in
     ;;
     redis1)
         echo "REDIS1"
+	echo "Shuting down container..."
         ./scripts/redis-clear-cluster-containers.sh
-        sleep 10
+        echo "Done"
+        echo "Press <ENTER> when all cluster elements have been shut down"
+	read NOP
         ./scripts/redis-up.sh 7000
-        sleep 1
-        docker ps
         sleep 10
         ./scripts/redis-cluster-start.sh
     ;;
     redis*)
         echo "REDIS"
+	echo "Shuting down container..."
         ./scripts/redis-clear-cluster-containers.sh
-        sleep 10
+        echo "Done"
+        echo "Press <ENTER> when all cluster elements have been shut down"
+	read NOP
         ./scripts/redis-up.sh 7000
     ;;
 esac
