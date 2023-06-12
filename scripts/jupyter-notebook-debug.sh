@@ -1,7 +1,7 @@
 #!/bin/bash
 
 docker run \
-    --name jupyter-notebook \
+    --name jupyter-notebook-debug \
     --env DAS_MONGODB_HOSTNAME=${DAS_MONGODB_HOSTNAME:-mongo} \
     --env DAS_MONGODB_PORT=${DAS_MONGODB_PORT:-27017} \
     --env DAS_REDIS_HOSTNAME=${DAS_REDIS_HOSTNAME:-redis} \
@@ -18,4 +18,4 @@ docker run \
     das:latest \
     jupyter-notebook --ip 0.0.0.0 --port 8887 --no-browser --allow-root
 
-docker rm jupyter-notebook >& /dev/null
+docker rm jupyter-notebook-debug >& /dev/null

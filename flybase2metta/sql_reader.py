@@ -5,26 +5,16 @@ import subprocess
 from enum import Enum, auto
 from precomputed_tables import PrecomputedTables
 import sqlparse
+import re
 
-#SQL_LINES_PER_CHUNK = 3000000000
-#SQL_LINES_PER_CHUNK = 3000000
-#EXPRESSIONS_PER_CHUNK = 70000000
 EXPRESSIONS_PER_CHUNK = 150000000
 SQL_FILE = "/opt/das/data/flybase/2023_02/FB2023_02.sql"
 #SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/auto_download/2023_02/FB2023_02.sql"
-#SQL_FILE = "/mnt/HD10T/nfs_share/work/datasets/flybase/FB2022_05.sql"
-#SQL_FILE = "/tmp/cut.sql"
-#SQL_FILE = "/tmp/hedra/genes.sql"
 #PRECOMPUTED_DIR = None
 PRECOMPUTED_DIR = "/opt/das/data/flybase/2023_02/precomputed"
 #PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/auto_download/2023_02/precomputed"
-#PRECOMPUTED_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase/precomputed/FB2022_05"
-#PRECOMPUTED_DIR = "/tmp/tsv"
 OUTPUT_DIR = "/opt/das/data/flybase_metta"
 #OUTPUT_DIR = "/mnt/HD10T/nfs_share/work/datasets/flybase_metta"
-#OUTPUT_DIR = "/tmp/flybase"
-#OUTPUT_DIR = "/tmp/cut"
-#OUTPUT_DIR = "/tmp/hedra"
 SHOW_PROGRESS = True
 FILE_SIZE = 0
 
@@ -62,6 +52,9 @@ FOREIGN_KEY = " FOREIGN KEY "
 COPY_PREFIX = "COPY "
 COPY_SUFFIX = "\."
 
+def _clear_table_name(file_name):
+    return re.sub(r"_fb_\d{4}_\d\d\.tsv", "", file_name)
+
 class State(int, Enum):
     WAIT_KNOWN_COMMAND = auto()
     READING_CREATE_TABLE = auto()
@@ -76,7 +69,7 @@ def filter_field(line):
         "CONSTRAINT" in line
 
 def _compose_name(str_list):
-    return "_".join(str_list)
+    return "_".join(str_list).replace(" ", "_")
 
 def short_name(long_table_name):
     return long_table_name.split(".")[1] if long_table_name is not None else None
@@ -107,9 +100,6 @@ class LazyParser():
         self.precomputed = precomputed
         self.relevant_tables = None
         self.expression_chunk_count = 0
-        #self.all_precomputed_nodes = set()
-        #self.all_precomputed_node_names = set()
-        #self.log_precomputed_nodes = None
         self.relevant_fkeys = {}
 
         Path(self.target_dir).mkdir(parents=True, exist_ok=True)
@@ -168,7 +158,6 @@ class LazyParser():
         self._emit_file_header()
 
     def _emit_precomputed_tables(self, output_file):
-        #self.log_precomputed_nodes = True
         table_count = 0
         for table in self.precomputed.all_tables:
             self._print_progress_bar(table_count, len(self.precomputed.all_tables), 50, 3, 5)
@@ -187,20 +176,18 @@ class LazyParser():
                             sql_table2, sql_field2 = table.mapping[key2] if key2 in table.mapping else (None, None)
                             node2 = self._add_value_node(short_name(sql_table2), self._get_type(sql_table2, sql_field2), value2)
                             #print("2:", node2)
-                            schema = self._add_node(AtomTypes.SCHEMA, _compose_name(["preref", table.name, key2]))
+                            schema = self._add_node(AtomTypes.SCHEMA, _compose_name([_clear_table_name(table.name), key2]))
                             self._add_execution(schema, node1, node2)
                 for key1, value1 in zip(table.header, row):
                     for key2, value2 in zip(table.header, row):
                         if key2 != key1:
-                            schema = self._add_node(AtomTypes.SCHEMA, _compose_name(["pre", table.name, key2]))
+                            schema = self._add_node(AtomTypes.SCHEMA, _compose_name([_clear_table_name(table.name), key2]))
                             node1 = self._add_node(AtomTypes.VERBATIM, value1)
                             node2 = self._add_node(AtomTypes.VERBATIM, value2)
                             self._add_execution(schema, node1, node2)
             table_count += 1
             self._print_progress_bar(table_count, len(self.precomputed.all_tables), 50, 3, 5)
-        #self.log_precomputed_nodes = False
 
-    #def _checkpoint(self, create_new, use_precomputed_filter=False):
     def _checkpoint(self, create_new):
         if SCHEMA_ONLY:
             return
@@ -208,7 +195,6 @@ class LazyParser():
             self.current_output_file.write(metta_string)
             self.current_output_file.write("\n")
         for metta_string in self.current_node_set:
-            #if not use_precomputed_filter or metta_string in self.all_precomputed_nodes:
             self.current_output_file.write(metta_string)
             self.current_output_file.write("\n")
         for metta_string in self.current_link_list:
@@ -283,9 +269,6 @@ class LazyParser():
 
     def _add_node_to_internal_sets(self, quoted_canonical_node_name, node):
         self.current_node_set.add(node)
-        #if self.log_precomputed_nodes:
-        #    self.all_precomputed_nodes.add(node)
-        #    self.all_precomputed_node_names.add(quoted_canonical_node_name)
         node_type = quoted_canonical_node_name.strip('"').split()[0]
         self.current_typedef_set.add(f"(: {node_type} Type)")
         self.expression_chunk_count += 1
@@ -386,7 +369,7 @@ class LazyParser():
             if name in fkeys:
                 referenced_table, referenced_field = table['foreign_key'][name]
                 schema_node = self._add_node(AtomTypes.SCHEMA, referenced_table)
-                fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name(["sqlfk", referenced_table, value]))
+                fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name([referenced_table, value]))
                 self._add_execution(schema_node, pkey_node, fkey_node)
             elif name != pkey:
                 ftype = self.current_field_types.get(name, None)
@@ -395,7 +378,7 @@ class LazyParser():
                 value_node = self._add_value_node(table_short_name, ftype, value)
                 if not value_node:
                     continue
-                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(["sql", table_short_name, name]))
+                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name([table_short_name, name]))
                 self._add_execution(schema_node, pkey_node, value_node)
 
     def _new_row(self, line):
@@ -439,7 +422,7 @@ class LazyParser():
                     if referenced_table not in self.relevant_fkeys:
                         self.relevant_fkeys[referenced_table] = set()
                     self.relevant_fkeys[referenced_table].add(value)
-                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(["sqlfk", referenced_table]))
+                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name([referenced_table]))
                 fkey_node = self._add_node(AtomTypes.CONCEPT, _compose_name([referenced_table, value]))
                 self._add_execution(schema_node, pkey_node, fkey_node)
             elif name != pkey:
@@ -449,7 +432,7 @@ class LazyParser():
                 value_node = self._add_value_node(table_short_name, ftype, value)
                 if not value_node:
                     continue
-                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name(["sql", table_short_name, name]))
+                schema_node = self._add_node(AtomTypes.SCHEMA, _compose_name([table_short_name, name]))
                 self._add_execution(schema_node, pkey_node, value_node)
 
     def _primary_key(self, first_line, second_line):
@@ -553,7 +536,6 @@ class LazyParser():
             if PRINT_PRECOMPUTED_NEAR_MATCHES:
                 self.precomputed.print_matched_tables()
             self._emit_precomputed_tables(self.current_output_file)
-            #self._checkpoint(True, use_precomputed_filter=True)
             #self._checkpoint(True)
         self.relevant_tables = self.precomputed.get_relevant_sql_tables()
 
@@ -659,8 +641,6 @@ def main():
     precomputed = PrecomputedTables(PRECOMPUTED_DIR) if PRECOMPUTED_DIR else None
     parser = LazyParser(SQL_FILE, precomputed)
     parser.parse()
-    if precomputed:
-        pass
 
 if __name__ == "__main__":
     main()
