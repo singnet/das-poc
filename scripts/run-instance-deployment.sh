@@ -10,7 +10,8 @@ case `hostname` in
         docker rm canonical-load >& /dev/null
         docker rm jupyter-notebook >& /dev/null
         docker rm jupyter-notebook-debug >& /dev/null
-        sleep 1
+        sleep 5
+	./scripts/build-das.sh
         docker ps -a
     ;;
     mongo)
@@ -25,7 +26,7 @@ case `hostname` in
         echo "Press <ENTER> when all cluster elements have been shut down"
 	read NOP
         ./scripts/redis-up.sh 7000
-        sleep 10
+        sleep 5
         ./scripts/redis-cluster-start.sh
     ;;
     redis*)
