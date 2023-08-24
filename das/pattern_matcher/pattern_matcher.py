@@ -535,7 +535,7 @@ class Link(Atom):
             return bool(answer.assignments)
         else:
             if DEBUG_LINK: print('matched()', f'leaving 2 self = {self}')
-            return db.link_exists(self.atom_type, target_handles)
+            return db.link_exists(self.atom_type, target_handles) or bool(answer.assignments)
 
 class Variable(Atom):
     """
