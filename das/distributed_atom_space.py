@@ -12,7 +12,6 @@ from redis import Redis
 from redis.cluster import RedisCluster
 from enum import Enum, auto
 from das.parser_actions import KnowledgeBaseFile, MultiThreadParsing
-from das.database.mongo_schema import CollectionNames as MongoCollections
 from das.parser_threads import (
     SharedData,
     ParserThread,
@@ -23,8 +22,9 @@ from das.parser_threads import (
     PopulateMongoDBLinksThread,
     PopulateRedisCollectionThread
 )
-from das.database.redis_mongo_db import RedisMongoDB
 from das.logger import logger
+from das.database.redis_mongo_db import RedisMongoDB
+from das.database.mongo_schema import CollectionNames as MongoCollections
 from das.database.key_value_schema import CollectionNames as KeyPrefix
 from das.database.db_interface import WILDCARD
 from das.transaction import Transaction
@@ -178,9 +178,18 @@ class DistributedAtomSpace:
 
     # Public API
 
-    def clear_database(self):
-        for collection_name in self.mongo_db.collection_names():
-            self.mongo_db.drop_collection(collection_name)
+    def clear_database(self) -> None:
+        """
+        Clear all data from the connected MongoDB and Redis databases.
+
+        This method drops all collections in the MongoDB database and flushes all data
+        from the Redis cache, effectively wiping the databases clean.
+        """
+        collections = self.mongo_db.list_collection_names()
+        
+        for collection in collections:
+            self.mongo_db[collection].drop()
+        
         self.redis.flushall()
 
     def count_atoms(self) -> Tuple[int, int]:
