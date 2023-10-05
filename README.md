@@ -1,197 +1,235 @@
 # Distributed Atom Space (DAS)
 
-### Description:
-
 This repo aims to develop a new design to store all the MeTTa expressions in a database to be accessed through an API.
-Our first approach is using MongoDB (expressions) + Couchbase (indexes).
 
-### Examples:
+## Functions
 
-As a simple example, we have the following expression:
+The `handle` function is responsible for handling various actions related to a Distributed Atom Space (DAS) database. It takes a JSON request as input and performs the requested action on the database.
 
-```
-(: Evaluation Type)
-(: Predicate Type)
-(: Reactome Type)
-(: Concept Type)
-(: "Predicate:has_name" Predicate)
-(: "Reactome:R-HSA-164843" Reactome)
-(: "Concept:2-LTR circle formation" Concept)
-(
-	Evaluation 
-	"Predicate:has_name" 
-	(
-	    Evaluation 
-	    "Predicate:has_name" 
-	    {"Reactome:R-HSA-164843" "Concept:2-LTR circle formation"}
-	)
-)
-```
+## Parameters
 
-#### MongoDB:
+- `request_json` (str): A JSON-formatted string containing the request data. This parameter is required.
 
-The `_id` must be built by hashing (`sha256`) the documents' fields to avoid duplication. For simplicity, we'll be using
-integers on this example.
+- `context` (dict): An optional parameter that can be used to provide additional context or information to the function. It is typically not required for basic usage.
 
-```
-NodeTypes: [
-    { _id: 1, type: null, name: "Unknown" },
-    { _id: 2, type: null, name: "Type" },
-    { _id: 3, type: 2, name: "Evaluation" },
-    { _id: 4, type: 2, name: "Predicate" },
-    { _id: 5, type: 2, name: "Reactome" },
-    { _id: 6, type: 2, name: "Concept" },
-]
+## Actions and Request Format
 
-Nodes: [
-    { _id: 7, type: 4, name: "Predicate:has_name" },
-    { _id: 8, type: 5, name: "Reactome:R-HSA-164843" },
-    { _id: 9, type: 6, name: "Concept:2-LTR circle formation" },
-]
+The `handle` function supports several actions, each with its specific set of parameters. Below is a list of supported actions and their request formats:
 
-Links_1: [{}]
+1. **Get Node**
 
-Links_2: [
-    {
-	    _id: 10,
-	    set_from: 1,
-	    is_root: false,
-	    type: [Reactome, Concept],
-	    key1: 8,
-	    key2: 9,
-    },
-]
+   - Action: `"get_node"`
+   - Parameters:
+     - `database_name` (str): The name of the database.
+     - `node_type` (str): The type of the node.
+     - `node_name` (str): The name of the node.
+   - Example Request:
+     ```json
+     {
+       "database_name": "my_database",
+       "action": "get_node",
+       "node_type": "Person",
+       "node_name": "JohnDoe"
+     }
+     ```
 
-Links_3: [
-    {
-	    _id: 11,
-	    set_from: null,
-	    is_root: false,
-	    type: [Type, Predicate, [Reactome, Concept]],
-	    key1: 3,
-	    key2: 7,
-	    key3: 10,
-    },
-    {
-	    _id: 12,
-	    set_from: null,
-	    is_root: true,
-	    type: [Type, Predicate, [Type, Predicate, {Reactome, Concept}]],
-	    key1: 3,
-	    key2: 7,
-	    key3: 11,
-    },
-]
-```
+2. **Get Nodes**
 
-As an example of how `sha256` will be used here:
+   - Action: `"get_nodes"`
+   - Parameters:
+     - `database_name` (str): The name of the database.
+     - `node_type` (str): The type of the nodes.
+     - `node_name` (str): The name of the nodes (optional).
+   - Example Request:
+     ```json
+     {
+       "database_name": "my_database",
+       "action": "get_nodes",
+       "node_type": "Person",
+       "node_name": "JohnDoe"
+     }
+     ```
 
-```
-    _id: XX ->  sha256(sha256(type), sha256(key1), sha256(key2), ...)
-    _id: 10 ->  sha256(sha256(set_salt, 5, 6), 8, 9)
-    _id: 11 ->  sha256(sha256(2, 4, sha256(set_salt, 5, 6)), 3, 7, 10)
-    _id: 12 ->  sha256(sha256(2, 4, sha256(2, 4, sha256(set_salt, 5, 6))), 3, 7, 11)
-```
+3. **Get Link**
 
-Notes:
+   - Action: `"get_link"`
+   - Parameters:
+     - `database_name` (str): The name of the database.
+     - `link_type` (str): The type of the link.
+     - `targets` (list): A list of target nodes or handles.
+   - Example Request:
+     ```json
+     {
+       "database_name": "my_database",
+       "action": "get_link",
+       "link_type": "Friend",
+       "targets": ["JohnDoe", "JaneSmith"]
+     }
+     ```
 
-- The field named `is_root` is NOT used on hashing.
-- Each document that represents an expression has the field named `set_from`. This field represents:
-  - when equal to `null` that the keys in document wasn't ordered in anyway;
-  - when equal to `1` that the keys in document was ordered alphabetically since their first key;
-  - when equal to `2` that the keys in document was ordered alphabetically since their second key;
-- The `set_from` field will be different of `null` when:
-  - their expression represents a `set` (`{ ... }`). So `set_from` receives `1`.
-  - the first key in expression points to a `Similarity` node type. So `set_from` receives `2`.
-- The `set_from` field is used on hashing.
+4. **Get Links**
 
-#### Couchbase:
+   - Action: `"get_links"`
+   - Parameters:
+     - `database_name` (str): The name of the database.
+     - `link_type` (str): The type of the link.
+     - `targets` (list): A list of target nodes or handles.
+     - `target_types` (list): A list of target node types (optional).
+   - Example Request:
+     ```json
+     {
+       "database_name": "my_database",
+       "action": "get_links",
+       "link_type": "Friend",
+       "targets": ["JohnDoe", "JaneSmith"],
+       "target_types": ["Person"]
+     }
+     ```
 
-```
-IncomingSet:
-{
-    8: [10],
-    9: [10],
-    3: 2,
-    3_0: [11],
-    3_1: [12],
-    7: 2,
-    7_0: [11],
-    7_1: [12],
-    10: [11],
-    11: [12]
-}
+5. **Get Link Type**
 
-RecursiveIncomingSet:
-{
-     8: [10, 11, 12],
-     9: [10, 11, 12],
-     3: [11, 12],
-     7: [11, 12],
-    10: [11, 12],
-    11: [12]
-}
+   - Action: `"get_link_type"`
+   - Parameters:
+     - `database_name` (str): The name of the database.
+     - `link_type` (str): The type of the link.
+   - Example Request:
+     ```json
+     {
+       "database_name": "my_database",
+       "action": "get_link_type",
+       "link_type": "Friend"
+     }
+     ```
 
-OutgoingSet:
-{
-    10: [8, 9],
-    11: [3, 7, 10],
-    12: [3, 7, 11]
-}
+6. **Get Link Targets**
 
-RecursiveOutgoingSet:
-{
-    10: [8, 9],
-    11: [3, 7, 10, 8, 9],
-    12: [3, 7, 11, 10, 8, 9]
-}
-```
+   - Action: `"get_link_targets"`
+   - Parameters:
+     - `database_name` (str): The name of the database.
+     - `link_targets` (str): The handle of the link.
+   - Example Request:
+     ```json
+     {
+       "database_name": "my_database",
+       "action": "get_link_targets",
+       "link_targets": "12345"
+     }
+     ```
 
-At this point, we found a [size limitation for values in Couchbase collections](https://docs.couchbase.com/server/current/learn/clusters-and-availability/size-limitations.html).
-Not rarely some keys in `IncomingSet` collection will have more than the limit of 20 MB defined by Couchbase under their values.
-On intend to bypass this limitation was implemented a rule to split the values into sub-keys. For simplicity, the example uses a limit of one value for each key (the real implementation has 500,000 as max number of values).
-The rule defines that once time a main key have more values than the max limit defined that key will be splitted into two other sub-keys and at the time the last one created sub-key achieve the max limit for their values a new sub-key will be created.
-The integer number storaged at main key represents the amount of the sub-keys existents under key itself. By their turn the sub-keys has the indentifier composed by the main key plus a counter starts at zero and ends at the integer storaged under main key minus one and both are separeted by underscore (`_`).
+7. **Get Node Type**
 
-```
-IncomingSet:
-{
-    8: [10],
-    9: [10],
-    3: 2,
-    3_0: [11],
-    3_1: [12],
-    7: 2,
-    7_0: [11],
-    7_1: [12],
-    10: [11],
-    11: [12]
-}
-```
+   - Action: `"get_node_type"`
+   - Parameters:
+     - `database_name` (str): The name of the database.
+     - `node_type` (str): The type of the node.
+   - Example Request:
+     ```json
+     {
+       "database_name": "my_database",
+       "action": "get_node_type",
+       "node_type": "Person"
+     }
+     ```
 
-Here is another simple example to show how we create a graph from an expression:
+8. **Get Node Name**
 
-```
-(
-    Evaluation
-        "Predicate:P1"
-        (
-            (Evaluation "Predicate:P2" {"Gene:G1" "Gene:G2"})
-            ("Concept:CN1" "Concept:CN2")
-        )
-)
-```
+   - Action: `"get_node_name"`
+   - Parameters:
+     - `database_name` (str): The name of the database.
+     - `node_name` (str): The handle of the node.
+   - Example Request:
+     ```json
+     {
+       "database_name": "my_database",
+       "action": "get_node_name",
+       "node_name": "JohnDoe"
+     }
+     ```
 
-![Example_2 Graph](./assets/example_2_graph.png)
+9. **Clear Database**
 
-### Datasets:
+   - Action: `"clear_database"`
+   - Parameters:
+     - `database_name` (str): The name of the database.
+   - Example Request:
+     ```json
+     {
+       "database_name": "my_database",
+       "action": "clear_database"
+     }
+     ```
 
-You can find all the Atomese (`.scm`) files
-from [gene-level-dataset_2020-10-20](https://mozi.ai/datasets/gene-level-dataset_2020-10-20/)
-already translated to MeTTa (`.metta`) in the [data/bio_atomsapace](./data/bio_atomspace) directory.
+10. **Count Atoms**
 
-The translation script used is in [scripts/atomese2metta](./scripts/atomese2metta).
+    - Action: `"count_atoms"`
+    - Parameters:
+      - `database_name` (str): The name of the database.
+    - Example Request:
+      ```json
+      {
+        "database_name": "my_database",
+        "action": "count_atoms"
+      }
+      ```
 
-### Get it started:
+11. **Get Atom**
 
-Go to [das/](./das) directory to get info about how to set up the necessary environment.
+    - Action: `"get_atom"`
+    - Parameters:
+      - `database_name` (str): The name of the database.
+      - `handle` (str): The handle of the atom.
+    - Example Request:
+      ```json
+      {
+        "database_name": "my_database",
+        "action": "get_atom",
+        "handle": "12345"
+      }
+      ```
+
+12. **Query**
+    - Action: `"query"`
+    - Parameters:
+      - `database_name` (str): The name of the database.
+      - `query` (dict): A dictionary representing a logical expression query.
+    - Example Request:
+      ```json
+      {
+        "database_name": "my_database",
+        "action": "query",
+        "query": {
+          "And": [
+            {
+              "Link": {
+                "link_type": "Evaluation",
+                "ordered": true,
+                "targets": [
+                  {
+                    "Variable": {
+                      "variable_name": "000000214999369af91fb563b4e0eadb"
+                    }
+                  },
+                  {
+                    "Variable": {
+                      "variable_name": "1a0738cb1a6b6b8ce7bae84c4296c0ce"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+      ```
+
+## Response Format
+
+The `handle` function returns a JSON response with the following format:
+
+- `msg` (str): A message indicating the result of the action.
+- `result` (varies): The result of the action, if applicable (e.g., query results).
+- `time_in_seconds` (float): The time taken to execute the action in seconds.
+
+## Error Handling
+
+If an error occurs during the execution of an action, the response will contain an error message in the `msg` field.
