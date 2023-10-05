@@ -8,7 +8,7 @@ from function.das.expression_hasher import ExpressionHasher
 from function.das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
 from function.das.database.mongo_schema import CollectionNames as MongoCollections
 from function.das.key_value_file import write_key_value, key_value_generator, key_value_targets_generator, sort_file
-import das.key_value_file
+import function.das.key_value_file
 from function.das.database.db_interface import WILDCARD
 
 class State(str, Enum):
