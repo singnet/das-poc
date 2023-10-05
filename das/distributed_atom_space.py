@@ -11,17 +11,17 @@ from pymongo import MongoClient as MongoDBClient
 from redis import Redis
 from redis.cluster import RedisCluster
 from enum import Enum, auto
-from das.parser_actions import KnowledgeBaseFile, MultiThreadParsing
-from das.database.mongo_schema import CollectionNames as MongoCollections
-from das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread, BuildConnectivityThread, \
+from function.das.parser_actions import KnowledgeBaseFile, MultiThreadParsing
+from function.das.database.mongo_schema import CollectionNames as MongoCollections
+from function.das.parser_threads import SharedData, ParserThread, FlushNonLinksToDBThread, BuildConnectivityThread, \
     BuildPatternsThread, BuildTypeTemplatesThread, PopulateMongoDBLinksThread, PopulateRedisCollectionThread
-from das.database.redis_mongo_db import RedisMongoDB
-from das.logger import logger
-from das.database.key_value_schema import CollectionNames as KeyPrefix
-from das.database.db_interface import WILDCARD
-from das.transaction import Transaction
-from das.canonical_parser import CanonicalParser
-from das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression
+from function.das.database.redis_mongo_db import RedisMongoDB
+from function.das.logger import logger
+from function.das.database.key_value_schema import CollectionNames as KeyPrefix
+from function.das.database.db_interface import WILDCARD
+from function.das.transaction import Transaction
+from function.das.canonical_parser import CanonicalParser
+from function.das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression
 
 class QueryOutputFormat(int, Enum):
     HANDLE = auto()

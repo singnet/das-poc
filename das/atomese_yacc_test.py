@@ -1,9 +1,9 @@
 import pytest
-from das.atomese_lex import AtomeseLex
-from das.atomese_lex_test import lex_test_data as test_data
-from das.atomese_yacc import AtomeseYacc
-from das.parser_actions import ParserActions
-from das.exceptions import UndefinedSymbolError
+from function.das.atomese_lex import AtomeseLex
+from function.das.atomese_lex_test import lex_test_data as test_data
+from function.das.atomese_yacc import AtomeseYacc
+from function.das.parser_actions import ParserActions
+from function.das.exceptions import UndefinedSymbolError
 
 class ActionBroker(ParserActions):
     def __init__(self, data=None):

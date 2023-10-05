@@ -1,5 +1,5 @@
 import ply.lex as lex
-from das.exceptions import AtomeseLexerError
+from function.das.exceptions import AtomeseLexerError
  
 class AtomeseLex:
     def __init__(self, **kwargs):

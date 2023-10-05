@@ -1,5 +1,5 @@
 ply==3.11
 pymongo==3.12.1
 pytest==6.2.5
-numpy==1.21.4
+numpy==1.25
 redis[hiredis]

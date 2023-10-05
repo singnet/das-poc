@@ -6,9 +6,9 @@ import pickle
 
 from pymongo.database import Database
 
-from das.expression_hasher import ExpressionHasher
-from das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
-from das.database.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
+from function.das.expression_hasher import ExpressionHasher
+from function.das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
+from function.das.database.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
 
 from .db_interface import DBInterface, WILDCARD, UNORDERED_LINK_TYPES
 

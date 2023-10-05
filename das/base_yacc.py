@@ -25,9 +25,9 @@ EXPRESSION -> EXPRESSION_OPENNING LIST_OF_EXPRESSIONS EXPRESSION_CLOSING
 
 from typing import List, Any, Optional
 import ply.yacc as yacc
-from das.expression_hasher import ExpressionHasher
-from das.expression import Expression
-from das.metta_lex import BASIC_TYPE
+from function.das.expression_hasher import ExpressionHasher
+from function.das.expression import Expression
+from function.das.metta_lex import BASIC_TYPE
 
 class BaseYacc:
 

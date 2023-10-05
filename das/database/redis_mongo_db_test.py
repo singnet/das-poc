@@ -6,10 +6,10 @@ import pytest
 from pymongo import MongoClient as MongoDBClient
 from redis import Redis
 
-from das.database.db_interface import DBInterface
-from das.database.redis_mongo_db import RedisMongoDB
-from das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
-from das.database.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
+from function.das.database.db_interface import DBInterface
+from function.das.database.redis_mongo_db import RedisMongoDB
+from function.das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
+from function.das.database.mongo_schema import CollectionNames as MongoCollectionNames, FieldNames as MongoFieldNames
 
 @pytest.fixture()
 def mongo_db():

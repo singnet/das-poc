@@ -6,7 +6,7 @@ from typing import Any, Optional
 import couchbase.exceptions
 from couchbase.bucket import Bucket
 
-from das.research.heap import Heap, PrioritizedItem
+from function.das.research.heap import Heap, PrioritizedItem
 
 
 class CacheException(Exception):

@@ -1,4 +1,4 @@
-from das.atomese2metta.translator import Expression, MList, MSet
+from function.das.atomese2metta.translator import Expression, MList, MSet
 
 
 def test_given_a_expression_instance_then_should_return_a_string_with_parentheses():

@@ -25,11 +25,11 @@ EXPRESSION -> EXPRESSION_OPENNING LIST_OF_EXPRESSIONS EXPRESSION_CLOSING
 
 from typing import List, Any, Optional
 import ply.yacc as yacc
-from das.metta_lex import MettaLex
-from das.exceptions import MettaSyntaxError, UndefinedSymbolError
-from das.expression_hasher import ExpressionHasher
-from das.expression import Expression
-from das.base_yacc import BaseYacc
+from function.das.metta_lex import MettaLex
+from function.das.exceptions import MettaSyntaxError, UndefinedSymbolError
+from function.das.expression_hasher import ExpressionHasher
+from function.das.expression import Expression
+from function.das.base_yacc import BaseYacc
 
 class MettaYacc(BaseYacc):
 

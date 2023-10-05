@@ -4,7 +4,7 @@ import time
 import numpy as np
 import pytest
 
-from das.helpers import get_logger
+from function.das.helpers import get_logger
 
 logger = get_logger()
 

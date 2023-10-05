@@ -1,8 +1,8 @@
 from typing import List, Tuple
 from abc import ABC, abstractmethod
-from das.expression import Expression
-from das.database.db_interface import DBInterface
-from das.parser_threads import SharedData
+from function.das.expression import Expression
+from function.das.database.db_interface import DBInterface
+from function.das.parser_threads import SharedData
 
 class ParserActions(ABC):
 

@@ -1,5 +1,5 @@
 import pytest
-from das.atomese_lex import AtomeseLex
+from function.das.atomese_lex import AtomeseLex
 
 lex_test_data = """
 (EvaluationLink (stv 1.0 0.964)

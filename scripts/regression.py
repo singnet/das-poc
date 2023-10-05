@@ -1,9 +1,9 @@
 
-from das.distributed_atom_space import DistributedAtomSpace
+from function.das.distributed_atom_space import DistributedAtomSpace
 
 
-from das.database.db_interface import DBInterface
-from das.pattern_matcher.pattern_matcher import (And, Link, LogicalExpression,
+from function.das.database.db_interface import DBInterface
+from function.das.pattern_matcher.pattern_matcher import (And, Link, LogicalExpression,
                                                  Node, Not, Or, LinkTemplate,
                                                  PatternMatchingAnswer,
                                                  Variable, TypedVariable)

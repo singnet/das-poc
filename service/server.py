@@ -12,9 +12,9 @@ from threading import Lock, Condition, Thread
 sys.path.append(os.path.join(os.path.dirname(__file__), "service_spec"))
 import das_pb2 as pb2
 import das_pb2_grpc as pb2_grpc
-from das.distributed_atom_space import DistributedAtomSpace, QueryOutputFormat
-from das.database.db_interface import UNORDERED_LINK_TYPES
-from das.pattern_matcher.pattern_matcher import Node, Link, And, Or, Not, Variable
+from function.das.distributed_atom_space import DistributedAtomSpace, QueryOutputFormat
+from function.das.database.db_interface import UNORDERED_LINK_TYPES
+from function.das.pattern_matcher.pattern_matcher import Node, Link, And, Or, Not, Variable
 
 SERVICE_PORT = 7025
 COUCHBASE_SETUP_DIR = os.environ['COUCHBASE_SETUP_DIR']

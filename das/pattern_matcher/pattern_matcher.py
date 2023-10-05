@@ -5,7 +5,7 @@ from enum import Enum, auto
 from functools import cmp_to_key
 from typing import Dict, FrozenSet, List, Optional, Set, Union
 
-from das.database.db_interface import DBInterface, WILDCARD
+from function.das.database.db_interface import DBInterface, WILDCARD
 
 DEBUG_AND = False
 DEBUG_OR = False

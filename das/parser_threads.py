@@ -3,15 +3,15 @@ import datetime
 import time
 import pickle
 from threading import Thread, Lock
-from das.expression import Expression
-from das.database.mongo_schema import CollectionNames as MongoCollections
-from das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
-from das.metta_yacc import MettaYacc
-from das.atomese_yacc import AtomeseYacc
-from das.database.db_interface import DBInterface
-from das.database.db_interface import DBInterface, WILDCARD
-from das.logger import logger
-from das.key_value_file import write_key_value, key_value_generator, key_value_targets_generator
+from function.das.expression import Expression
+from function.das.database.mongo_schema import CollectionNames as MongoCollections
+from function.das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
+from function.das.metta_yacc import MettaYacc
+from function.das.atomese_yacc import AtomeseYacc
+from function.das.database.db_interface import DBInterface
+from function.das.database.db_interface import DBInterface, WILDCARD
+from function.das.logger import logger
+from function.das.key_value_file import write_key_value, key_value_generator, key_value_targets_generator
 
 class SharedData():
     def __init__(self):

@@ -23,12 +23,12 @@ ATOM_LIST -> ATOM
 
 from typing import List, Any, Optional
 import ply.yacc as yacc
-from das.atomese_lex import AtomeseLex
-from das.metta_lex import BASIC_TYPE
-from das.exceptions import AtomeseSyntaxError, UndefinedSymbolError
-from das.expression_hasher import ExpressionHasher
-from das.expression import Expression
-from das.base_yacc import BaseYacc
+from function.das.atomese_lex import AtomeseLex
+from function.das.metta_lex import BASIC_TYPE
+from function.das.exceptions import AtomeseSyntaxError, UndefinedSymbolError
+from function.das.expression_hasher import ExpressionHasher
+from function.das.expression import Expression
+from function.das.base_yacc import BaseYacc
 
 class AtomeseYacc(BaseYacc):
 

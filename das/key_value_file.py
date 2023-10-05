@@ -1,4 +1,4 @@
-from das.expression_hasher import ExpressionHasher
+from function.das.expression_hasher import ExpressionHasher
 import os
 
 def sort_file(file_name):

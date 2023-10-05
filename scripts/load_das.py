@@ -1,5 +1,5 @@
 import argparse
-from das.distributed_atom_space import DistributedAtomSpace
+from function.das.distributed_atom_space import DistributedAtomSpace
 
 def run():
     parser = argparse.ArgumentParser(

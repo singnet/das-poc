@@ -136,3 +136,10 @@ dmypy.json
 nogit/*
 das/parser.out
 das/parsetab.py
+
+template/
+das.config/
+
+template
+build
+.secrets

@@ -1,5 +1,5 @@
 import pytest
-from das.metta_lex import MettaLex
+from function.das.metta_lex import MettaLex
 
 lex_test_data = """
     (: Evaluation Type)

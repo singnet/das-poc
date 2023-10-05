@@ -1,5 +1,5 @@
 import ply.lex as lex
-from das.exceptions import MettaLexerError
+from function.das.exceptions import MettaLexerError
  
 BASIC_TYPE = 'Type'
 

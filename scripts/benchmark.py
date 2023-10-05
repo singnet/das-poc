@@ -5,9 +5,9 @@ from typing import List, Dict
 from enum import Enum, auto
 import numpy as np
 import re
-from das.database.db_interface import DBInterface
-from das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not, And, Or, LinkTemplate, TypedVariable
-from das.distributed_atom_space import DistributedAtomSpace
+from function.das.database.db_interface import DBInterface
+from function.das.pattern_matcher.pattern_matcher import PatternMatchingAnswer, LogicalExpression, Node, Link, Variable, Not, And, Or, LinkTemplate, TypedVariable
+from function.das.distributed_atom_space import DistributedAtomSpace
 
 class DB_Architecture(int, Enum):
     """

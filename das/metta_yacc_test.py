@@ -1,11 +1,11 @@
 import pytest
-from das.metta_lex import MettaLex
-from das.metta_lex_test import lex_test_data as test_data
-from das.metta_yacc import MettaYacc, Expression
-from das.parser_actions import ParserActions
-from das.exceptions import UndefinedSymbolError
-from das.expression_hasher import ExpressionHasher
-from das.metta_lex import BASIC_TYPE
+from function.das.metta_lex import MettaLex
+from function.das.metta_lex_test import lex_test_data as test_data
+from function.das.metta_yacc import MettaYacc, Expression
+from function.das.parser_actions import ParserActions
+from function.das.exceptions import UndefinedSymbolError
+from function.das.expression_hasher import ExpressionHasher
+from function.das.metta_lex import BASIC_TYPE
 
 class ActionBroker(ParserActions):
     def __init__(self, data=None):

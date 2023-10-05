@@ -2,8 +2,8 @@ import tempfile
 import shutil
 import os
 import pytest
-from das.distributed_atom_space import DistributedAtomSpace, WILDCARD, QueryOutputFormat
-from das.database.db_interface import UNORDERED_LINK_TYPES
+from function.das.distributed_atom_space import DistributedAtomSpace, WILDCARD, QueryOutputFormat
+from function.das.database.db_interface import UNORDERED_LINK_TYPES
 
 das = DistributedAtomSpace()
 transaction = das.open_transaction()

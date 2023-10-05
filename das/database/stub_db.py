@@ -1,8 +1,8 @@
 import re
 from typing import List, Any, Tuple
 
-from das.database.db_interface import DBInterface
-from das.pattern_matcher.pattern_matcher import WILDCARD
+from function.das.database.db_interface import DBInterface
+from function.das.pattern_matcher.pattern_matcher import WILDCARD
 
 
 def _build_node_handle(node_type: str, node_name: str) -> str:
