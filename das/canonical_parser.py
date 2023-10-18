@@ -3,6 +3,7 @@ import datetime
 import subprocess
 import pickle
 import sys
+import os
 from das.logger import logger
 from das.expression_hasher import ExpressionHasher
 from das.database.key_value_schema import CollectionNames as KeyPrefix, build_redis_key
@@ -42,6 +43,11 @@ class CanonicalParser:
         self.temporary_file_name = {
             s.value: f"{TMP_DIR}/parser_{s.value}.txt" for s in KeyPrefix
         }
+        for fname in self.temporary_file_name.values():
+            try:
+                os.remove(fname)
+            except Exception as e:
+                logger().info(f"Temp file doesn't exist: {fname}")
         self.pattern_black_list = None
 
 
@@ -116,7 +122,7 @@ class CanonicalParser:
         if self.mongo_terminal:
             mongo_collection = self.db.mongo_db[MongoCollections.NODES]
             self._mongo_insert_many(mongo_collection, self.mongo_terminal)
-        with open(self.temporary_file_name[KeyPrefix.NAMED_ENTITIES], "w") as named_entities:
+        with open(self.temporary_file_name[KeyPrefix.NAMED_ENTITIES], "a") as named_entities:
             for document in self.mongo_terminal:
                 write_key_value(named_entities, document["_id"], document["name"])
         self.mongo_typedef = []
