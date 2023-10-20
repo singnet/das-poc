@@ -23,9 +23,12 @@ docker run \
     --volume /tmp:/tmp \
     --volume /mnt:/mnt \
     --volume /opt/das/data:/data \
+    --volume $(pwd)/notebooks:/app/notebooks \
     --detach \
     das:latest \
     jupyter-notebook --ip 0.0.0.0 --port $PORT --no-browser --allow-root
 
+sleep 5
 echo "URL: http://`curl https://ipinfo.io/ip`:${PORT}/tree/notebooks"
-echo "Token: `docker exec jupyter-notebook-senna jupyter notebook list | tail -1 | cut -d" " -f1 | cut -d"=" -f2`"
+#echo "URL: http://100.104.144.145:${PORT}/tree/notebooks"
+echo "Token: `docker exec jupyter-notebook-$1 jupyter notebook list | tail -1 | cut -d" " -f1 | cut -d"=" -f2`"
